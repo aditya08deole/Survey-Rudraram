@@ -1,0 +1,23 @@
+{
+  "name": "rudraram-survey",
+  "version": "1.0.0",
+  "description": "Rudraram Survey - Village Water Infrastructure Mapping Dashboard",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "node backend/server.js",
+    "client": "cd frontend && npm start",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm install && npm run build",
+    "heroku-postbuild": "cd frontend && npm install && npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aditya08deole/Rudraram-Survey.git"
+  },
+  "author": "Aditya Deole",
+  "license": "MIT"
+}

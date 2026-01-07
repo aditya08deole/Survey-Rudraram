@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const { parseExcelFile, validateExcelHeaders } = require('../services/excelParser');
 const store = require('../data/store');
+const excelWriter = require('../services/excelWriter');
 
 // Configure multer for Excel file uploads
 const excelStorage = multer.diskStorage({
@@ -81,6 +82,9 @@ router.post('/excel', uploadExcel.single('file'), (req, res) => {
 
     // Store the parsed devices
     store.setDevices(result.devices);
+
+    // Save the Excel file path for future updates (image sync)
+    excelWriter.setCurrentExcelPath(filePath);
 
     res.json({
       success: true,

@@ -2,6 +2,7 @@
  * Image Routes
  * 
  * API endpoints for device image upload and retrieval.
+ * Images are synced back to the Excel file.
  */
 
 const express = require('express');
@@ -11,6 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const store = require('../data/store');
+const excelWriter = require('../services/excelWriter');
 
 // Configure multer for image uploads
 const imageStorage = multer.diskStorage({
@@ -85,13 +87,20 @@ router.post('/:surveyCode', uploadImages.array('images', 10), (req, res) => {
       return `/uploads/images/${surveyCode}/${file.filename}`;
     });
 
-    // Add images to the device
+    // Add images to the device in memory
     const allImages = store.addDeviceImages(surveyCode, imagePaths);
+
+    // Sync images back to Excel file
+    const excelResult = excelWriter.updateDeviceImages(surveyCode, allImages);
+    if (!excelResult.success) {
+      console.warn('Warning: Could not update Excel file:', excelResult.error);
+    }
 
     res.json({
       success: true,
       message: `${req.files.length} image(s) uploaded successfully`,
-      images: allImages
+      images: allImages,
+      excelSynced: excelResult.success
     });
 
   } catch (error) {

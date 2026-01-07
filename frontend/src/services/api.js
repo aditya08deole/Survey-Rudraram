@@ -6,8 +6,8 @@
 
 import axios from 'axios';
 
-// Base URL for API - uses proxy in development
-const API_BASE = '/api';
+// Base URL for API - uses environment variable in production, proxy in development
+const API_BASE = process.env.REACT_APP_API_URL || '/api';
 
 // Create axios instance with default config
 const api = axios.create({
