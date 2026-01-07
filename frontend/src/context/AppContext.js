@@ -2,10 +2,11 @@
  * Application Context
  * 
  * Global state management for the Rudraram Survey Dashboard.
+ * Reads Excel file directly from GitHub (no backend required).
  */
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { deviceAPI, statsAPI, zoneAPI } from '../services/api';
+import { fetchAndParseExcel, calculateStats } from '../services/excelReader';
 
 // Initial state
 const initialState = {
@@ -135,34 +136,61 @@ export function AppProvider({ children }) {
     loadData();
   }, []);
 
-  // Function to load all data
+  // Function to load all data from Excel file on GitHub
   const loadData = async () => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
     
     try {
-      // Fetch all data in parallel
-      const [devicesRes, zonesRes, statsRes] = await Promise.all([
-        deviceAPI.getAll(),
-        zoneAPI.getAll(),
-        statsAPI.getDashboard()
-      ]);
+      // Fetch and parse Excel file from GitHub
+      const result = await fetchAndParseExcel();
 
-      dispatch({ type: ActionTypes.SET_DEVICES, payload: devicesRes.devices || [] });
-      dispatch({ type: ActionTypes.SET_ZONES, payload: zonesRes.zones || [] });
-      dispatch({ type: ActionTypes.SET_STATS, payload: statsRes.stats || null });
+      if (!result.success) {
+        throw new Error(result.errors.join(', ') || 'Failed to load Excel file');
+      }
+
+      // Calculate statistics
+      const stats = calculateStats(result.devices);
+
+      // Extract unique zones
+      const zones = [...new Set(result.devices.map(d => d.zone))]
+        .filter(Boolean)
+        .map(zoneName => ({
+          name: zoneName,
+          deviceCount: result.devices.filter(d => d.zone === zoneName).length
+        }));
+
+      dispatch({ type: ActionTypes.SET_DEVICES, payload: result.devices });
+      dispatch({ type: ActionTypes.SET_ZONES, payload: zones });
+      dispatch({ type: ActionTypes.SET_STATS, payload: {
+        overview: {
+          totalDevices: stats.totalDevices,
+          mappedDevices: stats.mappedDevices,
+          unmappedDevices: stats.unmappedDevices,
+          lastUpdated: result.loadedAt
+        },
+        byZone: stats.byZone,
+        byType: stats.byType,
+        byStatus: stats.byStatus
+      }});
       dispatch({ 
         type: ActionTypes.SET_DATA_STATUS, 
         payload: { 
-          hasData: (devicesRes.devices || []).length > 0,
-          lastUpdated: statsRes.stats?.overview?.lastUpdated || null
+          hasData: result.devices.length > 0,
+          lastUpdated: result.loadedAt
         }
       });
       dispatch({ type: ActionTypes.SET_ERROR, payload: null });
+
+      // Log warnings if any
+      if (result.warnings.length > 0) {
+        console.warn('⚠️  Warnings during Excel load:', result.warnings);
+      }
+
     } catch (error) {
       console.error('Failed to load data:', error);
       dispatch({ 
         type: ActionTypes.SET_ERROR, 
-        payload: 'Failed to load data. Please check if the backend server is running.' 
+        payload: `Failed to load Excel file from GitHub: ${error.message}` 
       });
     }
     
