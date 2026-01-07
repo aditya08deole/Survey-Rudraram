@@ -49,24 +49,52 @@ const loadExcelData = () => {
     // Read the Excel file
     const workbook = XLSX.readFile(EXCEL_FILE_PATH);
     
-    // Get the first sheet
-    const sheetName = workbook.SheetNames[0];
+    console.log('   📋 Available sheets:', workbook.SheetNames.join(', '));
+    
+    // Look for a sheet named "All" first, otherwise use the first sheet
+    let sheetName;
+    if (workbook.SheetNames.includes('All')) {
+      sheetName = 'All';
+      console.log('   ✅ Using sheet: "All"');
+    } else if (workbook.SheetNames.includes('all')) {
+      sheetName = 'all';
+      console.log('   ✅ Using sheet: "all"');
+    } else {
+      sheetName = workbook.SheetNames[0];
+      console.log(`   ⚠️  Sheet "All" not found, using: "${sheetName}"`);
+      result.warnings.push(`Expected sheet "All" not found, using "${sheetName}"`);
+    }
+    
     const worksheet = workbook.Sheets[sheetName];
+    
+    if (!worksheet) {
+      result.errors.push(`Sheet "${sheetName}" not found in Excel file`);
+      console.error('❌ Sheet not found:', sheetName);
+      return result;
+    }
     
     // Convert to JSON (array of objects)
     const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
     
+    console.log(`   📄 Total rows in sheet: ${rawData.length}`);
+    
     if (rawData.length === 0) {
       result.errors.push('Excel file is empty or has no data rows');
+      console.error('❌ No data rows found in sheet');
       return result;
     }
 
     // Validate headers (required columns)
     const headers = Object.keys(rawData[0]);
+    console.log(`   📋 Found ${headers.length} columns in Excel`);
+    
     const missingColumns = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
     
     if (missingColumns.length > 0) {
-      result.warnings.push(`Missing columns: ${missingColumns.join(', ')}`);
+      result.errors.push(`Missing required columns: ${missingColumns.join(', ')}`);
+      console.error('❌ Missing required columns:', missingColumns);
+      console.error('   Available columns:', headers);
+      return result;
     }
 
     // Track unique survey codes
@@ -86,7 +114,14 @@ const loadExcelData = () => {
       return true;
     });
 
+    console.log(`   ✅ Data rows after filtering: ${dataRows.length}`);
     result.stats.totalRows = dataRows.length;
+    
+    if (dataRows.length === 0) {
+      result.errors.push('No valid data rows found after filtering');
+      console.error('❌ All rows were filtered out (zone headers or empty)');
+      return result;
+    }
 
     // Parse each row
     dataRows.forEach((row, index) => {
@@ -161,11 +196,15 @@ const loadExcelData = () => {
 
       // Add computed fields
       device.isMapped = hasLocation;
-      device.images = [];
-
-      // Parse images from Excel (comma-separated paths)
-      if (device.imagesRef && device.imagesRef.trim()) {
-        device.images = device.imagesRef.split(',').map(s => s.trim()).filter(Boolean);
+      
+      // Parse images from Excel (comma-separated URLs/paths in the Images column)
+      if (device.imagesRef && typeof device.imagesRef === 'string' && device.imagesRef.trim()) {
+        device.images = device.imagesRef
+          .split(',')
+          .map(url => url.trim())
+          .filter(url => url.length > 0);
+      } else {
+        device.images = [];
       }
 
       // Add to result
@@ -183,12 +222,19 @@ const loadExcelData = () => {
     result.success = result.devices.length > 0;
 
     // Log summary
-    console.log(`✅ Loaded ${result.devices.length} devices from Excel`);
-    console.log(`   📍 Mapped: ${result.stats.mappedDevices}, Unmapped: ${result.stats.unmappedDevices}`);
+    console.log('\n╔════════════════════════════════════════════════════════════╗');
+    console.log(`║   ✅ LOADED ${result.devices.length} DEVICES FROM EXCEL`.padEnd(60) + '║');
+    console.log('╠════════════════════════════════════════════════════════════╣');
+    console.log(`║   📍 Mapped: ${result.stats.mappedDevices}, Unmapped: ${result.stats.unmappedDevices}`.padEnd(60) + '║');
+    console.log(`║   ✓ Valid Rows: ${result.stats.validRows}, Invalid: ${result.stats.invalidRows}`.padEnd(60) + '║');
     
     if (result.errors.length > 0) {
-      console.log(`   ⚠️  ${result.errors.length} errors`);
+      console.log(`║   ⚠️  Errors: ${result.errors.length}`.padEnd(60) + '║');
     }
+    if (result.warnings.length > 0) {
+      console.log(`║   ⚠️  Warnings: ${result.warnings.length}`.padEnd(60) + '║');
+    }
+    console.log('╚════════════════════════════════════════════════════════════╝\n');
 
   } catch (error) {
     console.error('❌ Error loading Excel:', error);

@@ -10,8 +10,6 @@ const REQUIRED_COLUMNS = [
   'Survey Code (ID)',
   'Zone',
   'Device Type',
-  'Lat',
-  'Long',
   'Status'
 ];
 
