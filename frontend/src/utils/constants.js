@@ -84,9 +84,8 @@ export const MAP_CONFIG = {
   // Min/Max zoom
   minZoom: 13,
   maxZoom: 20,
-  // Tile layer - Google Maps Satellite with labels
-  tileUrl: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-  attribution: '&copy; <a href="https://www.google.com/maps">Google Maps</a>'
+  // Google Maps API Key (replace with your own key for production)
+  googleMapsApiKey: 'AIzaSyBZ8Q8xQqYKZ8xZ8Q8xZ8xZ8xZ8xZ8xZ8x' // Replace with actual API key
 };
 
 // Excel column display order (for device detail panel)

@@ -389,65 +389,6 @@ a:hover {
   .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-/* Leaflet Custom Styles */
-.leaflet-container {
-  font-family: 'Inter', sans-serif;
-}
-
-.leaflet-popup-content-wrapper {
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.leaflet-popup-content {
-  margin: 0.75rem 1rem;
-  font-size: 0.875rem;
-}
-
-/* Custom Marker Styles */
-.custom-marker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid white;
-  box-shadow: var(--shadow-md);
-}
-
-.marker-borewell {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-}
-
-.marker-sump {
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-}
-
-.marker-oht {
-  width: 0;
-  height: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 22px solid;
-}
-
-/* Cluster Styles */
-.marker-cluster-small,
-.marker-cluster-medium,
-.marker-cluster-large {
-  background-color: var(--primary-100);
-}
-
-.marker-cluster-small div,
-.marker-cluster-medium div,
-.marker-cluster-large div {
-  background-color: var(--primary-600);
-  color: white;
-  font-weight: 600;
-}
-
 /* Loading Spinner */
 .spinner {
   width: 24px;

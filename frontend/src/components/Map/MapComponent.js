@@ -1,169 +1,185 @@
 /**
  * Map Component
  * 
- * React-Leaflet map with custom markers for water infrastructure devices.
- * Displays Rudraram Village with zone boundaries.
+ * Google Maps with custom markers for water infrastructure devices.
+ * Displays Rudraram Village with satellite imagery.
  */
 
-import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useState, useCallback, useEffect } from 'react';
+import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 import { MAP_CONFIG, getStatusColor } from '../../utils/constants';
 import './MapComponent.css';
-
-// Fix for default marker icons in webpack
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
 
 /**
  * Create custom marker icon based on device type and status
  */
 const createMarkerIcon = (device) => {
   const statusColor = getStatusColor(device.status);
-  const size = 28;
+  const size = 32;
   
-  let svgContent;
+  let svgPath;
   
   switch (device.deviceType) {
     case 'Borewell':
       // Circle marker
-      svgContent = `
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" fill="${statusColor}" stroke="white" stroke-width="2"/>
-          <circle cx="${size/2}" cy="${size/2}" r="4" fill="white" opacity="0.5"/>
-        </svg>
-      `;
+      svgPath = `M ${size/2} ${size/2} m -${size/3}, 0 a ${size/3},${size/3} 0 1,0 ${size/3*2},0 a ${size/3},${size/3} 0 1,0 -${size/3*2},0`;
       break;
     
     case 'Sump':
-      // Square marker
-      svgContent = `
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="${size-4}" height="${size-4}" rx="3" fill="${statusColor}" stroke="white" stroke-width="2"/>
-          <rect x="${size/2-3}" y="${size/2-3}" width="6" height="6" fill="white" opacity="0.5" rx="1"/>
-        </svg>
-      `;
+      // Square marker  
+      svgPath = `M ${size/4} ${size/4} h ${size/2} v ${size/2} h -${size/2} z`;
       break;
     
     case 'OHT':
       // Triangle marker
-      svgContent = `
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="${size/2},3 ${size-3},${size-3} 3,${size-3}" fill="${statusColor}" stroke="white" stroke-width="2"/>
-          <circle cx="${size/2}" cy="${size/2 + 2}" r="3" fill="white" opacity="0.5"/>
-        </svg>
-      `;
+      svgPath = `M ${size/2} ${size/4} L ${size/4*3} ${size/4*3} L ${size/4} ${size/4*3} z`;
       break;
     
     default:
       // Default circle
-      svgContent = `
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" fill="${statusColor}" stroke="white" stroke-width="2"/>
-        </svg>
-      `;
+      svgPath = `M ${size/2} ${size/2} m -${size/3}, 0 a ${size/3},${size/3} 0 1,0 ${size/3*2},0 a ${size/3},${size/3} 0 1,0 -${size/3*2},0`;
   }
+  
+  const svgContent = `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+      <path d="${svgPath}" fill="${statusColor}" stroke="white" stroke-width="2"/>
+    </svg>
+  `;
   
   const svgUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
   
-  return L.icon({
-    iconUrl: svgUrl,
-    iconSize: [size, size],
-    iconAnchor: [size/2, size/2],
-    popupAnchor: [0, -size/2]
-  });
+  return {
+    url: svgUrl,
+    scaledSize: new window.google.maps.Size(size, size),
+    anchor: new window.google.maps.Point(size/2, size/2)
+  };
 };
-
-/**
- * Component to handle map center updates
- */
-function MapCenterHandler({ selectedDevice }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (selectedDevice && selectedDevice.lat && selectedDevice.long) {
-      map.setView([selectedDevice.lat, selectedDevice.long], 17, {
-        animate: true,
-        duration: 0.5
-      });
-    }
-  }, [selectedDevice, map]);
-  
-  return null;
-}
 
 /**
  * Main Map Component
  */
 function MapComponent({ devices, selectedDevice, onMarkerClick }) {
-  const mapRef = useRef(null);
+  const [selectedMarker, setSelectedMarker] = useState(null);
+  const [mapInstance, setMapInstance] = useState(null);
+
+  // Load Google Maps script
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: MAP_CONFIG.googleMapsApiKey,
+    libraries: ['places']
+  });
+
+  // Map options
+  const mapOptions = {
+    mapTypeId: 'hybrid', // Satellite view with labels
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR,
+      position: window.google?.maps?.ControlPosition?.TOP_RIGHT,
+    },
+    streetViewControl: true,
+    fullscreenControl: true,
+    zoomControl: true,
+    minZoom: MAP_CONFIG.minZoom,
+    maxZoom: MAP_CONFIG.maxZoom,
+  };
+
+  // Handle map load
+  const onMapLoad = useCallback((map) => {
+    setMapInstance(map);
+  }, []);
+
+  // Handle marker click
+  const handleMarkerClick = useCallback((device) => {
+    setSelectedMarker(device);
+    if (onMarkerClick) {
+      onMarkerClick(device);
+    }
+  }, [onMarkerClick]);
+
+  // Center map on selected device
+  useEffect(() => {
+    if (mapInstance && selectedDevice && selectedDevice.lat && selectedDevice.long) {
+      mapInstance.panTo({ lat: selectedDevice.lat, lng: selectedDevice.long });
+      mapInstance.setZoom(17);
+      setSelectedMarker(selectedDevice);
+    }
+  }, [selectedDevice, mapInstance]);
+
+  if (loadError) {
+    return (
+      <div className="map-error">
+        <p>Error loading Google Maps</p>
+        <p style={{ fontSize: '0.875rem', color: '#666' }}>
+          Please check your internet connection and try again
+        </p>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="map-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading Google Maps...</p>
+      </div>
+    );
+  }
 
   return (
-    <MapContainer
-      center={MAP_CONFIG.center}
+    <GoogleMap
+      mapContainerClassName="google-map-container"
+      center={{ lat: MAP_CONFIG.center[0], lng: MAP_CONFIG.center[1] }}
       zoom={MAP_CONFIG.defaultZoom}
-      minZoom={MAP_CONFIG.minZoom}
-      maxZoom={MAP_CONFIG.maxZoom}
-      className="leaflet-map"
-      ref={mapRef}
-      scrollWheelZoom={true}
-      zoomControl={true}
+      options={mapOptions}
+      onLoad={onMapLoad}
     >
-      <TileLayer
-        attribution={MAP_CONFIG.attribution}
-        url={MAP_CONFIG.tileUrl}
-      />
-      
-      <MapCenterHandler selectedDevice={selectedDevice} />
-      
       {devices.map((device) => (
         <Marker
           key={device.surveyCode}
-          position={[device.lat, device.long]}
+          position={{ lat: device.lat, lng: device.long }}
           icon={createMarkerIcon(device)}
-          eventHandlers={{
-            click: () => onMarkerClick(device)
-          }}
-        >
-          <Popup className="custom-popup">
-            <div className="popup-content">
-              <div className="popup-header">
-                <span className="popup-id">{device.surveyCode}</span>
-                <span 
-                  className="popup-status"
-                  style={{ 
-                    backgroundColor: getStatusColor(device.status),
-                    color: 'white'
-                  }}
-                >
-                  {device.status}
-                </span>
-              </div>
-              <div className="popup-body">
-                <p><strong>Type:</strong> {device.deviceType}</p>
-                <p><strong>Zone:</strong> {device.zone}</p>
-                {device.streetName && (
-                  <p><strong>Location:</strong> {device.streetName}</p>
-                )}
-              </div>
-              <div className="popup-footer">
-                <button 
-                  className="popup-btn"
-                  onClick={() => onMarkerClick(device)}
-                >
-                  View Details
-                </button>
-              </div>
-            </div>
-          </Popup>
-        </Marker>
+          onClick={() => handleMarkerClick(device)}
+          title={`${device.surveyCode} - ${device.deviceType}`}
+        />
       ))}
-    </MapContainer>
+
+      {selectedMarker && (
+        <InfoWindow
+          position={{ lat: selectedMarker.lat, lng: selectedMarker.long }}
+          onCloseClick={() => setSelectedMarker(null)}
+        >
+          <div className="info-window-content">
+            <div className="info-window-header">
+              <span className="info-window-id">{selectedMarker.surveyCode}</span>
+              <span 
+                className="info-window-status"
+                style={{ 
+                  backgroundColor: getStatusColor(selectedMarker.status),
+                  color: 'white'
+                }}
+              >
+                {selectedMarker.status}
+              </span>
+            </div>
+            <div className="info-window-body">
+              <p><strong>Type:</strong> {selectedMarker.deviceType}</p>
+              <p><strong>Zone:</strong> {selectedMarker.zone}</p>
+              {selectedMarker.streetName && (
+                <p><strong>Location:</strong> {selectedMarker.streetName}</p>
+              )}
+            </div>
+            <div className="info-window-footer">
+              <button 
+                className="info-window-btn"
+                onClick={() => onMarkerClick(selectedMarker)}
+              >
+                View Details
+              </button>
+            </div>
+          </div>
+        </InfoWindow>
+      )}
+    </GoogleMap>
   );
 }
 
