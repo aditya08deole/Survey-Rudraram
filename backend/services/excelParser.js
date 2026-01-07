@@ -168,7 +168,16 @@ const parseExcelFile = (filePath) => {
 
       // Add computed fields
       device.isMapped = hasLocation;
-      device.images = [];
+      
+      // Parse images from Excel (comma-separated URLs/paths in the Images column)
+      if (device.imagesRef && typeof device.imagesRef === 'string' && device.imagesRef.trim()) {
+        device.images = device.imagesRef
+          .split(',')
+          .map(url => url.trim())
+          .filter(url => url.length > 0);
+      } else {
+        device.images = [];
+      }
 
       // Add to result
       if (rowErrors.length === 0) {
