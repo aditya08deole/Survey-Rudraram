@@ -6,10 +6,10 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MAP_CONFIG, getStatusColor, ZONES } from '../../utils/constants';
+import { MAP_CONFIG, getStatusColor } from '../../utils/constants';
 import './MapComponent.css';
 
 // Fix for default marker icons in webpack
@@ -80,49 +80,6 @@ const createMarkerIcon = (device) => {
 };
 
 /**
- * Component to add zone overlay circles
- */
-function ZoneOverlays() {
-  // Approximate zone center points (adjust based on actual device locations)
-  const zoneAreas = {
-    'SC Colony': { center: [17.568, 78.165], radius: 300 }, // Northern area
-    'Village': { center: [17.563, 78.167], radius: 400 },   // Central area
-    'Waddera': { center: [17.556, 78.168], radius: 350 }    // Southern area
-  };
-
-  return (
-    <>
-      {Object.entries(ZONES).map(([zoneName, zoneConfig]) => {
-        const area = zoneAreas[zoneName];
-        if (!area) return null;
-        
-        return (
-          <Circle
-            key={zoneName}
-            center={area.center}
-            radius={area.radius}
-            pathOptions={{
-              color: zoneConfig.borderColor || zoneConfig.color,
-              fillColor: zoneConfig.color,
-              fillOpacity: 0.15,
-              weight: 2,
-              dashArray: '10, 10'
-            }}
-          >
-            <Popup>
-              <div style={{ textAlign: 'center', padding: '5px' }}>
-                <strong>{zoneName}</strong><br/>
-                Population: {zoneConfig.population.toLocaleString()}
-              </div>
-            </Popup>
-          </Circle>
-        );
-      })}
-    </>
-  );
-}
-
-/**
  * Component to handle map center updates
  */
 function MapCenterHandler({ selectedDevice }) {
@@ -161,9 +118,6 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
         attribution={MAP_CONFIG.attribution}
         url={MAP_CONFIG.tileUrl}
       />
-      
-      {/* Zone boundary overlays */}
-      <ZoneOverlays />
       
       <MapCenterHandler selectedDevice={selectedDevice} />
       

@@ -83,10 +83,10 @@ export const MAP_CONFIG = {
   defaultZoom: 15,
   // Min/Max zoom
   minZoom: 13,
-  maxZoom: 19,
-  // Tile layer
-  tileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  maxZoom: 20,
+  // Tile layer - Google Maps Satellite with labels
+  tileUrl: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+  attribution: '&copy; <a href="https://www.google.com/maps">Google Maps</a>'
 };
 
 // Excel column display order (for device detail panel)
