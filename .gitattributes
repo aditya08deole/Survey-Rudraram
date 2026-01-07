@@ -1,0 +1,3 @@
+# Built files - ignore secret scanning
+docs/** linguist-generated=true
+docs/**/*.js -diff
