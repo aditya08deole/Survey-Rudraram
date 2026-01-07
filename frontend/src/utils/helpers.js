@@ -72,9 +72,8 @@ export const prepareDevicesForExport = (devices) => {
     'Long': device.long || '',
     'Status': device.status,
     'Houses Conn.': device.housesConnected || '',
-    'Daily Usage (Hrs)': device.dailyUsage || '',
     'Pipe Size (inch)': device.pipeSize || '',
-    'Motor HP / Cap': device.motorCapacity || '',
+    'Motor HP': device.motorHP || '',
     'Notes / Maintenance Issue': device.notes || ''
   }));
 };

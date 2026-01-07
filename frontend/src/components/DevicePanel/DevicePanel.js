@@ -149,15 +149,6 @@ function DevicePanel({ device, onClose }) {
                 </span>
               </div>
             </div>
-            <div className="quick-card">
-              <Clock size={16} />
-              <div>
-                <span className="quick-label">Daily Usage</span>
-                <span className="quick-value">
-                  {device.dailyUsage ? `${device.dailyUsage} hrs` : '-'}
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* All Fields - Following Excel Column Order */}
@@ -233,14 +224,6 @@ function DevicePanel({ device, onClose }) {
                 </span>
               </div>
 
-              {/* Daily Usage (Hrs) */}
-              <div className="field-row">
-                <span className="field-label">Daily Usage (Hrs)</span>
-                <span className="field-value field-number">
-                  {device.dailyUsage ? `${device.dailyUsage} hours` : formatValue('dailyUsage', null)}
-                </span>
-              </div>
-
               {/* Pipe Size (inch) */}
               <div className="field-row">
                 <span className="field-label">Pipe Size (inch)</span>
@@ -249,11 +232,11 @@ function DevicePanel({ device, onClose }) {
                 </span>
               </div>
 
-              {/* Motor HP / Capacity */}
+              {/* Motor HP */}
               <div className="field-row">
-                <span className="field-label">Motor HP / Capacity</span>
+                <span className="field-label">Motor HP</span>
                 <span className="field-value">
-                  {formatValue('motorCapacity', device.motorCapacity)}
+                  {formatValue('motorHP', device.motorHP)}
                 </span>
               </div>
 

@@ -272,10 +272,10 @@ function TableView() {
               <th onClick={() => handleSort('housesConnected')} className="sortable">
                 Houses {getSortIcon('housesConnected')}
               </th>
-              <th onClick={() => handleSort('dailyUsage')} className="sortable">
-                Daily Hrs {getSortIcon('dailyUsage')}
+              <th onClick={() => handleSort('pipeSize')} className="sortable">
+                Pipe Size {getSortIcon('pipeSize')}
               </th>
-              <th>Motor/Cap</th>
+              <th>Motor HP</th>
               <th>Mapped</th>
               <th>Actions</th>
             </tr>
@@ -319,8 +319,8 @@ function TableView() {
                     </span>
                   </td>
                   <td className="cell-number">{device.housesConnected || '-'}</td>
-                  <td className="cell-number">{device.dailyUsage || '-'}</td>
-                  <td className="cell-text">{device.motorCapacity || '-'}</td>
+                  <td className="cell-number">{device.pipeSize ? `${device.pipeSize}"` : '-'}</td>
+                  <td className="cell-text">{device.motorHP || '-'}</td>
                   <td className="cell-center">
                     {hasValidCoordinates(device) ? (
                       <MapPin size={16} className="mapped-icon" />

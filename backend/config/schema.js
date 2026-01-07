@@ -10,6 +10,8 @@ const REQUIRED_COLUMNS = [
   'Survey Code (ID)',
   'Zone',
   'Device Type',
+  'Lat',
+  'Long',
   'Status'
 ];
 
@@ -76,13 +78,6 @@ const EXCEL_COLUMNS = [
     required: false
   },
   {
-    key: 'dailyUsage',
-    excelHeader: 'Daily Usage (Hrs)',
-    displayName: 'Daily Usage (Hours)',
-    type: 'float',
-    required: false
-  },
-  {
     key: 'pipeSize',
     excelHeader: 'Pipe Size (inch)',
     displayName: 'Pipe Size (inch)',
@@ -90,9 +85,9 @@ const EXCEL_COLUMNS = [
     required: false
   },
   {
-    key: 'motorCapacity',
-    excelHeader: 'Motor HP / Cap',
-    displayName: 'Motor HP / Capacity',
+    key: 'motorHP',
+    excelHeader: 'Motor HP / Cc',
+    displayName: 'Motor HP',
     type: 'string',
     required: false
   },
