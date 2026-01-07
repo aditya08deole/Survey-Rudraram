@@ -33,9 +33,25 @@ const parseExcelFile = (filePath) => {
     // Read the Excel file
     const workbook = XLSX.readFile(filePath);
     
-    // Get the first sheet
-    const sheetName = workbook.SheetNames[0];
+    // Look for a sheet named "All" first, otherwise use the first sheet
+    let sheetName;
+    if (workbook.SheetNames.includes('All')) {
+      sheetName = 'All';
+      console.log('   📋 Using sheet: "All"');
+    } else if (workbook.SheetNames.includes('all')) {
+      sheetName = 'all';
+      console.log('   📋 Using sheet: "all"');
+    } else {
+      sheetName = workbook.SheetNames[0];
+      console.log(`   📋 Using sheet: "${sheetName}" (first sheet)`);
+    }
+    
     const worksheet = workbook.Sheets[sheetName];
+    
+    if (!worksheet) {
+      result.errors.push(`Sheet "${sheetName}" not found in Excel file`);
+      return result;
+    }
     
     // Convert to JSON (array of objects)
     const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
