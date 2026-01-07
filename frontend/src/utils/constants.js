@@ -84,8 +84,8 @@ export const MAP_CONFIG = {
   // Min/Max zoom
   minZoom: 13,
   maxZoom: 20,
-  // Google Maps API Key (replace with your own key for production)
-  googleMapsApiKey: 'AIzaSyBZ8Q8xQqYKZ8xZ8Q8xZ8xZ8xZ8xZ8xZ8x' // Replace with actual API key
+  // Google Maps API Key (loaded from environment variable - never commit the actual key!)
+  googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || ''
 };
 
 // Excel column display order (for device detail panel)
