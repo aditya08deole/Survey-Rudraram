@@ -10,19 +10,22 @@ export const ZONES = {
     id: 'Z1',
     name: 'SC Colony',
     population: 3000,
-    color: '#3B82F6'
+    color: '#FF6B6B', // Red - Northern area
+    borderColor: '#C92A2A'
   },
   'Village': {
     id: 'Z2',
     name: 'Village',
     population: 5000,
-    color: '#22C55E'
+    color: '#51CF66', // Green - Central area
+    borderColor: '#2F9E44'
   },
   'Waddera': {
     id: 'Z3',
     name: 'Waddera',
     population: 4000,
-    color: '#F97316'
+    color: '#FFD93D', // Yellow - Southern area
+    borderColor: '#F59F00'
   }
 };
 
@@ -74,12 +77,12 @@ export const STATUS_LIST = Object.keys(STATUS_CONFIG);
 
 // Map configuration
 export const MAP_CONFIG = {
-  // Rudraram village center coordinates
-  center: [17.5449, 78.2478],
-  // Default zoom level
-  defaultZoom: 14,
+  // Rudraram village center coordinates (Sangareddy district, Telangana)
+  center: [17.563, 78.167], // Rudraram Village, Isnapur Municipality
+  // Default zoom level (closer view to see village layout)
+  defaultZoom: 15,
   // Min/Max zoom
-  minZoom: 12,
+  minZoom: 13,
   maxZoom: 19,
   // Tile layer
   tileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
