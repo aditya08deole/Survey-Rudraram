@@ -1,6 +1,8 @@
 # Rudraram Survey – Village Water Infrastructure Mapping Dashboard
 
-A complete production-ready dashboard application for visualizing water infrastructure assets of Rudraram Village, Telangana, on an interactive OpenStreetMap.
+A production-ready dashboard application for visualizing water infrastructure assets of Rudraram Village, Telangana, on an interactive OpenStreetMap.
+
+**Data Source**: Excel file in repository (`backend/data/rudraram_survey.xlsx`) - No database, no file uploads. The Excel file is the single source of truth, loaded at server startup.
 
 ## 🚀 Live Demo
 
@@ -8,15 +10,14 @@ A complete production-ready dashboard application for visualizing water infrastr
 
 ## 📊 Features
 
+- **Single Source of Truth**: Excel file in repository, loaded at startup
 - Interactive OpenStreetMap with custom markers
-- 60+ water infrastructure devices (Borewells, Sumps, OHTs)
-- Three zones: SC Colony, Village, Waddera
-- Excel file upload for data management
-- Device image gallery with Excel sync
-- Filtering by zone, device type, status
-- Export to Excel/CSV
+- 60 water infrastructure devices (Borewells, Sumps, OHTs)
+- Three administrative zones: SC Colony, Village, Waddera
+- Device filtering by zone, type, and status
 - Real-time statistics dashboard
-- **Auto-sync images to Excel file**
+- Export data to Excel/CSV
+- Professional government-grade UI
 
 ## 🛠️ Technology Stack
 
@@ -29,28 +30,43 @@ A complete production-ready dashboard application for visualizing water infrastr
 ### Backend
 - Node.js
 - Express.js
-- XLSX (Excel parser & writer)
-- Multer (File uploads)
+- XLSX (Excel parser)
+- In-memory data store
 
-## 🌐 Deploy to Render (One-Click)
+## 🏗️ Architecture
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/aditya08deole/Rudraram-Survey)
+### Data Flow
+```
+Repository Excel File → Backend Loads at Startup → In-Memory Store → REST APIs → React Frontend
+```
 
-### Manual Render Deployment
+- **No database**: Data is read from Excel file at server start
+- **No uploads**: Excel file is part of the codebase
+- **Read-only APIs**: Frontend consumes data via REST endpoints
+- **Restart to update**: Changes to Excel file require server restart
 
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click **New** → **Web Service**
-3. Connect your GitHub repository
-4. Configure:
-   - **Name**: `rudraram-survey`
-   - **Environment**: `Node`
-   - **Build Command**: `cd frontend && npm install && npm run build`
-   - **Start Command**: `cd backend && node server.js`
-   - **Environment Variables**:
-     - `NODE_ENV` = `production`
-5. Click **Create Web Service**
+## 📁 Project Structure
 
-## 📦 Local Installation
+```
+├── backend/
+│   ├── data/
+│   │   └── rudraram_survey.xlsx    # Single source of truth
+│   ├── config/                     # Zone, device type, schema config
+│   ├── routes/                     # REST API endpoints
+│   ├── services/
+│   │   ├── dataLoader.js           # Loads Excel at startup
+│   │   └── excelParser.js          # Parses Excel structure
+│   └── server.js                   # Express server
+├── frontend/
+│   ├── src/
+│   │   ├── components/             # Map, DevicePanel, etc.
+│   │   ├── pages/                  # Dashboard, MapView, TableView
+│   │   ├── services/               # API client
+│   │   └── utils/                  # Constants and helpers
+│   └── public/
+│       └── device-images/          # Device photos (optional)
+└── README.md
+```
 
 ### Prerequisites
 - Node.js 18+
