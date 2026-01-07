@@ -10,7 +10,6 @@ import {
   LayoutDashboard, 
   Map, 
   Table, 
-  Upload, 
   Droplets,
   Menu,
   X
@@ -24,8 +23,7 @@ function Layout({ children }) {
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/map', icon: Map, label: 'Map View' },
-    { path: '/table', icon: Table, label: 'Table View' },
-    { path: '/admin', icon: Upload, label: 'Admin' }
+    { path: '/table', icon: Table, label: 'Table View' }
   ];
 
   const isMapPage = location.pathname === '/map';

@@ -2,6 +2,7 @@
  * API Configuration and Service
  * 
  * Centralized API calls to the backend.
+ * Data is read-only - loaded from Excel file in the repository.
  */
 
 import axios from 'axios';
@@ -18,7 +19,7 @@ const api = axios.create({
 });
 
 /**
- * Device API calls
+ * Device API calls (read-only)
  */
 export const deviceAPI = {
   // Get all devices with optional filters
@@ -63,7 +64,7 @@ export const deviceAPI = {
 };
 
 /**
- * Zone API calls
+ * Zone API calls (read-only)
  */
 export const zoneAPI = {
   // Get all zones with device counts
@@ -86,7 +87,7 @@ export const zoneAPI = {
 };
 
 /**
- * Statistics API calls
+ * Statistics API calls (read-only)
  */
 export const statsAPI = {
   // Get comprehensive dashboard statistics
@@ -121,97 +122,15 @@ export const statsAPI = {
 };
 
 /**
- * Upload API calls
- */
-export const uploadAPI = {
-  // Upload Excel file
-  uploadExcel: async (file, onProgress) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await api.post('/upload/excel', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress) {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percent);
-        }
-      }
-    });
-    return response.data;
-  },
-
-  // Validate Excel file without importing
-  validateExcel: async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await api.post('/upload/validate', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    return response.data;
-  },
-
-  // Get upload status
-  getStatus: async () => {
-    const response = await api.get('/upload/status');
-    return response.data;
-  },
-
-  // Clear all data
-  clearData: async () => {
-    const response = await api.delete('/upload/clear');
-    return response.data;
-  }
-};
-
-/**
- * Image API calls
- */
-export const imageAPI = {
-  // Upload images for a device
-  upload: async (surveyCode, files, onProgress) => {
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append('images', file);
-    });
-
-    const response = await api.post(`/images/${encodeURIComponent(surveyCode)}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress) {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percent);
-        }
-      }
-    });
-    return response.data;
-  },
-
-  // Get images for a device
-  getByDevice: async (surveyCode) => {
-    const response = await api.get(`/images/${encodeURIComponent(surveyCode)}`);
-    return response.data;
-  },
-
-  // Delete an image
-  delete: async (surveyCode, filename) => {
-    const response = await api.delete(`/images/${encodeURIComponent(surveyCode)}/${filename}`);
-    return response.data;
-  }
-};
-
-/**
- * Health check
+ * Health check and data info
  */
 export const checkHealth = async () => {
   const response = await api.get('/health');
+  return response.data;
+};
+
+export const getDataInfo = async () => {
+  const response = await api.get('/info');
   return response.data;
 };
 

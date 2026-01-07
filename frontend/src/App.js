@@ -2,6 +2,7 @@
  * Rudraram Survey - Main App Component
  * 
  * Root component that sets up routing and global state.
+ * Data is loaded from the backend which reads from repository Excel file.
  */
 
 import React from 'react';
@@ -11,7 +12,6 @@ import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
 import MapView from './pages/MapView';
 import TableView from './pages/TableView';
-import AdminUpload from './pages/AdminUpload';
 
 function App() {
   return (
@@ -22,7 +22,6 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/map" element={<MapView />} />
             <Route path="/table" element={<TableView />} />
-            <Route path="/admin" element={<AdminUpload />} />
           </Routes>
         </Layout>
       </Router>

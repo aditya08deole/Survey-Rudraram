@@ -1,18 +1,41 @@
 /**
  * Data Store
  * 
- * In-memory data store for devices and images.
- * Excel is the source of truth - data is loaded from Excel files.
+ * In-memory data store for devices.
+ * Excel file is loaded at startup - this is the single source of truth.
+ * No database, no uploads - data comes directly from the repository Excel file.
  */
+
+const { loadExcelData } = require('../services/dataLoader');
 
 // In-memory device storage
 let devices = [];
 
-// Image mappings: surveyCode -> array of image paths
-let deviceImages = {};
+// Load metadata
+let dataLoadedAt = null;
+let loadStats = null;
 
-// Last Excel upload metadata
-let lastUpload = null;
+/**
+ * Initialize the store by loading Excel data
+ * Called once at server startup
+ */
+const initializeStore = () => {
+  console.log('\n🔄 Initializing data store...');
+  
+  const result = loadExcelData();
+  
+  if (result.success) {
+    devices = result.devices;
+    dataLoadedAt = result.loadedAt;
+    loadStats = result.stats;
+    console.log('✅ Data store initialized successfully\n');
+  } else {
+    console.error('❌ Failed to initialize data store');
+    console.error('   Errors:', result.errors);
+  }
+  
+  return result;
+};
 
 /**
  * Get all devices
@@ -64,60 +87,17 @@ const getUnmappedDevices = () => {
 };
 
 /**
- * Set all devices (after Excel import)
+ * Get data loaded timestamp
  */
-const setDevices = (newDevices) => {
-  // Preserve existing images
-  newDevices.forEach(device => {
-    if (deviceImages[device.surveyCode]) {
-      device.images = deviceImages[device.surveyCode];
-    } else {
-      device.images = [];
-    }
-  });
-  devices = newDevices;
-  lastUpload = new Date().toISOString();
-  return devices;
+const getDataLoadedAt = () => {
+  return dataLoadedAt;
 };
 
 /**
- * Clear all devices
+ * Get load statistics
  */
-const clearDevices = () => {
-  devices = [];
-  lastUpload = null;
-};
-
-/**
- * Add images to a device
- */
-const addDeviceImages = (surveyCode, imagePaths) => {
-  if (!deviceImages[surveyCode]) {
-    deviceImages[surveyCode] = [];
-  }
-  deviceImages[surveyCode].push(...imagePaths);
-  
-  // Update device record if exists
-  const device = getDeviceById(surveyCode);
-  if (device) {
-    device.images = deviceImages[surveyCode];
-  }
-  
-  return deviceImages[surveyCode];
-};
-
-/**
- * Get images for a device
- */
-const getDeviceImages = (surveyCode) => {
-  return deviceImages[surveyCode] || [];
-};
-
-/**
- * Get last upload timestamp
- */
-const getLastUpload = () => {
-  return lastUpload;
+const getLoadStats = () => {
+  return loadStats;
 };
 
 /**
@@ -125,6 +105,14 @@ const getLastUpload = () => {
  */
 const getDeviceCount = () => {
   return devices.length;
+};
+
+/**
+ * Get images for a device (from the device record itself)
+ */
+const getDeviceImages = (surveyCode) => {
+  const device = getDeviceById(surveyCode);
+  return device ? device.images : [];
 };
 
 /**
@@ -168,6 +156,7 @@ const filterDevices = (filters) => {
 };
 
 module.exports = {
+  initializeStore,
   getAllDevices,
   getDeviceById,
   getDevicesByZone,
@@ -175,12 +164,10 @@ module.exports = {
   getDevicesByStatus,
   getMappedDevices,
   getUnmappedDevices,
-  setDevices,
-  clearDevices,
-  addDeviceImages,
-  getDeviceImages,
-  getLastUpload,
+  getDataLoadedAt,
+  getLoadStats,
   getDeviceCount,
+  getDeviceImages,
   searchDevices,
   filterDevices
 };
