@@ -1,0 +1,255 @@
+/**
+ * Application Context
+ * 
+ * Global state management for the Rudraram Survey Dashboard.
+ */
+
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { deviceAPI, statsAPI, zoneAPI } from '../services/api';
+
+// Initial state
+const initialState = {
+  // Data
+  devices: [],
+  zones: [],
+  stats: null,
+  
+  // Selected/Active items
+  selectedDevice: null,
+  selectedZone: null,
+  
+  // Filters
+  filters: {
+    zone: '',
+    deviceType: '',
+    status: '',
+    search: ''
+  },
+  
+  // UI state
+  isLoading: true,
+  error: null,
+  showDevicePanel: false,
+  
+  // Data status
+  lastUpdated: null,
+  hasData: false
+};
+
+// Action types
+const ActionTypes = {
+  SET_LOADING: 'SET_LOADING',
+  SET_ERROR: 'SET_ERROR',
+  SET_DEVICES: 'SET_DEVICES',
+  SET_ZONES: 'SET_ZONES',
+  SET_STATS: 'SET_STATS',
+  SET_SELECTED_DEVICE: 'SET_SELECTED_DEVICE',
+  SET_SELECTED_ZONE: 'SET_SELECTED_ZONE',
+  SET_FILTERS: 'SET_FILTERS',
+  RESET_FILTERS: 'RESET_FILTERS',
+  SHOW_DEVICE_PANEL: 'SHOW_DEVICE_PANEL',
+  HIDE_DEVICE_PANEL: 'HIDE_DEVICE_PANEL',
+  SET_DATA_STATUS: 'SET_DATA_STATUS',
+  REFRESH_DATA: 'REFRESH_DATA'
+};
+
+// Reducer
+function appReducer(state, action) {
+  switch (action.type) {
+    case ActionTypes.SET_LOADING:
+      return { ...state, isLoading: action.payload };
+    
+    case ActionTypes.SET_ERROR:
+      return { ...state, error: action.payload, isLoading: false };
+    
+    case ActionTypes.SET_DEVICES:
+      return { ...state, devices: action.payload };
+    
+    case ActionTypes.SET_ZONES:
+      return { ...state, zones: action.payload };
+    
+    case ActionTypes.SET_STATS:
+      return { ...state, stats: action.payload };
+    
+    case ActionTypes.SET_SELECTED_DEVICE:
+      return { 
+        ...state, 
+        selectedDevice: action.payload,
+        showDevicePanel: !!action.payload 
+      };
+    
+    case ActionTypes.SET_SELECTED_ZONE:
+      return { 
+        ...state, 
+        selectedZone: action.payload,
+        filters: {
+          ...state.filters,
+          zone: action.payload || ''
+        }
+      };
+    
+    case ActionTypes.SET_FILTERS:
+      return { 
+        ...state, 
+        filters: { ...state.filters, ...action.payload }
+      };
+    
+    case ActionTypes.RESET_FILTERS:
+      return {
+        ...state,
+        filters: {
+          zone: '',
+          deviceType: '',
+          status: '',
+          search: ''
+        }
+      };
+    
+    case ActionTypes.SHOW_DEVICE_PANEL:
+      return { ...state, showDevicePanel: true };
+    
+    case ActionTypes.HIDE_DEVICE_PANEL:
+      return { ...state, showDevicePanel: false, selectedDevice: null };
+    
+    case ActionTypes.SET_DATA_STATUS:
+      return {
+        ...state,
+        hasData: action.payload.hasData,
+        lastUpdated: action.payload.lastUpdated
+      };
+    
+    default:
+      return state;
+  }
+}
+
+// Create context
+const AppContext = createContext(null);
+
+// Provider component
+export function AppProvider({ children }) {
+  const [state, dispatch] = useReducer(appReducer, initialState);
+
+  // Load initial data
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Function to load all data
+  const loadData = async () => {
+    dispatch({ type: ActionTypes.SET_LOADING, payload: true });
+    
+    try {
+      // Fetch all data in parallel
+      const [devicesRes, zonesRes, statsRes] = await Promise.all([
+        deviceAPI.getAll(),
+        zoneAPI.getAll(),
+        statsAPI.getDashboard()
+      ]);
+
+      dispatch({ type: ActionTypes.SET_DEVICES, payload: devicesRes.devices || [] });
+      dispatch({ type: ActionTypes.SET_ZONES, payload: zonesRes.zones || [] });
+      dispatch({ type: ActionTypes.SET_STATS, payload: statsRes.stats || null });
+      dispatch({ 
+        type: ActionTypes.SET_DATA_STATUS, 
+        payload: { 
+          hasData: (devicesRes.devices || []).length > 0,
+          lastUpdated: statsRes.stats?.overview?.lastUpdated || null
+        }
+      });
+      dispatch({ type: ActionTypes.SET_ERROR, payload: null });
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      dispatch({ 
+        type: ActionTypes.SET_ERROR, 
+        payload: 'Failed to load data. Please check if the backend server is running.' 
+      });
+    }
+    
+    dispatch({ type: ActionTypes.SET_LOADING, payload: false });
+  };
+
+  // Filter devices based on current filters
+  const getFilteredDevices = () => {
+    let filtered = [...state.devices];
+
+    if (state.filters.zone) {
+      filtered = filtered.filter(d => d.zone === state.filters.zone);
+    }
+    if (state.filters.deviceType) {
+      filtered = filtered.filter(d => d.deviceType === state.filters.deviceType);
+    }
+    if (state.filters.status) {
+      filtered = filtered.filter(d => d.status === state.filters.status);
+    }
+    if (state.filters.search) {
+      const query = state.filters.search.toLowerCase();
+      filtered = filtered.filter(d => 
+        d.surveyCode.toLowerCase().includes(query) ||
+        (d.streetName && d.streetName.toLowerCase().includes(query))
+      );
+    }
+
+    return filtered;
+  };
+
+  // Get only mapped devices (with coordinates)
+  const getMappedDevices = () => {
+    return getFilteredDevices().filter(d => 
+      d.lat && d.long && !isNaN(d.lat) && !isNaN(d.long)
+    );
+  };
+
+  // Actions
+  const actions = {
+    refreshData: loadData,
+    
+    setSelectedDevice: (device) => {
+      dispatch({ type: ActionTypes.SET_SELECTED_DEVICE, payload: device });
+    },
+    
+    setSelectedZone: (zone) => {
+      dispatch({ type: ActionTypes.SET_SELECTED_ZONE, payload: zone });
+    },
+    
+    setFilters: (filters) => {
+      dispatch({ type: ActionTypes.SET_FILTERS, payload: filters });
+    },
+    
+    resetFilters: () => {
+      dispatch({ type: ActionTypes.RESET_FILTERS });
+    },
+    
+    hideDevicePanel: () => {
+      dispatch({ type: ActionTypes.HIDE_DEVICE_PANEL });
+    },
+    
+    showDevicePanel: () => {
+      dispatch({ type: ActionTypes.SHOW_DEVICE_PANEL });
+    }
+  };
+
+  const value = {
+    ...state,
+    ...actions,
+    getFilteredDevices,
+    getMappedDevices
+  };
+
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+// Custom hook to use the context
+export function useApp() {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+}
+
+export default AppContext;

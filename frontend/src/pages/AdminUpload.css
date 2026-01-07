@@ -1,0 +1,369 @@
+/**
+ * Admin Upload Page Styles
+ */
+
+.admin-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.admin-header {
+  margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+  font-size: 1.75rem;
+  margin: 0 0 0.5rem;
+}
+
+.admin-subtitle {
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Section */
+.admin-section {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.admin-section.schema-section {
+  grid-column: 1 / -1;
+}
+
+.section-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--gray-200);
+  background: var(--gray-50);
+}
+
+.section-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.section-header svg {
+  color: var(--gray-500);
+}
+
+.section-content {
+  padding: 1.25rem;
+}
+
+/* Status Card */
+.status-card {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.status-value.has-data {
+  color: var(--status-working);
+}
+
+.status-value.no-data {
+  color: var(--gray-400);
+}
+
+/* Drop Zone */
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius-lg);
+  background: var(--gray-50);
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-bottom: 1rem;
+}
+
+.drop-zone:hover {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+}
+
+.drop-zone.active {
+  border-color: var(--primary-500);
+  background: var(--primary-100);
+}
+
+.drop-zone.has-file {
+  border-style: solid;
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+}
+
+.drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: var(--gray-500);
+}
+
+.drop-content svg {
+  margin-bottom: 0.75rem;
+  color: var(--gray-400);
+}
+
+.drop-text {
+  font-size: 0.9375rem;
+  margin: 0 0 0.25rem;
+  color: var(--gray-700);
+}
+
+.drop-hint {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.file-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--primary-700);
+}
+
+.file-selected svg {
+  margin-bottom: 0.5rem;
+  color: var(--primary-600);
+}
+
+.file-name {
+  font-weight: 600;
+  word-break: break-all;
+  text-align: center;
+}
+
+.file-size {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+}
+
+/* Upload Button */
+.upload-btn {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--primary-500);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Result Card */
+.result-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.result-card.success {
+  background: var(--status-working-bg);
+  color: #166534;
+}
+
+.result-card.success svg {
+  color: var(--status-working);
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.result-card.error {
+  background: var(--status-failed-bg);
+  color: #991b1b;
+}
+
+.result-card.error svg {
+  color: var(--status-failed);
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.result-card.small {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.result-content strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.result-content p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.result-stats {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.result-warnings {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: #92400e;
+}
+
+/* Clear Button */
+.clear-btn {
+  width: 100%;
+  color: var(--status-failed);
+  border-color: var(--status-failed);
+}
+
+.clear-btn:hover {
+  background: var(--status-failed-bg);
+}
+
+/* Info Card */
+.info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--primary-50);
+  border-radius: var(--radius);
+  color: var(--primary-800);
+}
+
+.info-card svg {
+  color: var(--primary-500);
+  flex-shrink: 0;
+}
+
+.info-card p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Form Group */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.file-count {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+/* Schema Table */
+.schema-intro {
+  margin: 0 0 1rem;
+  color: var(--gray-600);
+}
+
+.schema-table {
+  overflow-x: auto;
+}
+
+.schema-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.schema-table th,
+.schema-table td {
+  padding: 0.625rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.schema-table th {
+  background: var(--gray-50);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.schema-table .required {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  background: var(--status-failed-bg);
+  color: #991b1b;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
