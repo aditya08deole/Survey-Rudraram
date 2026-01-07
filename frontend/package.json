@@ -1,7 +1,7 @@
 {
   "name": "rudraram-survey-frontend",
   "version": "1.0.0",
-  "homepage": "https://aditya08deole.github.io/Rudraram-Survey",
+  "homepage": "https://aditya08deole.github.io/Survey-Rudraram",
   "private": true,
   "dependencies": {
     "axios": "^1.6.2",

@@ -10,7 +10,7 @@ import * as XLSX from 'xlsx';
 // Configuration
 const GITHUB_CONFIG = {
   username: 'aditya08deole',
-  repository: 'Rudraram-Survey',
+  repository: 'Survey-Rudraram',
   branch: 'main',
   excelPath: 'backend/data/rudraram_survey.xlsx'
 };
