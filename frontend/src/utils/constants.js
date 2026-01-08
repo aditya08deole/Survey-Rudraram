@@ -80,10 +80,10 @@ export const MAP_CONFIG = {
   // Rudraram village center coordinates (Sangareddy district, Telangana)
   center: [17.563, 78.167], // Rudraram Village, Isnapur Municipality
   // Default zoom level (closer view to see village layout)
-  defaultZoom: 15,
+  defaultZoom: 16,
   // Min/Max zoom
-  minZoom: 13,
-  maxZoom: 20,
+  minZoom: 10,
+  maxZoom: 22,
   // OpenStreetMap tile providers
   tileProviders: {
     standard: {
