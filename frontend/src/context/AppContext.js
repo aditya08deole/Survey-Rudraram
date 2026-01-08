@@ -6,7 +6,8 @@
  */
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { fetchAndParseExcel, calculateStats } from '../services/excelReader';
+import { fetchSurveyData } from '../services/apiService';
+import { calculateStats } from '../services/excelReader';
 
 // Initial state
 const initialState = {
@@ -136,16 +137,16 @@ export function AppProvider({ children }) {
     loadData();
   }, []);
 
-  // Function to load all data from Excel file on GitHub
+  // Function to load all data from API backend
   const loadData = async () => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
     
     try {
-      // Fetch and parse Excel file from GitHub
-      const result = await fetchAndParseExcel();
+      // Fetch data from FastAPI backend
+      const result = await fetchSurveyData();
 
       if (!result.success) {
-        throw new Error(result.errors.join(', ') || 'Failed to load Excel file');
+        throw new Error(result.errors.join(', ') || 'Failed to load data from API');
       }
 
       // Calculate statistics

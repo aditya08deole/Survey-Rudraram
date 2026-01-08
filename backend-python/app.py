@@ -1,17 +1,21 @@
 """
 Rudraram Survey - FastAPI Backend
 Excel-driven water infrastructure dashboard API
+Serves both API endpoints and React frontend
 """
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import logging
 from io import BytesIO
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +27,9 @@ app = FastAPI(
     description="Water Infrastructure Mapping Dashboard API",
     version="2.0.0"
 )
+
+# Get frontend build directory
+FRONTEND_BUILD_DIR = Path(__file__).parent.parent / "frontend" / "build"
 
 # CORS configuration
 app.add_middleware(
@@ -340,6 +347,31 @@ async def health_check():
             "last_fetch": cache["timestamp"].isoformat() if cache["timestamp"] else None
         }
     }
+
+
+# Mount frontend static files (after API routes)
+# This must be after all API routes so they take precedence
+if FRONTEND_BUILD_DIR.exists():
+    logger.info(f"Serving React frontend from: {FRONTEND_BUILD_DIR}")
+    
+    # Serve static files (JS, CSS, images, etc.)
+    app.mount("/static", StaticFiles(directory=FRONTEND_BUILD_DIR / "static"), name="static")
+    
+    # Serve index.html for all other routes (React Router)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve React frontend for all non-API routes"""
+        # If path doesn't start with /api, serve the frontend
+        if not full_path.startswith("api"):
+            index_file = FRONTEND_BUILD_DIR / "index.html"
+            if index_file.exists():
+                with open(index_file, 'r', encoding='utf-8') as f:
+                    return HTMLResponse(content=f.read())
+        
+        raise HTTPException(status_code=404, detail="Not found")
+else:
+    logger.warning(f"Frontend build directory not found at: {FRONTEND_BUILD_DIR}")
+    logger.warning("Run 'cd frontend && npm run build' to build the frontend")
 
 
 if __name__ == "__main__":

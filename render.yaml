@@ -1,19 +1,26 @@
 # Render.com Blueprint Configuration
-# Python FastAPI Backend for Survey-Rudraram
+# Unified Dashboard: Python FastAPI Backend + React Frontend
 
 services:
-  # Python FastAPI Backend API
+  # Full Stack Dashboard (Frontend + Backend)
   - type: web
-    name: rudraram-survey-api
+    name: rudraram-survey-dashboard
     env: python
     region: singapore
     plan: free
-    rootDir: backend-python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    buildCommand: |
+      # Install Python dependencies
+      cd backend-python && pip install -r requirements.txt && cd ..
+      # Install Node.js and build React frontend
+      curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+      apt-get install -y nodejs
+      cd frontend && npm install && npm run build && cd ..
+    startCommand: cd backend-python && uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: NODE_VERSION
+        value: 18.x
       - key: GITHUB_RAW_EXCEL_URL
         value: https://raw.githubusercontent.com/aditya08deole/Survey-Rudraram/main/backend/data/rudraram_survey.xlsx
     healthCheckPath: /health
