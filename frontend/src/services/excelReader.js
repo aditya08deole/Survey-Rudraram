@@ -216,8 +216,10 @@ export const calculateStats = (devices) => {
   return stats;
 };
 
-export default {
+const excelReader = {
   fetchAndParseExcel,
   calculateStats,
   getExcelUrl
 };
+
+export default excelReader;

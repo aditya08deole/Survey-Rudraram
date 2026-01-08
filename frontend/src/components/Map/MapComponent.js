@@ -71,7 +71,6 @@ const createMarkerIcon = (device) => {
  * Main Map Component
  */
 function MapComponent({ devices, selectedDevice, onMarkerClick }) {
-  const [selectedMarker, setSelectedMarker] = useState(null);
   const [mapInstance, setMapInstance] = useState(null);
 
   const center = useMemo(() => MAP_CONFIG.center, []);
@@ -81,7 +80,6 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
   useEffect(() => {
     if (mapInstance && selectedDevice && selectedDevice.lat && selectedDevice.long) {
       mapInstance.flyTo([selectedDevice.lat, selectedDevice.long], 17);
-      setSelectedMarker(selectedDevice);
     }
   }, [selectedDevice, mapInstance]);
 
@@ -149,7 +147,6 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
             icon={createMarkerIcon(device)}
             eventHandlers={{
               click: () => {
-                setSelectedMarker(device);
                 if (onMarkerClick) {
                   onMarkerClick(device);
                 }

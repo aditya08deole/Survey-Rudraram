@@ -173,7 +173,7 @@ const calculateStats = (devices) => {
 export { API_BASE_URL };
 
 // Default export
-export default {
+const apiService = {
   fetchSurveyData,
   fetchSurveyStats,
   fetchDeviceByCode,
@@ -181,3 +181,5 @@ export default {
   checkApiHealth,
   API_BASE_URL
 };
+
+export default apiService;

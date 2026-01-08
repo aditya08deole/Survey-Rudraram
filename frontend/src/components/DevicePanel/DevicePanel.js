@@ -13,7 +13,6 @@ import {
   AlertTriangle, 
   XCircle,
   Home,
-  Clock,
   FileText,
   Image,
   ChevronLeft,
