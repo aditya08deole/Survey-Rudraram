@@ -12,19 +12,13 @@ import {
   ChevronUp, 
   ChevronDown,
   Eye,
-  MapPin,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
   FileSpreadsheet
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { 
   ZONE_NAMES, 
   DEVICE_TYPES, 
-  STATUS_LIST, 
-  getZoneColor,
-  getStatusBadgeClass
+  STATUS_LIST
 } from '../utils/constants';
 import { 
   exportToExcel, 
@@ -143,20 +137,6 @@ function TableView() {
     return sortConfig.direction === 'asc' ? 
       <ChevronUp size={14} /> : 
       <ChevronDown size={14} />;
-  };
-
-  // Get status icon
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Working':
-        return <CheckCircle size={14} className="status-icon-success" />;
-      case 'Not Work':
-        return <AlertTriangle size={14} className="status-icon-warning" />;
-      case 'Failed':
-        return <XCircle size={14} className="status-icon-danger" />;
-      default:
-        return null;
-    }
   };
 
   // Count active filters
