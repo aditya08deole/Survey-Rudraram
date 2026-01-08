@@ -168,6 +168,21 @@ def fetch_excel_from_github(sheet_name: str = SHEET_NAME) -> pd.DataFrame:
         )
 
 
+def make_json_safe(obj):
+    """Recursively ensure all values are JSON-safe by converting Inf/NaN to None"""
+    if isinstance(obj, dict):
+        return {k: make_json_safe(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_json_safe(item) for item in obj]
+    elif isinstance(obj, float):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
+        return obj
+    elif pd.isna(obj):
+        return None
+    return obj
+
+
 def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """
     Convert DataFrame to normalized JSON format - uses exact Excel column names
@@ -238,21 +253,8 @@ def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     devices = df_normalized.to_dict('records')
     
     # STEP 6: Final pass - ensure all values are JSON-safe
-    def make_json_safe(obj):
-        """Recursively ensure all values are JSON-safe"""
-        if isinstance(obj, dict):
-            return {k: make_json_safe(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [make_json_safe(item) for item in obj]
-        elif isinstance(obj, float):
-            if np.isnan(obj) or np.isinf(obj):
-                return None
-            return obj
-        elif pd.isna(obj):
-            return None
-        return obj
-    
     devices = [make_json_safe(device) for device in devices]
+
     
     # Count devices with coordinates (using mapped column names)
     if 'lat' in df_normalized.columns and 'long' in df_normalized.columns:
