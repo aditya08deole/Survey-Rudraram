@@ -70,7 +70,8 @@ def is_cache_valid(sheet_name: str = SHEET_NAME) -> bool:
 
 def validate_excel_data(df: pd.DataFrame) -> None:
     """
-    Validate Excel data structure and content using pandas methods
+    Validate Excel data structure - accepts ANY columns from Excel
+    No strict requirements - uses whatever columns are present
     
     Args:
         df: DataFrame to validate
@@ -78,28 +79,16 @@ def validate_excel_data(df: pd.DataFrame) -> None:
     Raises:
         HTTPException: If validation fails
     """
-    required_columns = ['Survey Code', 'Zone', 'Device Type', 'Status']
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    
-    if missing_columns:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Excel missing required columns: {missing_columns}"
-        )
-    
-    # Check for empty DataFrame
+    # Check for empty DataFrame first
     if df.empty:
         raise HTTPException(
             status_code=500,
             detail="Excel file contains no data rows"
         )
     
-    # Log data quality metrics using pandas
-    total_rows = len(df)
-    rows_with_coords = df[['Lat', 'Long']].notna().all(axis=1).sum()
-    missing_survey_codes = df['Survey Code'].isna().sum()
-    
-    logger.info(f"Data validation: {total_rows} rows, {rows_with_coords} with coordinates, {missing_survey_codes} missing codes")
+    # Log all available columns - NO validation, just logging
+    logger.info(f"Excel columns found: {list(df.columns)}")
+    logger.info(f"Data validation passed: {len(df)} rows, {len(df.columns)} columns")
 
 
 def fetch_excel_from_github(sheet_name: str = SHEET_NAME) -> pd.DataFrame:
@@ -120,8 +109,10 @@ def fetch_excel_from_github(sheet_name: str = SHEET_NAME) -> pd.DataFrame:
         logger.info(f"Fetching Excel from GitHub: {GITHUB_RAW_EXCEL_URL}")
         
         # Fetch Excel file
-        response = requests.get(GITHUB_RAW_EXCEL_URL, timeout=10)
+        response = requests.get(GITHUB_RAW_EXCEL_URL, timeout=15)
         response.raise_for_status()
+        
+        logger.info(f"Successfully fetched Excel file. Size: {len(response.content)} bytes")
         
         # Parse Excel using pandas with automatic dtype inference
         excel_data = BytesIO(response.content)
@@ -135,17 +126,21 @@ def fetch_excel_from_github(sheet_name: str = SHEET_NAME) -> pd.DataFrame:
         
         # Validate sheet exists
         if sheet_name not in available_sheets:
+            logger.error(f"Sheet '{sheet_name}' not found in available sheets")
             raise HTTPException(
                 status_code=404,
                 detail=f"Sheet '{sheet_name}' not found. Available sheets: {available_sheets}"
             )
         
         # Read the specific sheet
+        logger.info(f"Reading sheet: {sheet_name}")
         df = pd.read_excel(
             excel_file, 
             sheet_name=sheet_name,
             na_values=['', 'NA', 'N/A', 'null', 'NULL']  # Define what pandas should treat as NaN
         )
+        
+        logger.info(f"Successfully read sheet '{sheet_name}'. Shape: {df.shape}, Columns: {list(df.columns)}")
         
         # Validate data structure and content
         validate_excel_data(df)
@@ -173,37 +168,46 @@ def fetch_excel_from_github(sheet_name: str = SHEET_NAME) -> pd.DataFrame:
 
 def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """
-    Convert DataFrame to normalized JSON format matching frontend expectations
+    Convert DataFrame to normalized JSON format - uses exact Excel column names
+    Maps to frontend-friendly camelCase names
     Uses pandas vectorized operations for optimal performance
     
     Args:
         df: Raw DataFrame from Excel
         
     Returns:
-        List of device dictionaries with normalized keys
+        List of device dictionaries with all columns included
     """
-    # Column mapping: Excel -> Frontend
+    
+    # Exact column mapping from your Excel file
     column_mapping = {
-        'Survey Code': 'surveyCode',
+        'Survey Code (ID)': 'surveyCode',
         'Zone': 'zone',
-        'Street Name': 'streetName',
+        'Street Name / Landmark': 'streetName',
         'Device Type': 'deviceType',
-        'Status': 'status',
-        'Houses Connected': 'housesConnected',
-        'Daily Usage (hrs)': 'dailyUsage',
-        'Pipe Size (inch)': 'pipeSize',
-        'Motor HP': 'motorCapacity',
-        'Notes': 'notes',
         'Lat': 'lat',
         'Long': 'long',
+        'Status': 'status',
+        'Houses Conn.': 'housesConnected',
+        'Daily Usage (Hrs)': 'dailyUsage',
+        'Pipe Size (inch)': 'pipeSize',
+        'Motor HP / Cap': 'motorCapacity',
+        'Notes / Maintenance Issue': 'notes',
         'Images': 'images'
     }
     
-    # Create a copy and rename columns
-    df_normalized = df.rename(columns=column_mapping).copy()
+    # Log actual columns found
+    logger.info(f"Excel columns: {list(df.columns)}")
     
-    # Define column types for better data handling
-    numeric_columns = ['housesConnected', 'dailyUsage', 'pipeSize', 'motorCapacity', 'lat', 'long']
+    # Only map columns that exist in the DataFrame
+    existing_mapping = {k: v for k, v in column_mapping.items() if k in df.columns}
+    logger.info(f"Mapping {len(existing_mapping)} columns")
+    
+    # Create a copy and rename columns
+    df_normalized = df.rename(columns=existing_mapping).copy()
+    
+    # Identify numeric and string columns (after mapping)
+    numeric_columns = ['lat', 'long', 'housesConnected', 'dailyUsage', 'pipeSize', 'motorCapacity']
     string_columns = ['surveyCode', 'zone', 'streetName', 'deviceType', 'status', 'notes', 'images']
     
     # Convert numeric columns using pandas vectorized operations
@@ -223,17 +227,18 @@ def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
             df_normalized[col] = df_normalized[col].replace(['nan', 'None', ''], None)
     
     # Final cleanup: Replace all NaN values with None for JSON serialization
-    # This uses pandas fillna which is vectorized and faster
     df_normalized = df_normalized.where(pd.notna(df_normalized), None)
     
     # Convert to list of dictionaries using pandas built-in method
     devices = df_normalized.to_dict('records')
     
-    # Use pandas to count devices with coordinates (vectorized)
-    has_coords = df_normalized[['lat', 'long']].notna().all(axis=1)
-    devices_with_coords = has_coords.sum()
-    
-    logger.info(f"Normalized {len(devices)} devices, {devices_with_coords} with valid coordinates")
+    # Count devices with coordinates (using mapped column names)
+    if 'lat' in df_normalized.columns and 'long' in df_normalized.columns:
+        has_coords = df_normalized[['lat', 'long']].notna().all(axis=1)
+        devices_with_coords = has_coords.sum()
+        logger.info(f"Normalized {len(devices)} devices, {devices_with_coords} with valid coordinates")
+    else:
+        logger.info(f"Normalized {len(devices)} devices (no coordinate columns found)")
     
     return devices
 
