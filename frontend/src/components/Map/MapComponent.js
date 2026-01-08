@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MAP_CONFIG, getStatusColor } from '../../utils/constants';
@@ -68,20 +68,27 @@ const createMarkerIcon = (device) => {
 
 
 /**
+ * Map controller to handle map instance and interactions
+ */
+function MapController({ selectedDevice }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedDevice && selectedDevice.lat && selectedDevice.long) {
+      map.flyTo([selectedDevice.lat, selectedDevice.long], 17);
+    }
+  }, [selectedDevice, map]);
+
+  return null;
+}
+
+
+/**
  * Main Map Component
  */
 function MapComponent({ devices, selectedDevice, onMarkerClick }) {
-  const [mapInstance, setMapInstance] = useState(null);
-
   const center = useMemo(() => MAP_CONFIG.center, []);
   const zoom = useMemo(() => MAP_CONFIG.defaultZoom, []);
-
-  // Center map on selected device
-  useEffect(() => {
-    if (mapInstance && selectedDevice && selectedDevice.lat && selectedDevice.long) {
-      mapInstance.flyTo([selectedDevice.lat, selectedDevice.long], 17);
-    }
-  }, [selectedDevice, mapInstance]);
 
   const { BaseLayer } = LayersControl;
 
@@ -91,12 +98,13 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
         center={center}
         zoom={zoom}
         className="leaflet-map-container"
-        whenCreated={setMapInstance}
         zoomControl={true}
         scrollWheelZoom={true}
         maxZoom={22}
         minZoom={10}
+        style={{ height: '100%', width: '100%' }}
       >
+        <MapController selectedDevice={selectedDevice} />
         <LayersControl position="topright">
           {/* Satellite Imagery - Default View */}
           <BaseLayer checked name="Satellite View">

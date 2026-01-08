@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import pandas as pd
+import numpy as np
 import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
@@ -62,15 +63,50 @@ def is_cache_valid() -> bool:
     return elapsed < timedelta(seconds=CACHE_DURATION_SECONDS)
 
 
+def validate_excel_data(df: pd.DataFrame) -> None:
+    """
+    Validate Excel data structure and content using pandas methods
+    
+    Args:
+        df: DataFrame to validate
+        
+    Raises:
+        HTTPException: If validation fails
+    """
+    required_columns = ['Survey Code', 'Zone', 'Device Type', 'Status']
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    
+    if missing_columns:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Excel missing required columns: {missing_columns}"
+        )
+    
+    # Check for empty DataFrame
+    if df.empty:
+        raise HTTPException(
+            status_code=500,
+            detail="Excel file contains no data rows"
+        )
+    
+    # Log data quality metrics using pandas
+    total_rows = len(df)
+    rows_with_coords = df[['Lat', 'Long']].notna().all(axis=1).sum()
+    missing_survey_codes = df['Survey Code'].isna().sum()
+    
+    logger.info(f"Data validation: {total_rows} rows, {rows_with_coords} with coordinates, {missing_survey_codes} missing codes")
+
+
 def fetch_excel_from_github() -> pd.DataFrame:
     """
     Fetch Excel file from GitHub raw URL and parse with pandas
+    Includes data validation for quality assurance
     
     Returns:
-        DataFrame with survey data
+        DataFrame with validated survey data
     
     Raises:
-        HTTPException: If fetch or parse fails
+        HTTPException: If fetch, parse, or validation fails
     """
     try:
         logger.info(f"Fetching Excel from GitHub: {GITHUB_RAW_EXCEL_URL}")
@@ -79,11 +115,19 @@ def fetch_excel_from_github() -> pd.DataFrame:
         response = requests.get(GITHUB_RAW_EXCEL_URL, timeout=10)
         response.raise_for_status()
         
-        # Parse Excel using pandas
+        # Parse Excel using pandas with automatic dtype inference
         excel_data = BytesIO(response.content)
-        df = pd.read_excel(excel_data, sheet_name=SHEET_NAME, engine='openpyxl')
+        df = pd.read_excel(
+            excel_data, 
+            sheet_name=SHEET_NAME, 
+            engine='openpyxl',
+            na_values=['', 'NA', 'N/A', 'null', 'NULL']  # Define what pandas should treat as NaN
+        )
         
-        logger.info(f"Successfully fetched and parsed Excel. Rows: {len(df)}")
+        # Validate data structure and content
+        validate_excel_data(df)
+        
+        logger.info(f"Successfully fetched and validated Excel. Rows: {len(df)}, Columns: {len(df.columns)}")
         cache["fetch_count"] += 1
         
         return df
@@ -94,6 +138,8 @@ def fetch_excel_from_github() -> pd.DataFrame:
             status_code=503,
             detail=f"Unable to fetch data from GitHub: {str(e)}"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to parse Excel: {e}")
         raise HTTPException(
@@ -105,6 +151,7 @@ def fetch_excel_from_github() -> pd.DataFrame:
 def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """
     Convert DataFrame to normalized JSON format matching frontend expectations
+    Uses pandas vectorized operations for optimal performance
     
     Args:
         df: Raw DataFrame from Excel
@@ -129,25 +176,41 @@ def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
         'Images': 'images'
     }
     
-    # Rename columns
-    df_normalized = df.rename(columns=column_mapping)
+    # Create a copy and rename columns
+    df_normalized = df.rename(columns=column_mapping).copy()
     
-    # Replace NaN with None (becomes null in JSON)
-    df_normalized = df_normalized.where(pd.notna(df_normalized), None)
+    # Define column types for better data handling
+    numeric_columns = ['housesConnected', 'dailyUsage', 'pipeSize', 'motorCapacity', 'lat', 'long']
+    string_columns = ['surveyCode', 'zone', 'streetName', 'deviceType', 'status', 'notes', 'images']
     
-    # Convert numeric columns
-    numeric_columns = ['housesConnected', 'dailyUsage', 'pipeSize', 'lat', 'long']
+    # Convert numeric columns using pandas vectorized operations
     for col in numeric_columns:
         if col in df_normalized.columns:
+            # Convert to numeric, coercing errors to NaN
             df_normalized[col] = pd.to_numeric(df_normalized[col], errors='coerce')
+            # Replace Inf/-Inf with NaN
+            df_normalized[col] = df_normalized[col].replace([np.inf, -np.inf], np.nan)
     
-    # Convert to list of dictionaries
+    # Clean string columns using pandas string methods (vectorized)
+    for col in string_columns:
+        if col in df_normalized.columns:
+            # Strip whitespace and convert to string
+            df_normalized[col] = df_normalized[col].astype(str).str.strip()
+            # Replace 'nan' string with actual None
+            df_normalized[col] = df_normalized[col].replace(['nan', 'None', ''], None)
+    
+    # Final cleanup: Replace all NaN values with None for JSON serialization
+    # This uses pandas fillna which is vectorized and faster
+    df_normalized = df_normalized.where(pd.notna(df_normalized), None)
+    
+    # Convert to list of dictionaries using pandas built-in method
     devices = df_normalized.to_dict('records')
     
-    # Filter out devices without coordinates (if needed for map view)
-    devices_with_coords = [d for d in devices if d.get('lat') and d.get('long')]
+    # Use pandas to count devices with coordinates (vectorized)
+    has_coords = df_normalized[['lat', 'long']].notna().all(axis=1)
+    devices_with_coords = has_coords.sum()
     
-    logger.info(f"Normalized {len(devices)} devices, {len(devices_with_coords)} with coordinates")
+    logger.info(f"Normalized {len(devices)} devices, {devices_with_coords} with valid coordinates")
     
     return devices
 
@@ -219,7 +282,7 @@ async def get_all_survey_data():
 @app.get("/api/survey-data/stats")
 async def get_survey_stats():
     """
-    Get statistical summary of survey data
+    Get statistical summary of survey data using pandas vectorized operations
     
     Returns:
         Statistics about devices, zones, types, and status
@@ -227,34 +290,42 @@ async def get_survey_stats():
     try:
         devices = get_survey_data()
         
-        # Calculate statistics
-        total_devices = len(devices)
-        devices_with_coords = sum(1 for d in devices if d.get('lat') and d.get('long'))
+        # Convert to DataFrame for faster pandas operations
+        df = pd.DataFrame(devices)
         
-        # Group by zone
-        zones = {}
-        for device in devices:
-            zone = device.get('zone', 'Unknown')
-            zones[zone] = zones.get(zone, 0) + 1
+        # Total devices
+        total_devices = len(df)
         
-        # Group by device type
-        device_types = {}
-        for device in devices:
-            device_type = device.get('deviceType', 'Unknown')
-            device_types[device_type] = device_types.get(device_type, 0) + 1
+        # Count devices with valid coordinates using pandas vectorized operations
+        devices_with_coords = df[['lat', 'long']].notna().all(axis=1).sum()
         
-        # Group by status
-        statuses = {}
-        for device in devices:
-            status = device.get('status', 'Unknown')
-            statuses[status] = statuses.get(status, 0) + 1
+        # Use pandas value_counts for efficient grouping (vectorized)
+        zones = df['zone'].value_counts().fillna(0).to_dict() if 'zone' in df.columns else {}
+        device_types = df['deviceType'].value_counts().fillna(0).to_dict() if 'deviceType' in df.columns else {}
+        statuses = df['status'].value_counts().fillna(0).to_dict() if 'status' in df.columns else {}
+        
+        # Calculate additional stats using pandas aggregation
+        numeric_stats = {}
+        if 'housesConnected' in df.columns:
+            numeric_stats['houses_connected'] = {
+                'total': int(df['housesConnected'].sum(skipna=True)),
+                'average': float(df['housesConnected'].mean(skipna=True)),
+                'max': float(df['housesConnected'].max(skipna=True))
+            }
+        
+        if 'dailyUsage' in df.columns:
+            numeric_stats['daily_usage_hours'] = {
+                'average': float(df['dailyUsage'].mean(skipna=True)),
+                'total': float(df['dailyUsage'].sum(skipna=True))
+            }
         
         return {
-            "total_devices": total_devices,
-            "devices_with_coordinates": devices_with_coords,
-            "by_zone": zones,
-            "by_type": device_types,
-            "by_status": statuses,
+            "total_devices": int(total_devices),
+            "devices_with_coordinates": int(devices_with_coords),
+            "by_zone": {k: int(v) for k, v in zones.items()},
+            "by_type": {k: int(v) for k, v in device_types.items()},
+            "by_status": {k: int(v) for k, v in statuses.items()},
+            "numeric_stats": numeric_stats,
             "cache_info": {
                 "is_valid": is_cache_valid(),
                 "last_fetch": cache["timestamp"].isoformat() if cache["timestamp"] else None,
