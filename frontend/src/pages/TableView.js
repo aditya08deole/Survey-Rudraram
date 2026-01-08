@@ -46,38 +46,63 @@ function TableView() {
     showDevicePanel,
     hideDevicePanel,
     isLoading,
-    hasData
+    hasData,
+    devices
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'surveyCode', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [showFilters, setShowFilters] = useState(false);
+
+  // Dynamically get all column keys from actual data
+  const allColumns = useMemo(() => {
+    if (!devices || devices.length === 0) return [];
+    
+    // Get all unique keys from all devices
+    const columnSet = new Set();
+    devices.forEach(device => {
+      Object.keys(device).forEach(key => columnSet.add(key));
+    });
+    
+    return Array.from(columnSet);
+  }, [devices]);
+
+  // Format column header (camelCase to Title Case)
+  const formatColumnHeader = (key) => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .trim();
+  };
 
   // Get filtered devices
   const filteredDevices = useMemo(() => {
     let result = getFilteredDevices();
 
-    // Apply local search if different from context
-    if (searchQuery && searchQuery !== filters.search) {
+    // Apply local search
+    if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(d => 
-        d.surveyCode.toLowerCase().includes(query) ||
-        (d.streetName && d.streetName.toLowerCase().includes(query))
+        Object.values(d).some(val => 
+          val && val.toString().toLowerCase().includes(query)
+        )
       );
     }
 
     // Apply sorting
-    result.sort((a, b) => {
-      const aVal = a[sortConfig.key] || '';
-      const bVal = b[sortConfig.key] || '';
-      
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
+    if (sortConfig.key) {
+      result.sort((a, b) => {
+        const aVal = a[sortConfig.key] || '';
+        const bVal = b[sortConfig.key] || '';
+        
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
 
     return result;
-  }, [getFilteredDevices, searchQuery, filters.search, sortConfig]);
+  }, [getFilteredDevices, searchQuery, sortConfig]);
 
   // Handle search
   const handleSearch = (e) => {
@@ -254,80 +279,36 @@ function TableView() {
         <table className="data-table">
           <thead>
             <tr>
-              <th onClick={() => handleSort('surveyCode')} className="sortable">
-                Survey Code {getSortIcon('surveyCode')}
-              </th>
-              <th onClick={() => handleSort('zone')} className="sortable">
-                Zone {getSortIcon('zone')}
-              </th>
-              <th onClick={() => handleSort('streetName')} className="sortable">
-                Street / Landmark {getSortIcon('streetName')}
-              </th>
-              <th onClick={() => handleSort('deviceType')} className="sortable">
-                Device Type {getSortIcon('deviceType')}
-              </th>
-              <th onClick={() => handleSort('status')} className="sortable">
-                Status {getSortIcon('status')}
-              </th>
-              <th onClick={() => handleSort('housesConnected')} className="sortable">
-                Houses {getSortIcon('housesConnected')}
-              </th>
-              <th onClick={() => handleSort('pipeSize')} className="sortable">
-                Pipe Size {getSortIcon('pipeSize')}
-              </th>
-              <th>Motor HP</th>
-              <th>Mapped</th>
+              {allColumns.map(col => (
+                <th 
+                  key={col}
+                  onClick={() => handleSort(col)} 
+                  className="sortable"
+                >
+                  {formatColumnHeader(col)} {getSortIcon(col)}
+                </th>
+              ))}
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredDevices.length === 0 ? (
               <tr>
-                <td colSpan="10" className="empty-row">
+                <td colSpan={allColumns.length + 1} className="empty-row">
                   <p>No devices match your search criteria</p>
                 </td>
               </tr>
             ) : (
-              filteredDevices.map(device => (
+              filteredDevices.map((device, idx) => (
                 <tr 
-                  key={device.surveyCode}
+                  key={device.surveyCode || idx}
                   className={selectedDevice?.surveyCode === device.surveyCode ? 'selected' : ''}
                 >
-                  <td className="cell-id">{device.surveyCode}</td>
-                  <td>
-                    <span 
-                      className="zone-tag"
-                      style={{ 
-                        backgroundColor: getZoneColor(device.zone) + '20',
-                        color: getZoneColor(device.zone)
-                      }}
-                    >
-                      {device.zone}
-                    </span>
-                  </td>
-                  <td className="cell-text">{device.streetName || '-'}</td>
-                  <td>
-                    <span className="device-type-tag">
-                      {device.deviceType === 'Borewell' ? '⚫' : device.deviceType === 'Sump' ? '⬛' : '🔺'}
-                      {' '}{device.deviceType}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`status-tag ${getStatusBadgeClass(device.status)}`}>
-                      {getStatusIcon(device.status)}
-                      {device.status}
-                    </span>
-                  </td>
-                  <td className="cell-number">{device.housesConnected || '-'}</td>
-                  <td className="cell-number">{device.pipeSize ? `${device.pipeSize}"` : '-'}</td>
-                  <td className="cell-text">{device.motorHP || '-'}</td>
-                  <td className="cell-center">
-                    {hasValidCoordinates(device) ? (
-                      <MapPin size={16} className="mapped-icon" />
-                    ) : (
-                      <span className="unmapped-text">No</span>
-                    )}
-                  </td>
+                  {allColumns.map(col => (
+                    <td key={col} className="cell-text">
+                      {device[col] !== null && device[col] !== undefined ? device[col].toString() : '-'}
+                    </td>
+                  ))}
                   <td>
                     <button 
                       className="view-btn"
@@ -348,17 +329,26 @@ function TableView() {
       <div className="table-footer">
         <div className="summary-stats">
           <span>
-            <strong>{filteredDevices.filter(d => d.status === 'Working').length}</strong> Working
+            <strong>{filteredDevices.length}</strong> Total Records
           </span>
-          <span>
-            <strong>{filteredDevices.filter(d => d.status === 'Not Work').length}</strong> Not Working
-          </span>
-          <span>
-            <strong>{filteredDevices.filter(d => d.status === 'Failed').length}</strong> Failed
-          </span>
-          <span>
-            <strong>{filteredDevices.filter(d => hasValidCoordinates(d)).length}</strong> Mapped
-          </span>
+          {filteredDevices.some(d => d.status) && (
+            <>
+              <span>
+                <strong>{filteredDevices.filter(d => d.status === 'Working').length}</strong> Working
+              </span>
+              <span>
+                <strong>{filteredDevices.filter(d => d.status === 'Not Work').length}</strong> Not Working
+              </span>
+              <span>
+                <strong>{filteredDevices.filter(d => d.status === 'Failed').length}</strong> Failed
+              </span>
+            </>
+          )}
+          {filteredDevices.some(d => hasValidCoordinates(d)) && (
+            <span>
+              <strong>{filteredDevices.filter(d => hasValidCoordinates(d)).length}</strong> Mapped
+            </span>
+          )}
         </div>
       </div>
 

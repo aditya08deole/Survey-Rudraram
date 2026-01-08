@@ -74,24 +74,23 @@ def validate_excel_data(df: pd.DataFrame) -> None:
     """
     Validate Excel data structure - accepts ANY columns from Excel
     No strict requirements - uses whatever columns are present
+    Allows empty sheets (returns empty data)
     
     Args:
         df: DataFrame to validate
         
     Raises:
-        HTTPException: If validation fails
+        HTTPException: Only if critical errors occur
     """
-    # Check for empty DataFrame first
-    if df.empty:
-        raise HTTPException(
-            status_code=500,
-            detail="Excel file contains no data rows"
-        )
+    # Allow empty DataFrames - they'll return empty arrays
+    if df.empty or len(df.columns) == 0:
+        logger.warning(f"Empty sheet detected: {len(df)} rows, {len(df.columns)} columns")
+        logger.info("Data validation passed: Empty sheet (will return empty array)")
+        return
     
-    # Log all available columns - NO validation, just logging
+    # Log all available columns for non-empty sheets
     logger.info(f"Excel columns found: {list(df.columns)}")
     logger.info(f"Data validation passed: {len(df)} rows, {len(df.columns)} columns")
-
 
 def fetch_excel_from_github(sheet_name: str = SHEET_NAME) -> pd.DataFrame:
     """
@@ -185,84 +184,83 @@ def make_json_safe(obj):
 
 def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """
-    Convert DataFrame to normalized JSON format - uses exact Excel column names
-    Maps to frontend-friendly camelCase names
-    Uses pandas vectorized operations for optimal performance
+    Convert DataFrame to normalized JSON format - DYNAMICALLY maps ALL columns
+    Converts Excel column names to camelCase for frontend
+    Handles any sheet structure without data loss
     
     Args:
         df: Raw DataFrame from Excel
         
     Returns:
-        List of device dictionaries with all columns included
+        List of device dictionaries with ALL columns included
     """
     
-    # Exact column mapping from your Excel file
-    column_mapping = {
-        'Survey Code (ID)': 'surveyCode',
-        'Zone': 'zone',
-        'Street Name / Landmark': 'streetName',
-        'Device Type': 'deviceType',
-        'Lat': 'lat',
-        'Long': 'long',
-        'Status': 'status',
-        'Houses Conn.': 'housesConnected',
-        'Daily Usage (Hrs)': 'dailyUsage',
-        'Pipe Size (inch)': 'pipeSize',
-        'Motor HP / Cap': 'motorCapacity',
-        'Notes / Maintenance Issue': 'notes',
-        'Images': 'images'
-    }
+    # Handle empty DataFrames
+    if df.empty or len(df.columns) == 0:
+        logger.warning("Empty DataFrame received - returning empty list")
+        return []
     
     # Log actual columns found
     logger.info(f"Excel columns: {list(df.columns)}")
+    logger.info(f"Processing {len(df)} rows with {len(df.columns)} columns")
     
-    # Only map columns that exist in the DataFrame
-    existing_mapping = {k: v for k, v in column_mapping.items() if k in df.columns}
-    logger.info(f"Mapping {len(existing_mapping)} columns")
+    # Create camelCase mapping for ALL columns dynamically
+    def to_camel_case(col_name: str) -> str:
+        """Convert any column name to camelCase"""
+        # Remove special characters and split on spaces/slashes/parentheses
+        parts = col_name.replace('(', ' ').replace(')', ' ').replace('/', ' ').split()
+        if not parts:
+            return col_name.lower().replace(' ', '_')
+        # First word lowercase, rest capitalized
+        return parts[0].lower() + ''.join(word.capitalize() for word in parts[1:])
     
-    # Create a copy and rename columns
-    df_normalized = df.rename(columns=existing_mapping).copy()
+    # Create dynamic mapping for ALL columns
+    column_mapping = {col: to_camel_case(col) for col in df.columns}
+    logger.info(f"Dynamic column mapping created for {len(column_mapping)} columns")
     
-    # Identify numeric and string columns (after mapping)
-    numeric_columns = ['lat', 'long', 'housesConnected', 'dailyUsage', 'pipeSize', 'motorCapacity']
-    string_columns = ['surveyCode', 'zone', 'streetName', 'deviceType', 'status', 'notes', 'images']
+    # Rename ALL columns to camelCase
+    df_normalized = df.rename(columns=column_mapping).copy()
     
-    # STEP 1: Convert ALL numeric-looking columns (not just predefined ones)
+    # STEP 1: Intelligently convert numeric columns
     for col in df_normalized.columns:
-        # Try to convert to numeric
+        # Try to convert to numeric, keep original if fails
         try:
-            df_normalized[col] = pd.to_numeric(df_normalized[col], errors='coerce')
+            converted = pd.to_numeric(df_normalized[col], errors='coerce')
+            # Only use numeric version if at least some values converted successfully
+            if converted.notna().sum() > 0:
+                df_normalized[col] = converted
         except:
             pass
     
     # STEP 2: Replace ALL Inf/-Inf values across entire DataFrame
     df_normalized = df_normalized.replace([np.inf, -np.inf], np.nan)
     
-    # STEP 3: Replace ALL NaN values with None
+    # STEP 3: Replace ALL NaN values with None for JSON compatibility
     df_normalized = df_normalized.where(pd.notna(df_normalized), None)
     
-    # STEP 4: Clean string columns that we know should be strings
-    for col in string_columns:
-        if col in df_normalized.columns:
-            # Convert to string and strip whitespace
+    # STEP 4: Clean string columns (remove 'nan' strings, empty strings)
+    for col in df_normalized.columns:
+        if df_normalized[col].dtype == 'object':
+            # Convert to string, strip whitespace
             df_normalized[col] = df_normalized[col].astype(str).str.strip()
-            # Replace 'nan', 'None', empty strings with None
-            df_normalized[col] = df_normalized[col].replace(['nan', 'None', 'NaN', ''], None)
+            # Replace variations of null/empty with None
+            df_normalized[col] = df_normalized[col].replace(['nan', 'None', 'NaN', 'null', ''], None)
     
-    # STEP 5: Convert to list of dictionaries
+    # STEP 5: Convert to list of dictionaries (preserves ALL columns)
     devices = df_normalized.to_dict('records')
     
-    # STEP 6: Final pass - ensure all values are JSON-safe
+    # STEP 6: Final JSON safety pass
     devices = [make_json_safe(device) for device in devices]
-
     
-    # Count devices with coordinates (using mapped column names)
+    # Log summary
     if 'lat' in df_normalized.columns and 'long' in df_normalized.columns:
         has_coords = df_normalized[['lat', 'long']].notna().all(axis=1)
         devices_with_coords = has_coords.sum()
         logger.info(f"Normalized {len(devices)} devices, {devices_with_coords} with valid coordinates")
     else:
         logger.info(f"Normalized {len(devices)} devices (no coordinate columns found)")
+    
+    logger.info(f"Final output: {len(devices)} records with {len(devices[0].keys()) if devices else 0} fields each")
     
     return devices
 
