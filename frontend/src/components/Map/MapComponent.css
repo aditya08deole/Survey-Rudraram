@@ -1,10 +1,25 @@
 /**
- * Map Component Styles - Google Maps
+ * Map Component Styles - Leaflet OpenStreetMap
  */
 
-.google-map-container {
+/* Map wrapper */
+.map-wrapper {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+
+/* Leaflet map container */
+.leaflet-map-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Custom marker icon - remove default leaflet styles */
+.custom-marker-icon {
+  background: none !important;
+  border: none !important;
 }
 
 /* Loading and Error States */
@@ -33,7 +48,17 @@
   to { transform: rotate(360deg); }
 }
 
-/* Google Maps InfoWindow Styles */
+/* Leaflet Popup Styles */
+.leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  min-width: 200px;
+}
+
 .info-window-content {
   padding: 0;
   min-width: 180px;
@@ -46,7 +71,6 @@
   padding: 0.75rem 1rem;
   background: var(--gray-50);
   border-bottom: 1px solid var(--gray-200);
-  margin: -0.5rem -0.5rem 0 -0.5rem;
 }
 
 .info-window-id {
@@ -85,7 +109,6 @@
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--gray-200);
   background: var(--gray-50);
-  margin: 0 -0.5rem -0.5rem -0.5rem;
 }
 
 .info-window-btn {

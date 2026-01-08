@@ -84,8 +84,21 @@ export const MAP_CONFIG = {
   // Min/Max zoom
   minZoom: 13,
   maxZoom: 20,
-  // Google Maps API Key (loaded from environment variable - never commit the actual key!)
-  googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || ''
+  // OpenStreetMap tile providers
+  tileProviders: {
+    standard: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    },
+    satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attribution: '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    },
+    terrain: {
+      url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+      attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+    }
+  }
 };
 
 // Excel column display order (for device detail panel)

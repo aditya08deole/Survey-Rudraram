@@ -1,14 +1,25 @@
 /**
  * Map Component
  * 
- * Google Maps with custom markers for water infrastructure devices.
- * Displays Rudraram Village with satellite imagery.
+ * Leaflet map with OpenStreetMap and satellite imagery.
+ * Displays Rudraram Village with custom markers for water infrastructure devices.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import React, { useState, useEffect, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { MAP_CONFIG, getStatusColor } from '../../utils/constants';
 import './MapComponent.css';
+
+// Fix Leaflet default marker icon issue
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 
 /**
  * Create custom marker icon based on device type and status
@@ -46,14 +57,15 @@ const createMarkerIcon = (device) => {
     </svg>
   `;
   
-  const svgUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
-  
-  return {
-    url: svgUrl,
-    scaledSize: new window.google.maps.Size(size, size),
-    anchor: new window.google.maps.Point(size/2, size/2)
-  };
+  return L.divIcon({
+    html: svgContent,
+    className: 'custom-marker-icon',
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+    popupAnchor: [0, -size/2]
+  });
 };
+
 
 /**
  * Main Map Component
@@ -62,124 +74,123 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
   const [selectedMarker, setSelectedMarker] = useState(null);
   const [mapInstance, setMapInstance] = useState(null);
 
-  // Load Google Maps script
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: MAP_CONFIG.googleMapsApiKey,
-    libraries: ['places']
-  });
-
-  // Map options
-  const mapOptions = {
-    mapTypeId: 'hybrid', // Satellite view with labels
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-      style: window.google?.maps?.MapTypeControlStyle?.HORIZONTAL_BAR,
-      position: window.google?.maps?.ControlPosition?.TOP_RIGHT,
-    },
-    streetViewControl: true,
-    fullscreenControl: true,
-    zoomControl: true,
-    minZoom: MAP_CONFIG.minZoom,
-    maxZoom: MAP_CONFIG.maxZoom,
-  };
-
-  // Handle map load
-  const onMapLoad = useCallback((map) => {
-    setMapInstance(map);
-  }, []);
-
-  // Handle marker click
-  const handleMarkerClick = useCallback((device) => {
-    setSelectedMarker(device);
-    if (onMarkerClick) {
-      onMarkerClick(device);
-    }
-  }, [onMarkerClick]);
+  const center = useMemo(() => MAP_CONFIG.center, []);
+  const zoom = useMemo(() => MAP_CONFIG.defaultZoom, []);
 
   // Center map on selected device
   useEffect(() => {
     if (mapInstance && selectedDevice && selectedDevice.lat && selectedDevice.long) {
-      mapInstance.panTo({ lat: selectedDevice.lat, lng: selectedDevice.long });
-      mapInstance.setZoom(17);
+      mapInstance.flyTo([selectedDevice.lat, selectedDevice.long], 17);
       setSelectedMarker(selectedDevice);
     }
   }, [selectedDevice, mapInstance]);
 
-  if (loadError) {
-    return (
-      <div className="map-error">
-        <p>Error loading Google Maps</p>
-        <p style={{ fontSize: '0.875rem', color: '#666' }}>
-          Please check your internet connection and try again
-        </p>
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="map-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading Google Maps...</p>
-      </div>
-    );
-  }
+  const { BaseLayer } = LayersControl;
 
   return (
-    <GoogleMap
-      mapContainerClassName="google-map-container"
-      center={{ lat: MAP_CONFIG.center[0], lng: MAP_CONFIG.center[1] }}
-      zoom={MAP_CONFIG.defaultZoom}
-      options={mapOptions}
-      onLoad={onMapLoad}
-    >
-      {devices.map((device) => (
-        <Marker
-          key={device.surveyCode}
-          position={{ lat: device.lat, lng: device.long }}
-          icon={createMarkerIcon(device)}
-          onClick={() => handleMarkerClick(device)}
-          title={`${device.surveyCode} - ${device.deviceType}`}
-        />
-      ))}
+    <div className="map-wrapper">
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        className="leaflet-map-container"
+        whenCreated={setMapInstance}
+        zoomControl={true}
+        scrollWheelZoom={true}
+      >
+        <LayersControl position="topright">
+          {/* OpenStreetMap Standard Layer */}
+          <BaseLayer checked name="OpenStreetMap">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              maxZoom={19}
+            />
+          </BaseLayer>
 
-      {selectedMarker && (
-        <InfoWindow
-          position={{ lat: selectedMarker.lat, lng: selectedMarker.long }}
-          onCloseClick={() => setSelectedMarker(null)}
-        >
-          <div className="info-window-content">
-            <div className="info-window-header">
-              <span className="info-window-id">{selectedMarker.surveyCode}</span>
-              <span 
-                className="info-window-status"
-                style={{ 
-                  backgroundColor: getStatusColor(selectedMarker.status),
-                  color: 'white'
-                }}
-              >
-                {selectedMarker.status}
-              </span>
-            </div>
-            <div className="info-window-body">
-              <p><strong>Type:</strong> {selectedMarker.deviceType}</p>
-              <p><strong>Zone:</strong> {selectedMarker.zone}</p>
-              {selectedMarker.streetName && (
-                <p><strong>Location:</strong> {selectedMarker.streetName}</p>
-              )}
-            </div>
-            <div className="info-window-footer">
-              <button 
-                className="info-window-btn"
-                onClick={() => onMarkerClick(selectedMarker)}
-              >
-                View Details
-              </button>
-            </div>
-          </div>
-        </InfoWindow>
-      )}
-    </GoogleMap>
+          {/* Satellite Imagery Layer - Esri World Imagery */}
+          <BaseLayer name="Satellite">
+            <TileLayer
+              attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+          </BaseLayer>
+
+          {/* Hybrid Layer - Satellite with labels */}
+          <BaseLayer name="Hybrid (Satellite + Labels)">
+            <TileLayer
+              attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              opacity={0.3}
+              maxZoom={19}
+            />
+          </BaseLayer>
+
+          {/* Terrain Layer */}
+          <BaseLayer name="Terrain">
+            <TileLayer
+              attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+              url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+              maxZoom={17}
+            />
+          </BaseLayer>
+        </LayersControl>
+
+        {/* Device Markers */}
+        {devices.map((device) => (
+          <Marker
+            key={device.surveyCode}
+            position={[device.lat, device.long]}
+            icon={createMarkerIcon(device)}
+            eventHandlers={{
+              click: () => {
+                setSelectedMarker(device);
+                if (onMarkerClick) {
+                  onMarkerClick(device);
+                }
+              }
+            }}
+          >
+            <Popup>
+              <div className="info-window-content">
+                <div className="info-window-header">
+                  <span className="info-window-id">{device.surveyCode}</span>
+                  <span 
+                    className="info-window-status"
+                    style={{ 
+                      backgroundColor: getStatusColor(device.status),
+                      color: 'white'
+                    }}
+                  >
+                    {device.status}
+                  </span>
+                </div>
+                <div className="info-window-body">
+                  <p><strong>Type:</strong> {device.deviceType}</p>
+                  <p><strong>Zone:</strong> {device.zone}</p>
+                  {device.streetName && (
+                    <p><strong>Location:</strong> {device.streetName}</p>
+                  )}
+                </div>
+                <div className="info-window-footer">
+                  <button 
+                    className="info-window-btn"
+                    onClick={() => onMarkerClick(device)}
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
   );
 }
 

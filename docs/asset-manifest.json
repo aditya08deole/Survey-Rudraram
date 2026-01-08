@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/Survey-Rudraram/static/css/main.7a81f731.css",
-    "main.js": "/Survey-Rudraram/static/js/main.4e9d3171.js",
+    "main.css": "/Survey-Rudraram/static/css/main.b8e43261.css",
+    "main.js": "/Survey-Rudraram/static/js/main.cd563f0c.js",
     "index.html": "/Survey-Rudraram/index.html",
-    "main.7a81f731.css.map": "/Survey-Rudraram/static/css/main.7a81f731.css.map",
-    "main.4e9d3171.js.map": "/Survey-Rudraram/static/js/main.4e9d3171.js.map"
+    "main.b8e43261.css.map": "/Survey-Rudraram/static/css/main.b8e43261.css.map",
+    "main.cd563f0c.js.map": "/Survey-Rudraram/static/js/main.cd563f0c.js.map"
   },
   "entrypoints": [
-    "static/css/main.7a81f731.css",
-    "static/js/main.4e9d3171.js"
+    "static/css/main.b8e43261.css",
+    "static/js/main.cd563f0c.js"
   ]
 }
