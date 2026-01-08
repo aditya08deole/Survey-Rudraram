@@ -46,20 +46,25 @@ GITHUB_RAW_EXCEL_URL = "https://raw.githubusercontent.com/aditya08deole/Survey-R
 CACHE_DURATION_SECONDS = 60  # 60 seconds cache
 SHEET_NAME = "All"
 
-# In-memory cache
+# In-memory cache - stores data per sheet
 cache: Dict[str, Any] = {
-    "data": None,
-    "timestamp": None,
+    "sheets": {},  # Dict of sheet_name -> {data, timestamp}
+    "available_sheets": None,  # List of available sheet names
+    "sheets_timestamp": None,  # When sheet list was fetched
     "fetch_count": 0
 }
 
 
-def is_cache_valid() -> bool:
-    """Check if cached data is still valid"""
-    if cache["data"] is None or cache["timestamp"] is None:
+def is_cache_valid(sheet_name: str = SHEET_NAME) -> bool:
+    """Check if cached data is still valid for a specific sheet"""
+    if sheet_name not in cache["sheets"]:
         return False
     
-    elapsed = datetime.now() - cache["timestamp"]
+    sheet_cache = cache["sheets"][sheet_name]
+    if sheet_cache["data"] is None or sheet_cache["timestamp"] is None:
+        return False
+    
+    elapsed = datetime.now() - sheet_cache["timestamp"]
     return elapsed < timedelta(seconds=CACHE_DURATION_SECONDS)
 
 
@@ -97,16 +102,19 @@ def validate_excel_data(df: pd.DataFrame) -> None:
     logger.info(f"Data validation: {total_rows} rows, {rows_with_coords} with coordinates, {missing_survey_codes} missing codes")
 
 
-def fetch_excel_from_github() -> pd.DataFrame:
+def fetch_excel_from_github(sheet_name: str = SHEET_NAME) -> pd.DataFrame:
     """
-    Fetch Excel file from GitHub raw URL and parse with pandas
+    Fetch Excel file from GitHub raw URL and parse specific sheet with pandas
     Includes data validation for quality assurance
     
+    Args:
+        sheet_name: Name of the Excel sheet to load (default: "All")
+    
     Returns:
-        DataFrame with validated survey data
+        DataFrame with validated survey data from specified sheet
     
     Raises:
-        HTTPException: If fetch, parse, or validation fails
+        HTTPException: If fetch, parse, validation fails, or sheet not found
     """
     try:
         logger.info(f"Fetching Excel from GitHub: {GITHUB_RAW_EXCEL_URL}")
@@ -117,17 +125,32 @@ def fetch_excel_from_github() -> pd.DataFrame:
         
         # Parse Excel using pandas with automatic dtype inference
         excel_data = BytesIO(response.content)
+        
+        # Get all sheet names and cache them
+        excel_file = pd.ExcelFile(excel_data, engine='openpyxl')
+        available_sheets = excel_file.sheet_names
+        cache["available_sheets"] = available_sheets
+        cache["sheets_timestamp"] = datetime.now()
+        logger.info(f"Available sheets: {available_sheets}")
+        
+        # Validate sheet exists
+        if sheet_name not in available_sheets:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Sheet '{sheet_name}' not found. Available sheets: {available_sheets}"
+            )
+        
+        # Read the specific sheet
         df = pd.read_excel(
-            excel_data, 
-            sheet_name=SHEET_NAME, 
-            engine='openpyxl',
+            excel_file, 
+            sheet_name=sheet_name,
             na_values=['', 'NA', 'N/A', 'null', 'NULL']  # Define what pandas should treat as NaN
         )
         
         # Validate data structure and content
         validate_excel_data(df)
         
-        logger.info(f"Successfully fetched and validated Excel. Rows: {len(df)}, Columns: {len(df.columns)}")
+        logger.info(f"Successfully fetched sheet '{sheet_name}'. Rows: {len(df)}, Columns: {len(df.columns)}")
         cache["fetch_count"] += 1
         
         return df
@@ -215,26 +238,34 @@ def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     return devices
 
 
-def get_survey_data() -> List[Dict[str, Any]]:
+def get_survey_data(sheet_name: str = SHEET_NAME) -> List[Dict[str, Any]]:
     """
-    Get survey data with caching
+    Get survey data with per-sheet caching
+    
+    Args:
+        sheet_name: Name of the Excel sheet to load (default: "All")
     
     Returns:
-        List of device dictionaries
+        List of device dictionaries from specified sheet
     """
+    # Initialize sheet cache if not exists
+    if sheet_name not in cache["sheets"]:
+        cache["sheets"][sheet_name] = {"data": None, "timestamp": None}
+    
     # Check cache first
-    if is_cache_valid():
-        logger.info(f"Serving from cache (age: {(datetime.now() - cache['timestamp']).seconds}s)")
-        return cache["data"]
+    if is_cache_valid(sheet_name):
+        cache_age = (datetime.now() - cache["sheets"][sheet_name]["timestamp"]).seconds
+        logger.info(f"Serving sheet '{sheet_name}' from cache (age: {cache_age}s)")
+        return cache["sheets"][sheet_name]["data"]
     
     # Cache miss or expired - fetch fresh data
-    logger.info("Cache miss or expired - fetching fresh data")
-    df = fetch_excel_from_github()
+    logger.info(f"Cache miss for sheet '{sheet_name}' - fetching fresh data")
+    df = fetch_excel_from_github(sheet_name)
     devices = normalize_survey_data(df)
     
-    # Update cache
-    cache["data"] = devices
-    cache["timestamp"] = datetime.now()
+    # Update cache for this sheet
+    cache["sheets"][sheet_name]["data"] = devices
+    cache["sheets"][sheet_name]["timestamp"] = datetime.now()
     
     return devices
 
@@ -244,32 +275,39 @@ def get_survey_data() -> List[Dict[str, Any]]:
 @app.get("/")
 async def root():
     """Health check endpoint"""
+    cached_sheets = list(cache["sheets"].keys())
     return {
         "service": "Rudraram Survey API",
         "status": "operational",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "framework": "FastAPI",
-        "cache_status": "valid" if is_cache_valid() else "expired",
+        "default_sheet": SHEET_NAME,
+        "cached_sheets": cached_sheets,
+        "available_sheets": cache.get("available_sheets"),
         "total_fetches": cache["fetch_count"]
     }
 
 
 @app.get("/api/survey-data")
-async def get_all_survey_data():
+async def get_all_survey_data(sheet: str = SHEET_NAME):
     """
-    Get all survey data from Excel
+    Get all survey data from specified Excel sheet
+    
+    Args:
+        sheet: Name of the Excel sheet to load (default: "All")
     
     Returns:
-        JSON array of all devices
+        JSON array of all devices from specified sheet
     """
     try:
-        devices = get_survey_data()
+        devices = get_survey_data(sheet)
         return JSONResponse(
             content=devices,
             headers={
                 "Cache-Control": f"public, max-age={CACHE_DURATION_SECONDS}",
                 "X-Total-Devices": str(len(devices)),
-                "X-Cache-Status": "hit" if is_cache_valid() else "miss"
+                "X-Sheet-Name": sheet,
+                "X-Cache-Status": "hit" if is_cache_valid(sheet) else "miss"
             }
         )
     except HTTPException:
@@ -279,16 +317,53 @@ async def get_all_survey_data():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/sheets")
+async def get_available_sheets():
+    """
+    Get list of all available sheets in the Excel file
+    
+    Returns:
+        JSON object with available sheet names and default sheet
+    """
+    try:
+        # Check if we have cached sheet list (valid for 5 minutes)
+        if cache["available_sheets"] is not None and cache["sheets_timestamp"] is not None:
+            age = (datetime.now() - cache["sheets_timestamp"]).seconds
+            if age < 300:  # 5 minutes
+                logger.info(f"Serving sheet list from cache (age: {age}s)")
+                return {
+                    "sheets": cache["available_sheets"],
+                    "default_sheet": SHEET_NAME,
+                    "total_sheets": len(cache["available_sheets"])
+                }
+        
+        # Fetch fresh sheet list by loading any sheet (this updates the cache)
+        logger.info("Fetching fresh sheet list")
+        fetch_excel_from_github(SHEET_NAME)
+        
+        return {
+            "sheets": cache["available_sheets"],
+            "default_sheet": SHEET_NAME,
+            "total_sheets": len(cache["available_sheets"]) if cache["available_sheets"] else 0
+        }
+    except Exception as e:
+        logger.error(f"Error fetching sheet list: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/survey-data/stats")
-async def get_survey_stats():
+async def get_survey_stats(sheet: str = SHEET_NAME):
     """
     Get statistical summary of survey data using pandas vectorized operations
     
+    Args:
+        sheet: Name of the Excel sheet to load (default: "All")
+    
     Returns:
-        Statistics about devices, zones, types, and status
+        Statistics about devices, zones, types, and status from specified sheet
     """
     try:
-        devices = get_survey_data()
+        devices = get_survey_data(sheet)
         
         # Convert to DataFrame for faster pandas operations
         df = pd.DataFrame(devices)
@@ -320,6 +395,7 @@ async def get_survey_stats():
             }
         
         return {
+            "sheet_name": sheet,
             "total_devices": int(total_devices),
             "devices_with_coordinates": int(devices_with_coords),
             "by_zone": {k: int(v) for k, v in zones.items()},
@@ -327,8 +403,8 @@ async def get_survey_stats():
             "by_status": {k: int(v) for k, v in statuses.items()},
             "numeric_stats": numeric_stats,
             "cache_info": {
-                "is_valid": is_cache_valid(),
-                "last_fetch": cache["timestamp"].isoformat() if cache["timestamp"] else None,
+                "is_valid": is_cache_valid(sheet),
+                "last_fetch": cache["sheets"][sheet]["timestamp"].isoformat() if sheet in cache["sheets"] and cache["sheets"][sheet]["timestamp"] else None,
                 "total_fetches": cache["fetch_count"]
             }
         }
@@ -338,22 +414,23 @@ async def get_survey_stats():
 
 
 @app.get("/api/survey-data/{survey_code}")
-async def get_device_by_code(survey_code: str):
+async def get_device_by_code(survey_code: str, sheet: str = SHEET_NAME):
     """
-    Get specific device by survey code
+    Get specific device by survey code from specified sheet
     
     Args:
         survey_code: Device survey code (e.g., "RUD001")
+        sheet: Name of the Excel sheet to search in (default: "All")
         
     Returns:
         Device details
     """
     try:
-        devices = get_survey_data()
+        devices = get_survey_data(sheet)
         device = next((d for d in devices if d.get('surveyCode') == survey_code), None)
         
         if not device:
-            raise HTTPException(status_code=404, detail=f"Device {survey_code} not found")
+            raise HTTPException(status_code=404, detail=f"Device {survey_code} not found in sheet '{sheet}'")
         
         return device
     except HTTPException:
@@ -364,26 +441,51 @@ async def get_device_by_code(survey_code: str):
 
 
 @app.post("/api/cache/refresh")
-async def refresh_cache():
+async def refresh_cache(sheet: Optional[str] = None):
     """
     Manually refresh cache (force re-fetch from GitHub)
+    
+    Args:
+        sheet: Specific sheet to refresh (optional). If not provided, refreshes all cached sheets
     
     Returns:
         Success message with new data count
     """
     try:
-        logger.info("Manual cache refresh triggered")
-        cache["data"] = None
-        cache["timestamp"] = None
-        
-        devices = get_survey_data()
-        
-        return {
-            "status": "success",
-            "message": "Cache refreshed successfully",
-            "devices_loaded": len(devices),
-            "timestamp": cache["timestamp"].isoformat()
-        }
+        if sheet:
+            # Refresh specific sheet
+            logger.info(f"Manual cache refresh triggered for sheet '{sheet}'")
+            if sheet in cache["sheets"]:
+                cache["sheets"][sheet]["data"] = None
+                cache["sheets"][sheet]["timestamp"] = None
+            
+            devices = get_survey_data(sheet)
+            
+            return {
+                "status": "success",
+                "message": f"Cache refreshed for sheet '{sheet}'",
+                "sheet": sheet,
+                "devices_loaded": len(devices),
+                "timestamp": cache["sheets"][sheet]["timestamp"].isoformat()
+            }
+        else:
+            # Refresh all sheets
+            logger.info("Manual cache refresh triggered for all sheets")
+            refreshed_sheets = list(cache["sheets"].keys())
+            cache["sheets"] = {}
+            cache["available_sheets"] = None
+            cache["sheets_timestamp"] = None
+            
+            # Reload default sheet
+            devices = get_survey_data(SHEET_NAME)
+            
+            return {
+                "status": "success",
+                "message": "Cache refreshed for all sheets",
+                "refreshed_sheets": refreshed_sheets,
+                "devices_loaded": len(devices),
+                "timestamp": datetime.now().isoformat()
+            }
     except Exception as e:
         logger.error(f"Error refreshing cache: {e}")
         raise HTTPException(status_code=500, detail=str(e))

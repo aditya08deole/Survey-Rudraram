@@ -27,6 +27,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
   height: 64px;
   padding: 0 1.5rem;
   max-width: 1440px;
@@ -36,6 +37,20 @@
 .header-left {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .header-center {
+    display: none;
+  }
 }
 
 /* Logo */

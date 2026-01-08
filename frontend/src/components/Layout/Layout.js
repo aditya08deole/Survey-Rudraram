@@ -14,11 +14,14 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import SheetSelector from '../SheetSelector/SheetSelector';
+import { useApp } from '../../context/AppContext';
 import './Layout.css';
 
 function Layout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const location = useLocation();
+  const { currentSheet, setCurrentSheet } = useApp();
 
   const navItems = [
     { path: '/', icon: Map, label: 'Map View' },
@@ -27,6 +30,10 @@ function Layout({ children }) {
   ];
 
   const isMapPage = location.pathname === '/';
+
+  const handleSheetChange = (sheetName) => {
+    setCurrentSheet(sheetName);
+  };
 
   return (
     <div className={`layout ${isMapPage ? 'layout-fullscreen' : ''}`}>
@@ -41,6 +48,14 @@ function Layout({ children }) {
                 <span className="logo-subtitle">Water Infrastructure Dashboard</span>
               </div>
             </div>
+          </div>
+          
+          {/* Sheet Selector */}
+          <div className="header-center">
+            <SheetSelector 
+              currentSheet={currentSheet} 
+              onSheetChange={handleSheetChange}
+            />
           </div>
 
           {/* Desktop Navigation */}

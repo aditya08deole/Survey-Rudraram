@@ -16,6 +16,10 @@ const initialState = {
   zones: [],
   stats: null,
   
+  // Sheet selection
+  currentSheet: 'All',
+  availableSheets: ['All'],
+  
   // Selected/Active items
   selectedDevice: null,
   selectedZone: null,
@@ -52,7 +56,9 @@ const ActionTypes = {
   SHOW_DEVICE_PANEL: 'SHOW_DEVICE_PANEL',
   HIDE_DEVICE_PANEL: 'HIDE_DEVICE_PANEL',
   SET_DATA_STATUS: 'SET_DATA_STATUS',
-  REFRESH_DATA: 'REFRESH_DATA'
+  REFRESH_DATA: 'REFRESH_DATA',
+  SET_CURRENT_SHEET: 'SET_CURRENT_SHEET',
+  SET_AVAILABLE_SHEETS: 'SET_AVAILABLE_SHEETS'
 };
 
 // Reducer
@@ -120,6 +126,18 @@ function appReducer(state, action) {
         lastUpdated: action.payload.lastUpdated
       };
     
+    case ActionTypes.SET_CURRENT_SHEET:
+      return {
+        ...state,
+        currentSheet: action.payload
+      };
+    
+    case ActionTypes.SET_AVAILABLE_SHEETS:
+      return {
+        ...state,
+        availableSheets: action.payload
+      };
+    
     default:
       return state;
   }
@@ -134,16 +152,16 @@ export function AppProvider({ children }) {
 
   // Load initial data
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(state.currentSheet);
+  }, [state.currentSheet]);
 
   // Function to load all data from API backend
-  const loadData = async () => {
+  const loadData = async (sheetName = 'All') => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
     
     try {
-      // Fetch data from FastAPI backend
-      const result = await fetchSurveyData();
+      // Fetch data from FastAPI backend with sheet parameter
+      const result = await fetchSurveyData(sheetName);
 
       if (!result.success) {
         throw new Error(result.errors.join(', ') || 'Failed to load data from API');
@@ -231,7 +249,15 @@ export function AppProvider({ children }) {
 
   // Actions
   const actions = {
-    refreshData: loadData,
+    refreshData: () => loadData(state.currentSheet),
+    
+    setCurrentSheet: (sheetName) => {
+      dispatch({ type: ActionTypes.SET_CURRENT_SHEET, payload: sheetName });
+    },
+    
+    setAvailableSheets: (sheets) => {
+      dispatch({ type: ActionTypes.SET_AVAILABLE_SHEETS, payload: sheets });
+    },
     
     setSelectedDevice: (device) => {
       dispatch({ type: ActionTypes.SET_SELECTED_DEVICE, payload: device });

@@ -18,12 +18,18 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 /**
- * Fetch all survey devices from API
+ * Fetch all survey devices from API with optional sheet selection
+ * @param {string} sheet - Name of the Excel sheet to load (optional, defaults to "All")
  * @returns {Promise<Array>} Array of device objects
  */
-export const fetchSurveyData = async () => {
+export const fetchSurveyData = async (sheet = 'All') => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/survey-data`, {
+    const url = new URL(`${API_BASE_URL}/api/survey-data`);
+    if (sheet) {
+      url.searchParams.append('sheet', sheet);
+    }
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -38,6 +44,7 @@ export const fetchSurveyData = async () => {
     return {
       success: true,
       devices: data,
+      sheet: sheet,
       stats: calculateStats(data),
       errors: [],
       warnings: []
@@ -47,6 +54,7 @@ export const fetchSurveyData = async () => {
     return {
       success: false,
       devices: [],
+      sheet: sheet,
       stats: null,
       errors: [error.message],
       warnings: []
@@ -169,6 +177,42 @@ const calculateStats = (devices) => {
   return stats;
 };
 
+/**
+ * Fetch list of available Excel sheets
+ * @returns {Promise<Object>} Object with sheets array and default sheet
+ */
+export const fetchAvailableSheets = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/sheets`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      sheets: data.sheets || [],
+      defaultSheet: data.default_sheet || 'All',
+      totalSheets: data.total_sheets || 0
+    };
+  } catch (error) {
+    console.error('Error fetching available sheets:', error);
+    return {
+      success: false,
+      sheets: ['All'],  // Fallback to default
+      defaultSheet: 'All',
+      totalSheets: 1,
+      error: error.message
+    };
+  }
+};
+
 // Export API base URL for debugging
 export { API_BASE_URL };
 
@@ -176,6 +220,7 @@ export { API_BASE_URL };
 const apiService = {
   fetchSurveyData,
   fetchSurveyStats,
+  fetchAvailableSheets,
   fetchDeviceByCode,
   refreshCache,
   checkApiHealth,
