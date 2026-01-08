@@ -19,8 +19,8 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/map" element={<MapView />} />
+            <Route path="/" element={<MapView />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/table" element={<TableView />} />
           </Routes>
         </Layout>

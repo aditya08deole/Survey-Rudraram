@@ -21,12 +21,12 @@ function Layout({ children }) {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/map', icon: Map, label: 'Map View' },
+    { path: '/', icon: Map, label: 'Map View' },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/table', icon: Table, label: 'Table View' }
   ];
 
-  const isMapPage = location.pathname === '/map';
+  const isMapPage = location.pathname === '/';
 
   return (
     <div className={`layout ${isMapPage ? 'layout-fullscreen' : ''}`}>
