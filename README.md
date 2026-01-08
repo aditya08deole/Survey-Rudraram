@@ -1,52 +1,70 @@
 # Rudraram Survey – Village Water Infrastructure Mapping Dashboard
 
-A production-ready dashboard application for visualizing water infrastructure assets of Rudraram Village, Telangana, on an interactive OpenStreetMap.
+A production-ready dashboard application for visualizing water infrastructure assets of Rudraram Village, Telangana, on an interactive OpenStreetMap with satellite imagery.
 
-**Data Source**: Excel file in repository (`backend/data/rudraram_survey.xlsx`) - No database, no file uploads. The Excel file is the single source of truth, loaded at server startup.
+**Data Source**: Excel file in repository (`backend/data/rudraram_survey.xlsx`) - Fetched dynamically from GitHub, cached for 60 seconds. No database needed.
 
-## 🚀 Live Demo
+## 🚀 Live Deployment
 
-**Deployed on Render**: [https://rudraram-survey.onrender.com](https://rudraram-survey.onrender.com)
+- **Frontend (GitHub Pages)**: [https://aditya08deole.github.io/Survey-Rudraram](https://aditya08deole.github.io/Survey-Rudraram)
+- **Backend API (Render)**: Deploy using `render.yaml`
 
 ## 📊 Features
 
-- **Single Source of Truth**: Excel file in repository, loaded at startup
-- Interactive OpenStreetMap with custom markers
-- 60 water infrastructure devices (Borewells, Sumps, OHTs)
+- **Dynamic Data Loading**: Excel fetched from GitHub raw URL with intelligent caching
+- Interactive OpenStreetMap with **4 layer types**: Standard, Satellite, Hybrid, Terrain
+- 60+ water infrastructure devices (Borewells, Sumps, OHTs)
 - Three administrative zones: SC Colony, Village, Waddera
 - Device filtering by zone, type, and status
 - Real-time statistics dashboard
-- Export data to Excel/CSV
 - Professional government-grade UI
+- Mobile-responsive design
 
 ## 🛠️ Technology Stack
 
 ### Frontend
 - React 18
 - React-Leaflet (OpenStreetMap)
-- Axios
+- Esri World Imagery (Satellite tiles - FREE)
+- XLSX (Client-side Excel parsing)
 - Lucide React Icons
 
 ### Backend
-- Node.js
-- Express.js
-- XLSX (Excel parser)
-- In-memory data store
+- **Python 3.11** + FastAPI
+- **Pandas** - Superior Excel processing
+- **Uvicorn** - ASGI server
+- **60-second intelligent cache**
+- **GitHub raw URL fetch**
 
 ## 🏗️ Architecture
 
 ### Data Flow
 ```
-Repository Excel File → Backend Loads at Startup → In-Memory Store → REST APIs → React Frontend
+GitHub Excel File → Python Backend (Pandas) → 60s Cache → REST API → React Frontend
 ```
 
-- **No database**: Data is read from Excel file at server start
-- **No uploads**: Excel file is part of the codebase
-- **Read-only APIs**: Frontend consumes data via REST endpoints
-- **Restart to update**: Changes to Excel file require server restart
+- **No database**: Excel is fetched from GitHub on-demand
+- **Auto-refresh**: Updates within 60 seconds without redeployment
+- **Version controlled**: All data changes tracked in Git
+- **Stateless**: Backend can restart without data loss
 
 ## 📁 Project Structure
 
+```
+Survey-Rudraram/
+├── frontend/               # React application
+│   ├── src/
+│   │   ├── components/    # UI components
+│   │   ├── services/      # Excel reader (from GitHub)
+│   │   └── utils/         # Constants and helpers
+│   └── public/            # Static assets
+├── backend-python/        # FastAPI Python backend
+│   ├── app.py            # Main FastAPI application
+│   ├── requirements.txt  # Python dependencies
+│   └── README.md         # Backend documentation
+├── docs/                  # GitHub Pages build output
+├── render.yaml           # Render deployment config
+└── RENDER_DEPLOY.md      # Deployment guide
 ```
 ├── backend/
 │   ├── data/
