@@ -506,18 +506,41 @@ async def health_check():
     except:
         github_accessible = False
     
+    # Check if any sheet data is loaded
+    any_data_loaded = any(
+        sheet_cache.get("data") is not None 
+        for sheet_cache in cache["sheets"].values()
+    )
+    
+    # Calculate total cached devices across all sheets
+    total_cached_devices = sum(
+        len(sheet_cache.get("data", [])) 
+        for sheet_cache in cache["sheets"].values() 
+        if sheet_cache.get("data")
+    )
+    
+    # Get most recent fetch timestamp
+    all_timestamps = [
+        sheet_cache.get("timestamp") 
+        for sheet_cache in cache["sheets"].values() 
+        if sheet_cache.get("timestamp")
+    ]
+    last_fetch = max(all_timestamps).isoformat() if all_timestamps else None
+    
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "checks": {
-            "cache_valid": is_cache_valid(),
+            "cache_valid_default": is_cache_valid(SHEET_NAME),
             "github_accessible": github_accessible,
-            "data_loaded": cache["data"] is not None
+            "data_loaded": any_data_loaded
         },
         "metrics": {
             "total_fetches": cache["fetch_count"],
-            "cached_devices": len(cache["data"]) if cache["data"] else 0,
-            "last_fetch": cache["timestamp"].isoformat() if cache["timestamp"] else None
+            "cached_sheets": len(cache["sheets"]),
+            "total_cached_devices": total_cached_devices,
+            "available_sheets": cache.get("available_sheets"),
+            "last_fetch": last_fetch
         }
     }
 
