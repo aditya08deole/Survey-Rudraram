@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.encoders import jsonable_encoder
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -17,6 +18,7 @@ from typing import Dict, List, Any, Optional
 import logging
 from io import BytesIO
 import os
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -210,27 +212,47 @@ def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     numeric_columns = ['lat', 'long', 'housesConnected', 'dailyUsage', 'pipeSize', 'motorCapacity']
     string_columns = ['surveyCode', 'zone', 'streetName', 'deviceType', 'status', 'notes', 'images']
     
-    # Convert numeric columns using pandas vectorized operations
-    for col in numeric_columns:
-        if col in df_normalized.columns:
-            # Convert to numeric, coercing errors to NaN
+    # STEP 1: Convert ALL numeric-looking columns (not just predefined ones)
+    for col in df_normalized.columns:
+        # Try to convert to numeric
+        try:
             df_normalized[col] = pd.to_numeric(df_normalized[col], errors='coerce')
-            # Replace Inf/-Inf with NaN
-            df_normalized[col] = df_normalized[col].replace([np.inf, -np.inf], np.nan)
+        except:
+            pass
     
-    # Clean string columns using pandas string methods (vectorized)
-    for col in string_columns:
-        if col in df_normalized.columns:
-            # Strip whitespace and convert to string
-            df_normalized[col] = df_normalized[col].astype(str).str.strip()
-            # Replace 'nan' string with actual None
-            df_normalized[col] = df_normalized[col].replace(['nan', 'None', ''], None)
+    # STEP 2: Replace ALL Inf/-Inf values across entire DataFrame
+    df_normalized = df_normalized.replace([np.inf, -np.inf], np.nan)
     
-    # Final cleanup: Replace all NaN values with None for JSON serialization
+    # STEP 3: Replace ALL NaN values with None
     df_normalized = df_normalized.where(pd.notna(df_normalized), None)
     
-    # Convert to list of dictionaries using pandas built-in method
+    # STEP 4: Clean string columns that we know should be strings
+    for col in string_columns:
+        if col in df_normalized.columns:
+            # Convert to string and strip whitespace
+            df_normalized[col] = df_normalized[col].astype(str).str.strip()
+            # Replace 'nan', 'None', empty strings with None
+            df_normalized[col] = df_normalized[col].replace(['nan', 'None', 'NaN', ''], None)
+    
+    # STEP 5: Convert to list of dictionaries
     devices = df_normalized.to_dict('records')
+    
+    # STEP 6: Final pass - ensure all values are JSON-safe
+    def make_json_safe(obj):
+        """Recursively ensure all values are JSON-safe"""
+        if isinstance(obj, dict):
+            return {k: make_json_safe(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [make_json_safe(item) for item in obj]
+        elif isinstance(obj, float):
+            if np.isnan(obj) or np.isinf(obj):
+                return None
+            return obj
+        elif pd.isna(obj):
+            return None
+        return obj
+    
+    devices = [make_json_safe(device) for device in devices]
     
     # Count devices with coordinates (using mapped column names)
     if 'lat' in df_normalized.columns and 'long' in df_normalized.columns:
@@ -306,11 +328,18 @@ async def get_all_survey_data(sheet: str = SHEET_NAME):
     """
     try:
         devices = get_survey_data(sheet)
+        
+        # Apply final JSON sanitization to ensure no Inf/NaN values
+        safe_devices = make_json_safe(devices)
+        
+        # Use jsonable_encoder for extra safety
+        json_safe_content = jsonable_encoder(safe_devices)
+        
         return JSONResponse(
-            content=devices,
+            content=json_safe_content,
             headers={
                 "Cache-Control": f"public, max-age={CACHE_DURATION_SECONDS}",
-                "X-Total-Devices": str(len(devices)),
+                "X-Total-Devices": str(len(safe_devices)),
                 "X-Sheet-Name": sheet,
                 "X-Cache-Status": "hit" if is_cache_valid(sheet) else "miss"
             }
