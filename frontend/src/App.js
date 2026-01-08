@@ -2,11 +2,11 @@
  * Rudraram Survey - Main App Component
  * 
  * Root component that sets up routing and global state.
- * Data is loaded directly from Excel file on GitHub (no backend).
+ * Data is loaded from FastAPI backend.
  */
 
 import React from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';

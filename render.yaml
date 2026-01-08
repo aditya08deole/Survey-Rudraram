@@ -20,7 +20,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: NODE_VERSION
-        value: 18.x
+        value: 20.x
       - key: GITHUB_RAW_EXCEL_URL
         value: https://raw.githubusercontent.com/aditya08deole/Survey-Rudraram/main/backend/data/rudraram_survey.xlsx
     healthCheckPath: /health

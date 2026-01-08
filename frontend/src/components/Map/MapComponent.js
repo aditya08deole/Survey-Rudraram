@@ -96,17 +96,35 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
         scrollWheelZoom={true}
       >
         <LayersControl position="topright">
-          {/* OpenStreetMap Standard Layer */}
-          <BaseLayer checked name="OpenStreetMap">
+          {/* Carto Light - Clean and readable */}
+          <BaseLayer checked name="Street Map (Clear)">
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              maxZoom={19}
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              maxZoom={20}
+            />
+          </BaseLayer>
+
+          {/* OpenStreetMap HOT - More detailed */}
+          <BaseLayer name="Detailed Street Map">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/">HOT</a>'
+              url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+              maxZoom={20}
+            />
+          </BaseLayer>
+
+          {/* Carto Dark - Good contrast */}
+          <BaseLayer name="Dark Mode">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              maxZoom={20}
             />
           </BaseLayer>
 
           {/* Satellite Imagery Layer - Esri World Imagery */}
-          <BaseLayer name="Satellite">
+          <BaseLayer name="Satellite View">
             <TileLayer
               attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -114,27 +132,17 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
             />
           </BaseLayer>
 
-          {/* Hybrid Layer - Satellite with labels */}
-          <BaseLayer name="Hybrid (Satellite + Labels)">
+          {/* Hybrid Layer - Satellite with street labels */}
+          <BaseLayer name="Satellite + Labels">
             <TileLayer
               attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               maxZoom={19}
             />
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              opacity={0.3}
-              maxZoom={19}
-            />
-          </BaseLayer>
-
-          {/* Terrain Layer */}
-          <BaseLayer name="Terrain">
-            <TileLayer
-              attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
-              url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-              maxZoom={17}
+              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+              maxZoom={20}
             />
           </BaseLayer>
         </LayersControl>
