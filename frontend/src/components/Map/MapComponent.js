@@ -335,29 +335,6 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
               </span>
             </label>
           ))}
-
-          <h4 style={{ marginTop: '1rem' }}>Filter by Device Type</h4>
-          {Object.keys(deviceTypeFilters).map(deviceType => (
-            <label key={deviceType} className="filter-checkbox">
-              <input
-                type="checkbox"
-                checked={deviceTypeFilters[deviceType]}
-                onChange={() => setDeviceTypeFilters(prev => ({ ...prev, [deviceType]: !prev[deviceType] }))}
-                aria-label={`Show ${deviceType} devices`}
-              />
-              <span>{deviceType}</span>
-              <span className="device-count">
-                ({devices.filter(d => {
-                  const dt = d.deviceType || d.type;
-                  const cs = ((d.surveyCode || '') + (d.originalName || '')).toUpperCase();
-                  if (deviceType === 'Borewell') return dt === 'Borewell' || cs.includes('BW') || cs.includes('BORE');
-                  if (deviceType === 'Sump') return dt === 'Sump' || cs.includes('SM') || cs.includes('SUMP');
-                  if (deviceType === 'OHSR' || deviceType === 'OHT') return dt === deviceType || cs.includes('OH');
-                  return dt === deviceType;
-                }).length})
-              </span>
-            </label>
-          ))}
         </div>
       )}
 
