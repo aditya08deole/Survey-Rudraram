@@ -1,11 +1,22 @@
 # Rudraram Survey - Production-Grade Python Requirements
 # Strictly pinned to ensure deterministic, zero-fault builds on Render
 
-fastapi==0.109.0
+# Framework Layer (Upgraded for Pydantic 2.11 support)
+fastapi==0.111.0
 uvicorn[standard]==0.27.0
 python-multipart==0.0.6
-pydantic[email]==2.10.1
+
+# Pydantic (Latest stable for Supabase compatibility)
+pydantic==2.12.5
 pydantic-core==2.27.1
+
+# Database Layer (Exploded for granular control)
+supabase==2.27.1
+postgrest==2.27.1
+realtime==2.27.1
+storage3==2.27.1
+supabase-auth==2.27.1
+supabase-functions==2.27.1
 
 # Excel & Data Processing
 pandas==2.2.0
@@ -13,9 +24,9 @@ openpyxl==3.1.2
 xlrd==2.0.1
 numpy==1.26.4
 
-# HTTP & API
+# HTTP & API Utilities
 requests==2.31.0
-httpx==0.26.0
+httpx==0.28.1
 httpcore==1.0.2
 
 # Security & Authentication
@@ -27,11 +38,7 @@ slowapi==0.1.9
 redis==5.0.1
 celery[redis]==5.3.6
 
-# Database
-supabase==2.27.1
-postgrest==2.27.1
-
-# Utilities
+# Environment & Type Safety
 python-dotenv==1.0.1
 typing-extensions==4.12.2
 anyio==4.2.0
