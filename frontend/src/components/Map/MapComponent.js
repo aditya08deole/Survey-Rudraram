@@ -144,7 +144,7 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
     'Failed': true
   });
   const [selectedDeviceType, setSelectedDeviceType] = useState('All'); // Dropdown for device type
-  const [selectedDevice, setSelectedDevice] = useState(null); // For floating panel
+  const [activeDevice, setActiveDevice] = useState(null); // For floating panel
   const [selectedDeviceIndex, setSelectedDeviceIndex] = useState(-1);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const mapRef = useRef(null);
@@ -415,7 +415,7 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
               eventHandlers={{
                 click: () => {
                   setSelectedDeviceIndex(idx);
-                  setSelectedDevice(device);
+                  setActiveDevice(device);
                   if (onMarkerClick) onMarkerClick(device);
                 }
               }}
@@ -424,11 +424,11 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
         })}
 
         {/* Floating Device Info Panel */}
-        {selectedDevice && (
+        {activeDevice && (
           <DeviceInfoPanel
-            device={selectedDevice}
+            device={activeDevice}
             onClose={() => {
-              setSelectedDevice(null);
+              setActiveDevice(null);
               setSelectedDeviceIndex(-1);
             }}
           />
