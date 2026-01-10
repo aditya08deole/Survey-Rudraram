@@ -11,7 +11,7 @@ from dashboard_app.auth.jwt_handler import (
     verify_password,
     get_password_hash
 )
-from dashboard_app.auth.permissions import get_current_user
+from dashboard_app.auth.dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
