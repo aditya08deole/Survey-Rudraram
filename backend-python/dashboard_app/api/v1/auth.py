@@ -11,27 +11,13 @@ from dashboard_app.auth.jwt_handler import (
     verify_password,
     get_password_hash
 )
-from dashboard_app.auth.dependencies import get_current_user
+from dashboard_app.auth.permissions import get_current_user
+from dashboard_app.schemas.user import User, TokenResponse, LoginRequest, SignupRequest
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-# Request/Response models
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-class SignupRequest(BaseModel):
-    email: EmailStr
-    password: str
-    username: str
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: dict
 
 # Temporary in-memory user store
 # In production, this will be in Supabase database
@@ -40,7 +26,6 @@ users_db = {
         "id": "1",
         "username": "admin",
         "email": "admin@example.com",
-        # Password: "admin123"
         "hashed_password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5aeB6xYJ9T.8K",
         "role": "admin"
     }
