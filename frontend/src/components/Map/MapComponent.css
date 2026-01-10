@@ -910,3 +910,44 @@
     font-size: 11px;
   }
 }
+
+/* 
+   ---------------------------
+   NEW MARKER SHAPES & STYLES
+   ---------------------------
+*/
+
+/* Reset default div icon styling */
+.custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* BOREWELL: Circle */
+.marker-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+/* OHSR: Square */
+.marker-square {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 2px solid white;
+}
+
+/* SUMP: Triangle */
+.marker-triangle {
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 18px solid;
+  /* Color set via inline style */
+  filter: drop-shadow(0 0 1px white) drop-shadow(0 0 1px white);
+  background: transparent !important;
+  box-shadow: none !important;
+}

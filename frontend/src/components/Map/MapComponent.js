@@ -14,7 +14,7 @@ import html2canvas from 'html2canvas';
 import 'leaflet/dist/leaflet.css';
 import { MAP_CONFIG, getStatusColor, STATUS_CONFIG } from '../../utils/constants';
 import { getDeviceIcon } from './CustomMarkerIcons';
-import DeviceInfoPanel from './DeviceInfoPanel';
+import DeviceSidebar from './DeviceSidebar';
 import DrawingTools from './tools/DrawingTools';
 import MeasurementTool from './tools/MeasurementTool';
 import './MapComponent.css';
@@ -155,6 +155,7 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
+
         const searchableText = [
           device.originalName,
           device.surveyCode,
@@ -163,7 +164,13 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
           device.zone
         ].filter(Boolean).join(' ').toLowerCase();
 
-        if (!searchableText.includes(query)) return false;
+        // Normalize Waddera/Waddera Colony search
+        let effectiveQuery = query;
+        if (query.includes('waddera')) {
+          effectiveQuery = 'waddera';
+        }
+
+        if (!searchableText.includes(effectiveQuery)) return false;
       }
 
       // Status filter
@@ -423,9 +430,9 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
           );
         })}
 
-        {/* Floating Device Info Panel */}
+        {/* Device Sidebar */}
         {activeDevice && (
-          <DeviceInfoPanel
+          <DeviceSidebar
             device={activeDevice}
             onClose={() => {
               setActiveDevice(null);
