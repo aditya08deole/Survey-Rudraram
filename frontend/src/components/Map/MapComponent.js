@@ -495,4 +495,5 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
   );
 }
 
+export default MapComponent;
 
