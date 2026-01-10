@@ -93,6 +93,53 @@
   padding: 10px;
 }
 
+/* View Mode Toggle */
+.view-mode-toggle {
+  display: flex;
+  gap: 8px;
+  background: white;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.view-mode-btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6B7280;
+  transition: all 0.2s;
+}
+
+.view-mode-btn:hover {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.view-mode-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Custom Device Icons */
+.custom-device-icon {
+  background: none !important;
+  border: none !important;
+  transition: transform 0.2s ease;
+}
+
+.custom-device-icon:hover {
+  transform: scale(1.1);
+}
+
 /* Filters Panel */
 .map-filters-panel {
   position: absolute;

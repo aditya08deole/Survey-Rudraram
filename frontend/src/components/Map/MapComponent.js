@@ -6,14 +6,17 @@
  * Features: Clustering, Search, Filters, Heatmap, Accessibility
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import { Eye, Search, Filter, Download, X } from 'lucide-react';
+import { Eye, Search, Filter, Download, X, Layers, Map as MapIcon } from 'lucide-react';
 import L from 'leaflet';
+import 'leaflet.heat';
 import html2canvas from 'html2canvas';
 import 'leaflet/dist/leaflet.css';
 import { MAP_CONFIG, getStatusColor, STATUS_CONFIG } from '../../utils/constants';
+import { getDeviceIcon } from './CustomMarkerIcons';
+import HeatmapLayer from './HeatmapLayer';
 import DrawingTools from './tools/DrawingTools';
 import MeasurementTool from './tools/MeasurementTool';
 import './MapComponent.css';
@@ -142,10 +145,18 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
     'Not Work': true,
     'Failed': true
   });
+  const [deviceTypeFilters, setDeviceTypeFilters] = useState({
+    'Borewell': true,
+    'Sump': true,
+    'OHSR': true,
+    'OHT': true
+  });
+  const [viewMode, setViewMode] = useState('markers'); // 'markers', 'heatmap', 'cluster'
   const [selectedDeviceIndex, setSelectedDeviceIndex] = useState(-1);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const mapRef = useRef(null);
 
-  // Filter devices based on search and status
+  // Filter devices based on search, status, and device type
   const filteredDevices = useMemo(() => {
     return devices.filter(device => {
       // Search filter
@@ -165,12 +176,25 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
       // Status filter
       if (device.status && !statusFilters[device.status]) return false;
 
+      // Device type filter
+      const deviceType = device.deviceType || device.type;
+      const checkStr = ((device.surveyCode || '') + (device.originalName || '')).toUpperCase();
+      let detectedType = deviceType;
+
+      if (!detectedType) {
+        if (checkStr.includes('BW') || checkStr.includes('BORE')) detectedType = 'Borewell';
+        else if (checkStr.includes('SM') || checkStr.includes('SUMP')) detectedType = 'Sump';
+        else if (checkStr.includes('OH') || checkStr.includes('OHT') || checkStr.includes('OHSR')) detectedType = 'OHSR';
+      }
+
+      if (detectedType && !deviceTypeFilters[detectedType]) return false;
+
       // Must have coordinates
       const lat = device.latitude || device.lat;
       const lng = device.longitude || device.long;
       return lat && lng;
     });
-  }, [devices, searchQuery, statusFilters]);
+  }, [devices, searchQuery, statusFilters, deviceTypeFilters]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -263,6 +287,33 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
           )}
         </div>
 
+        <div className="view-mode-toggle">
+          <button
+            className={`view-mode-btn ${viewMode === 'markers' ? 'active' : ''}`}
+            onClick={() => setViewMode('markers')}
+            title="Individual Markers"
+          >
+            <MapIcon size={18} />
+            Markers
+          </button>
+          <button
+            className={`view-mode-btn ${viewMode === 'cluster' ? 'active' : ''}`}
+            onClick={() => setViewMode('cluster')}
+            title="Clustered View"
+          >
+            <Layers size={18} />
+            Cluster
+          </button>
+          <button
+            className={`view-mode-btn ${viewMode === 'heatmap' ? 'active' : ''}`}
+            onClick={() => setViewMode('heatmap')}
+            title="Heatmap Density"
+          >
+            <Eye size={18} />
+            Heatmap
+          </button>
+        </div>
+
         <button
           className={`filter-toggle-btn ${showFilters ? 'active' : ''}`}
           onClick={() => setShowFilters(!showFilters)}
@@ -285,7 +336,7 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="map-filters-panel" role="group" aria-label="Status filters">
+        <div className="map-filters-panel" role="group" aria-label="Filters">
           <h4>Filter by Status</h4>
           {Object.keys(statusFilters).map(status => (
             <label key={status} className="filter-checkbox">
@@ -302,6 +353,29 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
               <span>{status}</span>
               <span className="device-count">
                 ({devices.filter(d => d.status === status).length})
+              </span>
+            </label>
+          ))}
+
+          <h4 style={{ marginTop: '1rem' }}>Filter by Device Type</h4>
+          {Object.keys(deviceTypeFilters).map(deviceType => (
+            <label key={deviceType} className="filter-checkbox">
+              <input
+                type="checkbox"
+                checked={deviceTypeFilters[deviceType]}
+                onChange={() => setDeviceTypeFilters(prev => ({ ...prev, [deviceType]: !prev[deviceType] }))}
+                aria-label={`Show ${deviceType} devices`}
+              />
+              <span>{deviceType}</span>
+              <span className="device-count">
+                ({devices.filter(d => {
+                  const dt = d.deviceType || d.type;
+                  const cs = ((d.surveyCode || '') + (d.originalName || '')).toUpperCase();
+                  if (deviceType === 'Borewell') return dt === 'Borewell' || cs.includes('BW') || cs.includes('BORE');
+                  if (deviceType === 'Sump') return dt === 'Sump' || cs.includes('SM') || cs.includes('SUMP');
+                  if (deviceType === 'OHSR' || deviceType === 'OHT') return dt === deviceType || cs.includes('OH');
+                  return dt === deviceType;
+                }).length})
               </span>
             </label>
           ))}
@@ -327,9 +401,10 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
         className="leaflet-map-container"
         zoomControl={true}
         scrollWheelZoom={true}
-        maxZoom={22}
+        maxZoom={30}
         minZoom={10}
         style={{ height: '100%', width: '100%' }}
+        ref={mapRef}
       >
         <MapController selectedDevice={selectedDevice} />
         <DrawingTools />
@@ -354,277 +429,386 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
           </BaseLayer>
         </LayersControl>
 
-        {/* Device Markers with Clustering */}
-        <MarkerClusterGroup
-          chunkedLoading
-          maxClusterRadius={50}
-          spiderfyOnMaxZoom={true}
-          showCoverageOnHover={false}
-          zoomToBoundsOnClick={true}
-          iconCreateFunction={(cluster) => {
-            const count = cluster.getChildCount();
-            let size = 'small';
-            if (count > 50) size = 'large';
-            else if (count > 10) size = 'medium';
+        {/* Conditional Rendering based on View Mode */}
+        {viewMode === 'heatmap' && (
+          <HeatmapLayer
+            points={filteredDevices.map(device => [
+              device.latitude || device.lat,
+              device.longitude || device.long,
+              0.8 // intensity
+            ])}
+            options={{
+              radius: 25,
+              blur: 15,
+              maxZoom: 30,
+              gradient: {
+                0.0: '#3b82f6',
+                0.3: '#10b981',
+                0.5: '#fbbf24',
+                0.7: '#f59e0b',
+                1.0: '#ef4444'
+              }
+            }}
+          />
+        )}
 
-            return L.divIcon({
-              html: `<div class="cluster-icon cluster-${size}"><span>${count}</span></div>`,
-              className: 'custom-cluster-icon',
-              iconSize: [40, 40]
-            });
-          }}
-        >
-          {filteredDevices.map((device, idx) => {
-            // Handle both lowercase and capitalized column names
-            const lat = device.latitude || device.lat;
-            const lng = device.longitude || device.long;
-            const deviceName = device.originalName || device.surveyCode || device.surveyCodeId || `Device ${idx + 1}`;
+        {viewMode === 'cluster' && (
+          <MarkerClusterGroup
+            chunkedLoading
+            maxClusterRadius={50}
+            spiderfyOnMaxZoom={true}
+            showCoverageOnHover={false}
+            zoomToBoundsOnClick={true}
+            iconCreateFunction={(cluster) => {
+              const count = cluster.getChildCount();
+              let size = 'small';
+              if (count > 50) size = 'large';
+              else if (count > 10) size = 'medium';
 
-            // Skip devices without coordinates
-            if (!lat || !lng) return null;
+              return L.divIcon({
+                html: `<div class="cluster-icon cluster-${size}"><span>${count}</span></div>`,
+                className: 'custom-cluster-icon',
+                iconSize: [40, 40]
+              });
+            }}
+          >
+            {filteredDevices.map((device, idx) => {
+              const lat = device.latitude || device.lat;
+              const lng = device.longitude || device.long;
+              if (!lat || !lng) return null;
 
-            const isSelected = selectedDeviceIndex === idx;
+              // Detect device type
+              let deviceType = device.deviceType || device.type;
+              const checkStr = ((device.surveyCode || '') + (device.originalName || '')).toUpperCase();
+              if (!deviceType) {
+                if (checkStr.includes('BW') || checkStr.includes('BORE')) deviceType = 'Borewell';
+                else if (checkStr.includes('SM') || checkStr.includes('SUMP')) deviceType = 'Sump';
+                else if (checkStr.includes('OH') || checkStr.includes('OHT') || checkStr.includes('OHSR')) deviceType = 'OHSR';
+              }
 
-            return (
-              <Marker
-                key={device.surveyCode || device.surveyCodeId || idx}
-                position={[lat, lng]}
-                icon={createMarkerIcon(device, isSelected)}
-                opacity={isSelected ? 1 : 0.9}
-                zIndexOffset={isSelected ? 1000 : 0}
-                eventHandlers={{
-                  click: () => {
-                    setSelectedDeviceIndex(idx);
-                    if (onMarkerClick) {
-                      onMarkerClick(device);
+              const isSelected = selectedDeviceIndex === idx;
+
+              return (
+                <Marker
+                  key={device.surveyCode || device.surveyCodeId || idx}
+                  position={[lat, lng]}
+                  icon={getDeviceIcon(deviceType, device.status)}
+                  opacity={isSelected ? 1 : 0.9}
+                  zIndexOffset={isSelected ? 1000 : 0}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedDeviceIndex(idx);
+                      if (onMarkerClick) onMarkerClick(device);
                     }
-                  }
-                }}
-              >
-                <Popup className="device-popup" maxWidth={350} minWidth={300}>
-                  <div className="device-popup-content">
-                    {/* Header with Device Name and Status */}
-                    <div className="device-popup-header">
-                      <div className="device-popup-title">
-                        <h3>{deviceName}</h3>
-                        <span className="device-popup-code">
-                          {device.surveyCode || device.surveyCodeId || 'N/A'}
-                        </span>
-                      </div>
-                      {device.status && (
-                        <div
-                          className="device-popup-status"
-                          style={{
-                            backgroundColor: STATUS_CONFIG[device.status]?.color || '#6B7280',
-                            boxShadow: `0 0 15px ${STATUS_CONFIG[device.status]?.glowColor || 'transparent'}`
-                          }}
-                        >
-                          {device.status}
+                  }}
+                >
+                  <Popup className="device-popup" maxWidth={350} minWidth={300}>
+                    <div className="device-popup-content">
+                      {/* Header with Device Name and Status */}
+                      <div className="device-popup-header">
+                        <div className="device-popup-title">
+                          <h3>{deviceName}</h3>
+                          <span className="device-popup-code">
+                            {device.surveyCode || device.surveyCodeId || 'N/A'}
+                          </span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Device Type Specific Info Cards */}
-                    <div className="device-popup-body">
-                      {(() => {
-                        const detectedType = device.deviceType || device.type || '';
-                        const checkStr = ((device.surveyCode || '') + (device.originalName || '') + detectedType).toUpperCase();
-
-                        // Borewell Details
-                        if (checkStr.includes('BW') || checkStr.includes('BORE') || detectedType === 'Borewell') {
-                          return (
-                            <>
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">📍 Zone</span>
-                                  <span className="info-value">{device.zone || 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">📌 Location</span>
-                                  <span className="info-value">{device.location || 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card highlight">
-                                  <span className="info-label">⚡ Motor HP</span>
-                                  <span className="info-value-large">{device.motorHp || device.motorHP || 'N/A'}</span>
-                                </div>
-                                <div className="info-card highlight">
-                                  <span className="info-label">📏 Depth</span>
-                                  <span className="info-value-large">{device.depthFt ? `${device.depthFt} ft` : 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">🔧 Pipe Size</span>
-                                  <span className="info-value">{device.pipeSizeInch ? `${device.pipeSizeInch}"` : 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">⚡ Power</span>
-                                  <span className="info-value">{device.powerType1Ph3Ph || device.powerType || 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">🏠 Houses</span>
-                                  <span className="info-value">{device.housesConnected || 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">⏱️ Daily Usage</span>
-                                  <span className="info-value">{device.dailyUsageHrs ? `${device.dailyUsageHrs} hrs` : 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              {device.notes && (
-                                <div className="info-card full-width notes-card">
-                                  <span className="info-label">📝 Notes</span>
-                                  <span className="info-value">{device.notes}</span>
-                                </div>
-                              )}
-                            </>
-                          );
-                        }
-
-                        // Sump Details
-                        if (checkStr.includes('SM') || checkStr.includes('SUMP') || detectedType === 'Sump') {
-                          return (
-                            <>
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">📍 Zone</span>
-                                  <span className="info-value">{device.zone || 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">📌 Location</span>
-                                  <span className="info-value">{device.location || 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card highlight">
-                                  <span className="info-label">💧 Capacity</span>
-                                  <span className="info-value-large">{device.capacity || 'N/A'}</span>
-                                </div>
-                                <div className="info-card highlight">
-                                  <span className="info-label">📐 Height</span>
-                                  <span className="info-value-large">{device.tankHeightM ? `${device.tankHeightM} m` : 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">⭕ Circumference</span>
-                                  <span className="info-value">{device.tankCircumference || 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">⚡ Power Distance</span>
-                                  <span className="info-value">{device.powerDistanceM ? `${device.powerDistanceM} m` : 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              {device.notes && (
-                                <div className="info-card full-width notes-card">
-                                  <span className="info-label">📝 Notes</span>
-                                  <span className="info-value">{device.notes}</span>
-                                </div>
-                              )}
-                            </>
-                          );
-                        }
-
-                        // OHT/OHSR Details
-                        if (checkStr.includes('OH') || checkStr.includes('CMSR') || detectedType === 'OHT') {
-                          return (
-                            <>
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">📍 Zone</span>
-                                  <span className="info-value">{device.zone || 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">📌 Location</span>
-                                  <span className="info-value">{device.location || 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card highlight">
-                                  <span className="info-label">💧 Capacity</span>
-                                  <span className="info-value-large">{device.capacity || 'N/A'}</span>
-                                </div>
-                                <div className="info-card highlight">
-                                  <span className="info-label">🏗️ Type</span>
-                                  <span className="info-value-large">{device.type || 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">📐 Height</span>
-                                  <span className="info-value">{device.tankHeightM ? `${device.tankHeightM} m` : 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">🧱 Material</span>
-                                  <span className="info-value">{device.material || 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              <div className="info-card-grid">
-                                <div className="info-card">
-                                  <span className="info-label">🚪 Lid Access</span>
-                                  <span className="info-value">{device.lidAccess || 'N/A'}</span>
-                                </div>
-                                <div className="info-card">
-                                  <span className="info-label">🏠 Houses</span>
-                                  <span className="info-value">{device.housesConnected || 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              {device.notes && (
-                                <div className="info-card full-width notes-card">
-                                  <span className="info-label">📝 Notes</span>
-                                  <span className="info-value">{device.notes}</span>
-                                </div>
-                              )}
-                            </>
-                          );
-                        }
-
-                        // Default fallback
-                        return (
-                          <div className="info-card full-width">
-                            <p><strong>Type:</strong> {detectedType || 'Unknown'}</p>
-                            <p><strong>Zone:</strong> {device.zone || 'N/A'}</p>
-                            <p><strong>Location:</strong> {device.location || 'N/A'}</p>
+                        {device.status && (
+                          <div
+                            className="device-popup-status"
+                            style={{
+                              backgroundColor: STATUS_CONFIG[device.status]?.color || '#6B7280',
+                              boxShadow: `0 0 15px ${STATUS_CONFIG[device.status]?.glowColor || 'transparent'}`
+                            }}
+                          >
+                            {device.status}
                           </div>
-                        );
-                      })()}
+                        )}
+                      </div>
 
-                      {/* Coordinates */}
-                      <div className="device-popup-coordinates">
-                        <span>📍 {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                      {/* Device Type Specific Info Cards */}
+                      <div className="device-popup-body">
+                        {(() => {
+                          const detectedType = device.deviceType || device.type || '';
+                          const checkStr = ((device.surveyCode || '') + (device.originalName || '') + detectedType).toUpperCase();
+
+                          // Borewell Details
+                          if (checkStr.includes('BW') || checkStr.includes('BORE') || detectedType === 'Borewell') {
+                            return (
+                              <>
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">📍 Zone</span>
+                                    <span className="info-value">{device.zone || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">📌 Location</span>
+                                    <span className="info-value">{device.location || 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card highlight">
+                                    <span className="info-label">⚡ Motor HP</span>
+                                    <span className="info-value-large">{device.motorHp || device.motorHP || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card highlight">
+                                    <span className="info-label">📏 Depth</span>
+                                    <span className="info-value-large">{device.depthFt ? `${device.depthFt} ft` : 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">🔧 Pipe Size</span>
+                                    <span className="info-value">{device.pipeSizeInch ? `${device.pipeSizeInch}"` : 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">⚡ Power</span>
+                                    <span className="info-value">{device.powerType1Ph3Ph || device.powerType || 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">🏠 Houses</span>
+                                    <span className="info-value">{device.housesConnected || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">⏱️ Daily Usage</span>
+                                    <span className="info-value">{device.dailyUsageHrs ? `${device.dailyUsageHrs} hrs` : 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                {device.notes && (
+                                  <div className="info-card full-width notes-card">
+                                    <span className="info-label">📝 Notes</span>
+                                    <span className="info-value">{device.notes}</span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          }
+
+                          // Sump Details
+                          if (checkStr.includes('SM') || checkStr.includes('SUMP') || detectedType === 'Sump') {
+                            return (
+                              <>
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">📍 Zone</span>
+                                    <span className="info-value">{device.zone || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">📌 Location</span>
+                                    <span className="info-value">{device.location || 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card highlight">
+                                    <span className="info-label">💧 Capacity</span>
+                                    <span className="info-value-large">{device.capacity || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card highlight">
+                                    <span className="info-label">📐 Height</span>
+                                    <span className="info-value-large">{device.tankHeightM ? `${device.tankHeightM} m` : 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">⭕ Circumference</span>
+                                    <span className="info-value">{device.tankCircumference || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">⚡ Power Distance</span>
+                                    <span className="info-value">{device.powerDistanceM ? `${device.powerDistanceM} m` : 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                {device.notes && (
+                                  <div className="info-card full-width notes-card">
+                                    <span className="info-label">📝 Notes</span>
+                                    <span className="info-value">{device.notes}</span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          }
+
+                          // OHT/OHSR Details
+                          if (checkStr.includes('OH') || checkStr.includes('CMSR') || detectedType === 'OHT') {
+                            return (
+                              <>
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">📍 Zone</span>
+                                    <span className="info-value">{device.zone || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">📌 Location</span>
+                                    <span className="info-value">{device.location || 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card highlight">
+                                    <span className="info-label">💧 Capacity</span>
+                                    <span className="info-value-large">{device.capacity || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card highlight">
+                                    <span className="info-label">🏗️ Type</span>
+                                    <span className="info-value-large">{device.type || 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">📐 Height</span>
+                                    <span className="info-value">{device.tankHeightM ? `${device.tankHeightM} m` : 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">🧱 Material</span>
+                                    <span className="info-value">{device.material || 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className="info-card-grid">
+                                  <div className="info-card">
+                                    <span className="info-label">🚪 Lid Access</span>
+                                    <span className="info-value">{device.lidAccess || 'N/A'}</span>
+                                  </div>
+                                  <div className="info-card">
+                                    <span className="info-label">🏠 Houses</span>
+                                    <span className="info-value">{device.housesConnected || 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                {device.notes && (
+                                  <div className="info-card full-width notes-card">
+                                    <span className="info-label">📝 Notes</span>
+                                    <span className="info-value">{device.notes}</span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          }
+
+                          // Default fallback
+                          return (
+                            <div className="info-card full-width">
+                              <p><strong>Type:</strong> {detectedType || 'Unknown'}</p>
+                              <p><strong>Zone:</strong> {device.zone || 'N/A'}</p>
+                              <p><strong>Location:</strong> {device.location || 'N/A'}</p>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Coordinates */}
+                        <div className="device-popup-coordinates">
+                          <span>📍 {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+                        </div>
+                      </div>
+
+                      {/* Footer with Action Button */}
+                      <div className="device-popup-footer">
+                        <button
+                          className="device-popup-btn"
+                          onClick={() => onMarkerClick && onMarkerClick(device)}
+                        >
+                          <Eye size={16} />
+                          View Full Details
+                        </button>
                       </div>
                     </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </MarkerClusterGroup>
+        )}
 
-                    {/* Footer with Action Button */}
-                    <div className="device-popup-footer">
-                      <button
-                        className="device-popup-btn"
-                        onClick={() => onMarkerClick && onMarkerClick(device)}
+        {viewMode === 'markers' && filteredDevices.map((device, idx) => {
+          const lat = device.latitude || device.lat;
+          const lng = device.longitude || device.long;
+          if (!lat || !lng) return null;
+
+          // Detect device type
+          let deviceType = device.deviceType || device.type;
+          const checkStr = ((device.surveyCode || '') + (device.originalName || '')).toUpperCase();
+          if (!deviceType) {
+            if (checkStr.includes('BW') || checkStr.includes('BORE')) deviceType = 'Borewell';
+            else if (checkStr.includes('SM') || checkStr.includes('SUMP')) deviceType = 'Sump';
+            else if (checkStr.includes('OH') || checkStr.includes('OHT') || checkStr.includes('OHSR')) deviceType = 'OHSR';
+          }
+
+          const isSelected = selectedDeviceIndex === idx;
+          const deviceName = device.originalName || device.surveyCode || device.surveyCodeId || `Device ${idx + 1}`;
+
+          return (
+            <Marker
+              key={device.surveyCode || device.surveyCodeId || idx}
+              position={[lat, lng]}
+              icon={getDeviceIcon(deviceType, device.status)}
+              opacity={isSelected ? 1 : 0.9}
+              zIndexOffset={isSelected ? 1000 : 0}
+              eventHandlers={{
+                click: () => {
+                  setSelectedDeviceIndex(idx);
+                  if (onMarkerClick) onMarkerClick(device);
+                }
+              }}
+            >
+              <Popup className="device-popup" maxWidth={350} minWidth={300}>
+                <div className="device-popup-content">
+                  <div className="device-popup-header">
+                    <div className="device-popup-title">
+                      <h3>{deviceName}</h3>
+                      <span className="device-popup-code">
+                        {device.surveyCode || device.surveyCodeId || 'N/A'}
+                      </span>
+                    </div>
+                    {device.status && (
+                      <div
+                        className="device-popup-status"
+                        style={{
+                          backgroundColor: STATUS_CONFIG[device.status]?.color || '#6B7280',
+                          boxShadow: `0 0 15px ${STATUS_CONFIG[device.status]?.glowColor || 'transparent'}`
+                        }}
                       >
-                        <Eye size={16} />
-                        View Full Details
-                      </button>
+                        {device.status}
+                      </div>
+                    )}
+                  </div>
+                  <div className="device-popup-body">
+                    <div className="info-card-grid">
+                      <div className="info-card">
+                        <span className="info-label">📍 Zone</span>
+                        <span className="info-value">{device.zone || 'N/A'}</span>
+                      </div>
+                      <div className="info-card">
+                        <span className="info-label">📌 Location</span>
+                        <span className="info-value">{device.location || 'N/A'}</span>
+                      </div>
+                    </div>
+                    <div className="device-popup-coordinates">
+                      <span>📍 {lat.toFixed(6)}, {lng.toFixed(6)}</span>
                     </div>
                   </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MarkerClusterGroup>
+                  <div className="device-popup-footer">
+                    <button
+                      className="device-popup-btn"
+                      onClick={() => onMarkerClick && onMarkerClick(device)}
+                    >
+                      <Eye size={16} />
+                      View Full Details
+                    </button>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </div>
   );
