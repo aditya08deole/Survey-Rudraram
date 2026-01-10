@@ -116,12 +116,14 @@ export const getInitials = (name) => {
 };
 
 /**
- * Check if coordinates are valid
+ * Check if coordinates are valid - handles both lowercase and capitalized column names
  */
 export const hasValidCoordinates = (device) => {
-  return device.lat && device.long && 
-         !isNaN(device.lat) && !isNaN(device.long) &&
-         device.lat !== 0 && device.long !== 0;
+  const lat = device.latitude || device.lat;
+  const lng = device.longitude || device.long;
+  return lat && lng && 
+         !isNaN(lat) && !isNaN(lng) &&
+         lat !== 0 && lng !== 0;
 };
 
 /**

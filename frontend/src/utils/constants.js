@@ -51,24 +51,27 @@ export const DEVICE_MARKERS = {
   }
 };
 
-// Status configuration
+// Status configuration with neon colors
 export const STATUS_CONFIG = {
   'Working': {
-    color: '#22C55E',
+    color: '#00FF41', // Neon green
     bgColor: '#DCFCE7',
     textColor: '#166534',
+    glowColor: 'rgba(0, 255, 65, 0.6)',
     label: 'Working'
   },
   'Not Work': {
-    color: '#F97316',
+    color: '#FF4500', // Neon orange-red
     bgColor: '#FFEDD5',
     textColor: '#9A3412',
+    glowColor: 'rgba(255, 69, 0, 0.6)',
     label: 'Not Working'
   },
   'Failed': {
-    color: '#EF4444',
+    color: '#FF0040', // Neon red
     bgColor: '#FEE2E2',
     textColor: '#991B1B',
+    glowColor: 'rgba(255, 0, 64, 0.6)',
     label: 'Failed'
   }
 };
@@ -77,10 +80,10 @@ export const STATUS_LIST = Object.keys(STATUS_CONFIG);
 
 // Map configuration
 export const MAP_CONFIG = {
-  // Rudraram village center coordinates (Sangareddy district, Telangana)
-  center: [17.563, 78.167], // Rudraram Village, Isnapur Municipality
-  // Default zoom level (closer view to see village layout)
-  defaultZoom: 16,
+  // Rudraram village center coordinates (exact focus area)
+  center: [17.558599, 78.166078], // Rudraram focus area
+  // Default zoom level (15 for clear area view)
+  defaultZoom: 15,
   // Min/Max zoom
   minZoom: 10,
   maxZoom: 22,

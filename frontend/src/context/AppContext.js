@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { fetchSurveyData } from '../services/apiService';
+import { fetchSurveyData, fetchDevicesFromDB, fetchStatsFromDB, fetchZonesFromDB } from '../services/apiService';
 import { calculateStats } from '../services/excelReader';
 
 // Initial state
@@ -16,7 +16,10 @@ const initialState = {
   zones: [],
   stats: null,
   
-  // Sheet selection
+  // Data source
+  useDatabase: true, // Use database API by default (set to false for Excel fallback)
+  
+  // Sheet selection (Excel mode)
   currentSheet: 'All',
   availableSheets: ['All'],
   
@@ -152,10 +155,132 @@ export function AppProvider({ children }) {
 
   // Load initial data
   useEffect(() => {
-    loadData(state.currentSheet);
-  }, [state.currentSheet]);
+    if (state.useDatabase) {
+      loadDatabaseData();
+    } else {
+      loadData(state.currentSheet);
+    }
+  }, [state.currentSheet, state.useDatabase]);
 
-  // Function to load all data from API backend
+  // Function to load data from DATABASE API (new Supabase integration)
+  const loadDatabaseData = async () => {
+    dispatch({ type: ActionTypes.SET_LOADING, payload: true });
+    
+    try {
+      // Fetch all devices from database
+      const devicesResult = await fetchDevicesFromDB();
+      
+      if (!devicesResult.success || !devicesResult.devices) {
+        throw new Error(devicesResult.error || 'Failed to load devices from database');
+      }
+
+      const devices = devicesResult.devices;
+
+      // Transform database schema to match frontend expectations
+      const typeMap = { borewell: 'Borewell', sump: 'Sump', overhead_tank: 'OHT' };
+      const transformedDevices = devices.map(device => ({
+        // Standardized fields
+        surveyCode: device.survey_code || device.sr_no,
+        deviceType: typeMap[device.device_type] || device.device_type || 'Unknown',
+        zone: device.zone,
+        location: device.location,
+        status: device.status || 'Unknown',
+        
+        // Coordinates
+        lat: device.latitude,
+        long: device.longitude,
+        
+        // Device-specific fields
+        ...device,
+        
+        // Street name from location
+        streetName: device.location || device.original_name
+      }));
+
+      // Fetch statistics
+      const statsResult = await fetchStatsFromDB();
+      const dbStats = statsResult.success ? statsResult.stats : {};
+
+      // Fetch zones
+      const zonesResult = await fetchZonesFromDB();
+      const zonesList = zonesResult.success ? zonesResult.zones : [];
+      
+      const zonesWithCounts = zonesList.map(zoneName => ({
+        name: zoneName,
+        deviceCount: transformedDevices.filter(d => d.zone === zoneName).length
+      }));
+
+      // Calculate additional stats
+      const mappedDevices = transformedDevices.filter(d => d.lat && d.long).length;
+
+      // Transform device types for Dashboard display
+      const deviceTypesArray = Object.entries(dbStats.by_type || {}).map(([type, count]) => ({
+        type: type === 'borewell' ? 'Borewell' : type === 'sump' ? 'Sump' : type === 'overhead_tank' ? 'OHSR' : type,
+        count: count
+      }));
+
+      // Transform status breakdown
+      const statusArray = Object.entries(dbStats.by_status || {}).map(([status, count]) => ({
+        status: status,
+        count: count
+      }));
+
+      // Transform zones
+      const zonesArray = Object.entries(dbStats.by_zone || {}).map(([zone, count]) => ({
+        zone: zone,
+        count: count
+      }));
+
+      dispatch({ type: ActionTypes.SET_DEVICES, payload: transformedDevices });
+      dispatch({ type: ActionTypes.SET_ZONES, payload: zonesWithCounts });
+      dispatch({ type: ActionTypes.SET_STATS, payload: {
+        overview: {
+          totalDevices: transformedDevices.length,
+          mappedDevices: mappedDevices,
+          unmappedDevices: transformedDevices.length - mappedDevices,
+          lastUpdated: new Date().toISOString()
+        },
+        byType: dbStats.by_type || {},
+        byStatus: dbStats.by_status || {},
+        byZone: dbStats.by_zone || {},
+        deviceTypes: deviceTypesArray,
+        statusBreakdown: statusArray,
+        zones: zonesArray,
+        summary: {
+          totalBorewells: dbStats.by_type?.borewell || 0,
+          totalSumps: dbStats.by_type?.sump || 0,
+          totalOHSR: dbStats.by_type?.overhead_tank || 0,
+          workingDevices: dbStats.by_status?.Working || 0,
+          notWorkingDevices: dbStats.by_status?.['Not Working'] || 0
+        }
+      }});
+      dispatch({ 
+        type: ActionTypes.SET_DATA_STATUS, 
+        payload: { 
+          hasData: transformedDevices.length > 0,
+          lastUpdated: new Date().toISOString()
+        }
+      });
+      dispatch({ type: ActionTypes.SET_ERROR, payload: null });
+
+      console.log('✅ Database loaded:', {
+        devices: transformedDevices.length,
+        zones: zonesWithCounts.length,
+        stats: dbStats
+      });
+
+    } catch (error) {
+      console.error('Failed to load database:', error);
+      dispatch({ 
+        type: ActionTypes.SET_ERROR, 
+        payload: `Failed to load data from database: ${error.message}` 
+      });
+    }
+    
+    dispatch({ type: ActionTypes.SET_LOADING, payload: false });
+  };
+
+  // Function to load all data from Excel API backend (legacy)
   const loadData = async (sheetName = 'All') => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
     
@@ -249,7 +374,26 @@ export function AppProvider({ children }) {
 
   // Actions
   const actions = {
-    refreshData: () => loadData(state.currentSheet),
+    refreshData: () => {
+      if (state.useDatabase) {
+        loadDatabaseData();
+      } else {
+        loadData(state.currentSheet);
+      }
+    },
+    
+    toggleDataSource: () => {
+      dispatch({ type: ActionTypes.SET_LOADING, payload: true });
+      // Toggle between database and Excel
+      const newValue = !state.useDatabase;
+      // Manually update state and reload
+      dispatch({ type: ActionTypes.SET_ERROR, payload: null });
+      if (newValue) {
+        loadDatabaseData();
+      } else {
+        loadData(state.currentSheet);
+      }
+    },
     
     setCurrentSheet: (sheetName) => {
       dispatch({ type: ActionTypes.SET_CURRENT_SHEET, payload: sheetName });

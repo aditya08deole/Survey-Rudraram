@@ -1,5 +1,5 @@
 # Rudraram Survey - Python FastAPI Backend
-# Production-ready requirements for Render deployment
+# Production-ready requirements with security and database support
 
 # FastAPI Framework
 fastapi==0.109.0
@@ -15,5 +15,15 @@ xlrd==2.0.1
 requests==2.31.0
 httpx==0.26.0
 
+# Security & Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+slowapi==0.1.9
+
+# Database (Supabase)
+supabase==2.27.1
+postgrest==2.27.1
+
 # Utilities
 python-dotenv==1.0.1
+

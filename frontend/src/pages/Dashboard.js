@@ -2,10 +2,12 @@
  * Dashboard Page
  * 
  * Landing page with project overview, statistics, and zone summaries.
+ * Enhanced with Framer Motion animations
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   Droplets, 
   MapPin, 
@@ -30,6 +32,11 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatNumber, formatDate } from '../utils/helpers';
+import AnimatedCounter from '../components/AnimatedCounter';
+import AnimatedPage from '../components/AnimatedPage';
+import LoadingAnimation from '../components/LoadingAnimation';
+import { containerVariants, itemVariants } from '../animations/transitions';
+import { staggerFadeIn } from '../animations/gsap-effects';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -42,13 +49,24 @@ function Dashboard() {
     refreshData 
   } = useApp();
 
+  // GSAP animation refs
+  const statsGridRef = useRef();
+  const metricsGridRef = useRef();
+  
+  // Animate elements on mount
+  useEffect(() => {
+    if (!isLoading && hasData) {
+      if (statsGridRef.current) {
+        staggerFadeIn(statsGridRef.current.children, { stagger: 0.15 });
+      }
+      if (metricsGridRef.current) {
+        staggerFadeIn(metricsGridRef.current.children, { stagger: 0.1, delay: 0.3 });
+      }
+    }
+  }, [isLoading, hasData]);
+
   if (isLoading) {
-    return (
-      <div className="dashboard-loading">
-        <div className="spinner"></div>
-        <p>Loading dashboard data...</p>
-      </div>
-    );
+    return <LoadingAnimation fullScreen message="Loading dashboard data..." />;
   }
 
   if (error) {
@@ -86,7 +104,7 @@ function Dashboard() {
   const summary = stats?.summary || {};
 
   return (
-    <div className="dashboard">
+    <AnimatedPage className="dashboard">
       {/* Header Section */}
       <div className="dashboard-header">
         <div className="dashboard-title-section">
@@ -107,63 +125,141 @@ function Dashboard() {
       </div>
 
       {/* Overview Stats */}
-      <div className="stats-grid">
-        <div className="stat-card stat-card-primary">
-          <div className="stat-icon">
+      <motion.div 
+        className="stats-grid" 
+        ref={statsGridRef}
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div 
+          className="stat-card stat-card-primary"
+          variants={itemVariants}
+          whileHover="hover"
+          whileTap="tap"
+        >
+          <motion.div 
+            className="stat-icon"
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
             <Droplets size={24} />
-          </div>
+          </motion.div>
           <div className="stat-content">
             <span className="stat-label">Total Devices</span>
-            <span className="stat-value">{formatNumber(overview.totalDevices)}</span>
+            <span className="stat-value">
+              <AnimatedCounter value={overview.totalDevices || 0} duration={2} />
+            </span>
             <span className="stat-trend">Across all zones</span>
           </div>
           <div className="stat-badge">100%</div>
-        </div>
+        </motion.div>
 
-        <div className="stat-card stat-card-success">
-          <div className="stat-icon">
+        <motion.div 
+          className="stat-card stat-card-success"
+          variants={itemVariants}
+          whileHover="hover"
+          whileTap="tap"
+        >
+          <motion.div 
+            className="stat-icon"
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
             <CheckCircle size={24} />
-          </div>
+          </motion.div>
           <div className="stat-content">
             <span className="stat-label">Working</span>
             <span className="stat-value">
-              {formatNumber(statusBreakdown.find(s => s.status === 'Working')?.count || 0)}
+              <AnimatedCounter 
+                value={statusBreakdown.find(s => s.status === 'Working')?.count || 0} 
+                duration={2.2}
+              />
             </span>
             <span className="stat-trend">
-              {Math.round((statusBreakdown.find(s => s.status === 'Working')?.count || 0) / (overview.totalDevices || 1) * 100)}% operational
+              <AnimatedCounter 
+                value={Math.round((statusBreakdown.find(s => s.status === 'Working')?.count || 0) / (overview.totalDevices || 1) * 100)}
+                duration={2}
+                suffix="%"
+              /> operational
             </span>
           </div>
-          <div className="stat-badge stat-badge-success">✓</div>
-        </div>
+          <motion.div 
+            className="stat-badge stat-badge-success"
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 0.6, delay: 1 }}
+          >
+            ✓
+          </motion.div>
+        </motion.div>
 
-        <div className="stat-card stat-card-warning">
-          <div className="stat-icon">
+        <motion.div 
+          className="stat-card stat-card-warning"
+          variants={itemVariants}
+          whileHover="hover"
+          whileTap="tap"
+        >
+          <motion.div 
+            className="stat-icon"
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 0.5, delay: 0.7, repeat: 3 }}
+          >
             <AlertTriangle size={24} />
-          </div>
+          </motion.div>
           <div className="stat-content">
             <span className="stat-label">Not Working</span>
             <span className="stat-value">
-              {formatNumber(statusBreakdown.find(s => s.status === 'Not Work')?.count || 0)}
+              <AnimatedCounter 
+                value={statusBreakdown.find(s => s.status === 'Not Work')?.count || 0}
+                duration={2.4}
+              />
             </span>
             <span className="stat-trend">Need attention</span>
           </div>
-          <div className="stat-badge stat-badge-warning">!</div>
-        </div>
+          <motion.div 
+            className="stat-badge stat-badge-warning"
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 0.8, delay: 0.8, repeat: 2 }}
+          >
+            !
+          </motion.div>
+        </motion.div>
 
-        <div className="stat-card stat-card-danger">
-          <div className="stat-icon">
+        <motion.div 
+          className="stat-card stat-card-danger"
+          variants={itemVariants}
+          whileHover="hover"
+          whileTap="tap"
+        >
+          <motion.div 
+            className="stat-icon"
+            animate={{ 
+              rotate: [0, 15, -15, 0],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ duration: 0.6, delay: 0.8, repeat: 2 }}
+          >
             <XCircle size={24} />
-          </div>
+          </motion.div>
           <div className="stat-content">
             <span className="stat-label">Failed</span>
             <span className="stat-value">
-              {formatNumber(statusBreakdown.find(s => s.status === 'Failed')?.count || 0)}
+              <AnimatedCounter 
+                value={statusBreakdown.find(s => s.status === 'Failed')?.count || 0}
+                duration={2.6}
+              />
             </span>
             <span className="stat-trend">Critical status</span>
           </div>
-          <div className="stat-badge stat-badge-danger">×</div>
-        </div>
-      </div>
+          <motion.div 
+            className="stat-badge stat-badge-danger"
+            animate={{ rotate: [0, 180] }}
+            transition={{ duration: 0.5, delay: 1 }}
+          >
+            ×
+          </motion.div>
+        </motion.div>
+      </motion.div>
 
       {/* Quick Insights */}
       <section className="dashboard-section">
@@ -231,8 +327,14 @@ function Dashboard() {
           </h2>
         </div>
 
-        <div className="metrics-grid">
-          <div className="metric-card metric-card-gradient-1">
+        <motion.div 
+          className="metrics-grid"
+          ref={metricsGridRef}
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div className="metric-card metric-card-gradient-1" variants={itemVariants}>
             <div className="metric-icon-wrapper">
               <Clock size={28} />
             </div>
@@ -247,9 +349,9 @@ function Dashboard() {
                 <span>Optimal range</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="metric-card metric-card-gradient-2">
+          <motion.div className="metric-card metric-card-gradient-2" variants={itemVariants}>
             <div className="metric-icon-wrapper">
               <Power size={28} />
             </div>
@@ -264,9 +366,9 @@ function Dashboard() {
                 <span>Installed capacity</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="metric-card metric-card-gradient-3">
+          <motion.div className="metric-card metric-card-gradient-3" variants={itemVariants}>
             <div className="metric-icon-wrapper">
               <Wrench size={28} />
             </div>
@@ -280,9 +382,9 @@ function Dashboard() {
                 <span>Requires action</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="metric-card metric-card-gradient-4">
+          <motion.div className="metric-card metric-card-gradient-4" variants={itemVariants}>
             <div className="metric-icon-wrapper">
               <Thermometer size={28} />
             </div>
@@ -296,6 +398,90 @@ function Dashboard() {
                 <CheckCircle size={14} />
                 <span>Excellent</span>
               </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* Status Distribution Chart */}
+      <section className="dashboard-section">
+        <div className="section-header">
+          <h2>
+            <BarChart3 size={20} />
+            Status Distribution
+          </h2>
+        </div>
+
+        <div className="chart-container">
+          <div className="status-chart">
+            {statusBreakdown.map((status, idx) => {
+              const percentage = ((status.count / overview.totalDevices) * 100).toFixed(1);
+              const colors = {
+                'Working': '#00FF41',
+                'Not Work': '#FF4500',
+                'Failed': '#FF0040'
+              };
+              
+              return (
+                <div key={idx} className="chart-bar-wrapper">
+                  <div className="chart-bar-container">
+                    <div 
+                      className="chart-bar"
+                      style={{
+                        width: `${percentage}%`,
+                        background: `linear-gradient(90deg, ${colors[status.status] || '#6B7280'}, ${colors[status.status] || '#6B7280'}dd)`,
+                        boxShadow: `0 0 20px ${colors[status.status] || '#6B7280'}66`
+                      }}
+                    >
+                      <span className="chart-bar-label">{percentage}%</span>
+                    </div>
+                  </div>
+                  <div className="chart-legend-item">
+                    <div 
+                      className="chart-legend-color"
+                      style={{ backgroundColor: colors[status.status] || '#6B7280' }}
+                    />
+                    <span className="chart-legend-label">{status.status}</span>
+                    <span className="chart-legend-count">{status.count} devices</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Device Type Distribution */}
+          <div className="device-type-chart">
+            <h3>Device Types</h3>
+            <div className="device-type-grid">
+              {deviceTypes.map((type, idx) => {
+                const typeColors = {
+                  'Borewell': '#667eea',
+                  'Sump': '#f093fb',
+                  'OHT': '#4facfe',
+                  'OHSR': '#43e97b',
+                  'CMSR': '#fa709a'
+                };
+                const percentage = ((type.count / overview.totalDevices) * 100).toFixed(0);
+                
+                return (
+                  <div key={idx} className="device-type-card">
+                    <div 
+                      className="device-type-circle"
+                      style={{
+                        background: `conic-gradient(${typeColors[type.type] || '#6B7280'} ${percentage * 3.6}deg, #f3f4f6 0deg)`,
+                      }}
+                    >
+                      <div className="device-type-inner">
+                        <span className="device-type-percent">{percentage}%</span>
+                      </div>
+                    </div>
+                    <div className="device-type-info">
+                      <span className="device-type-name">{type.type}</span>
+                      <span className="device-type-count">{type.count}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -478,12 +664,17 @@ function Dashboard() {
       </section>
 
       {/* Last Updated */}
-      <div className="dashboard-footer">
+      <motion.div 
+        className="dashboard-footer"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1, duration: 0.5 }}
+      >
         <p>
           Last updated: {lastUpdated ? formatDate(lastUpdated) : 'Not available'}
         </p>
-      </div>
-    </div>
+      </motion.div>
+    </AnimatedPage>
   );
 }
 

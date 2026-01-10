@@ -213,17 +213,210 @@ export const fetchAvailableSheets = async () => {
   }
 };
 
+/**
+ * ========================================
+ * DATABASE API FUNCTIONS (New Supabase Integration)
+ * ========================================
+ */
+
+/**
+ * Fetch devices from DATABASE API (replaces Excel-based system)
+ * @param {Object} filters - Query filters (device_type, zone, status, limit, offset)
+ * @returns {Promise<Object>} Response with devices array
+ */
+export const fetchDevicesFromDB = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    
+    if (filters.device_type) params.append('device_type', filters.device_type);
+    if (filters.zone) params.append('zone', filters.zone);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.offset) params.append('offset', filters.offset);
+
+    const response = await fetch(`${API_BASE_URL}/api/db/devices?${params}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Database API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      devices: data.data || [],
+      count: data.count || 0,
+      filters: data.filters || {},
+      errors: []
+    };
+  } catch (error) {
+    console.error('Database API error:', error);
+    return {
+      success: false,
+      error: error.message,
+      devices: [],
+      count: 0,
+      errors: [error.message]
+    };
+  }
+};
+
+/**
+ * Fetch statistics from DATABASE API
+ * @returns {Promise<Object>} Statistics with counts by type, status, zone
+ */
+export const fetchStatsFromDB = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/db/stats`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Database stats error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      stats: data.data || {},
+      errors: []
+    };
+  } catch (error) {
+    console.error('Database stats error:', error);
+    return {
+      success: false,
+      error: error.message,
+      stats: {},
+      errors: [error.message]
+    };
+  }
+};
+
+/**
+ * Fetch single device by survey code from DATABASE
+ * @param {string} surveyCode - Device survey code
+ * @returns {Promise<Object>} Device object with device_type field
+ */
+export const fetchDeviceByCodeDB = async (surveyCode) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/db/devices/${encodeURIComponent(surveyCode)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Device not found: ${surveyCode}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      device: data.data || null,
+      errors: []
+    };
+  } catch (error) {
+    console.error('Device fetch error:', error);
+    return {
+      success: false,
+      error: error.message,
+      device: null,
+      errors: [error.message]
+    };
+  }
+};
+
+/**
+ * Fetch zones list from DATABASE
+ * @returns {Promise<Object>} List of unique zones
+ */
+export const fetchZonesFromDB = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/db/zones`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Zones fetch error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      zones: data.data || [],
+      errors: []
+    };
+  } catch (error) {
+    console.error('Zones fetch error:', error);
+    return {
+      success: false,
+      error: error.message,
+      zones: [],
+      errors: [error.message]
+    };
+  }
+};
+
+/**
+ * Check database health
+ * @returns {Promise<Object>} Database connection status
+ */
+export const checkDatabaseHealth = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/db/health`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const data = await response.json();
+    return {
+      success: data.status === 'healthy',
+      status: data.status,
+      database: data.database || 'unknown',
+      timestamp: data.timestamp || null
+    };
+  } catch (error) {
+    return {
+      success: false,
+      status: 'error',
+      error: error.message
+    };
+  }
+};
+
 // Export API base URL for debugging
 export { API_BASE_URL };
 
 // Default export
 const apiService = {
+  // Excel-based API (Legacy)
   fetchSurveyData,
   fetchSurveyStats,
   fetchAvailableSheets,
   fetchDeviceByCode,
   refreshCache,
   checkApiHealth,
+  
+  // Database API (New)
+  fetchDevicesFromDB,
+  fetchStatsFromDB,
+  fetchDeviceByCodeDB,
+  fetchZonesFromDB,
+  checkDatabaseHealth,
+  
   API_BASE_URL
 };
 

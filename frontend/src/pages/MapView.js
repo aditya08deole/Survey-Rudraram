@@ -2,6 +2,7 @@
  * Map View Page
  * 
  * Full-screen interactive map with filtering and device details.
+ * Enhanced with smooth page transitions
  */
 
 import React, { useState, useCallback } from 'react';
@@ -14,6 +15,8 @@ import {
 import { useApp } from '../context/AppContext';
 import MapComponent from '../components/Map/MapComponent';
 import DevicePanel from '../components/DevicePanel/DevicePanel';
+import AnimatedPage from '../components/AnimatedPage';
+import LoadingAnimation from '../components/LoadingAnimation';
 import { ZONE_NAMES, DEVICE_TYPES, STATUS_LIST } from '../utils/constants';
 import './MapView.css';
 
@@ -83,8 +86,12 @@ function MapView() {
     );
   }
 
+  if (isLoading) {
+    return <LoadingAnimation fullScreen message="Loading map data..." />;
+  }
+
   return (
-    <div className="map-view">
+    <AnimatedPage className="map-view">
       {/* Filter Panel */}
       <aside className={`filter-sidebar ${showFilterPanel ? 'open' : 'closed'}`}>
         <div className="filter-header">
@@ -253,7 +260,7 @@ function MapView() {
           onClose={hideDevicePanel}
         />
       )}
-    </div>
+    </AnimatedPage>
   );
 }
 

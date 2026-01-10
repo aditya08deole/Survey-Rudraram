@@ -2,9 +2,10 @@
 Rudraram Survey - FastAPI Backend
 Excel-driven water infrastructure dashboard API
 Serves both API endpoints and React frontend
+Enhanced with JWT authentication, rate limiting, and Supabase integration
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,27 +20,50 @@ import logging
 from io import BytesIO
 import os
 import json
+from dotenv import load_dotenv
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+# Import database routes
+from api_database import router as db_router
+
+# Load environment variables
+env_file = ".env.development" if os.getenv("ENV") != "production" else ".env.production"
+load_dotenv(env_file)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Rudraram Survey API",
     description="Water Infrastructure Mapping Dashboard API",
-    version="2.0.0"
+    version="3.0.0"
 )
+
+# Include database routes
+app.include_router(db_router)
+logger.info("✓ Database routes registered at /api/db/*")
+
+# Add rate limit exceeded handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Get frontend build directory
 FRONTEND_BUILD_DIR = Path(__file__).parent.parent / "frontend" / "build"
 
-# CORS configuration
+# CORS configuration - now using environment variables
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=allowed_origins,  # Secured with specific origins
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -207,6 +231,17 @@ def normalize_survey_data(df: pd.DataFrame) -> List[Dict[str, Any]]:
     # Create camelCase mapping for ALL columns dynamically
     def to_camel_case(col_name: str) -> str:
         """Convert any column name to camelCase"""
+        # Special handling for common column names
+        special_mappings = {
+            'Latitude': 'lat',
+            'Longitude': 'long',
+            'Original Name': 'originalName',
+            'Survey Code (ID)': 'surveyCode'
+        }
+        
+        if col_name in special_mappings:
+            return special_mappings[col_name]
+        
         # Remove special characters and split on spaces/slashes/parentheses
         parts = col_name.replace('(', ' ').replace(')', ' ').replace('/', ' ').split()
         if not parts:
@@ -577,6 +612,190 @@ async def health_check():
             "last_fetch": last_fetch
         }
     }
+
+
+# ============================================================================
+# AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+from auth import (
+    create_user_token,
+    verify_password,
+    get_password_hash,
+    get_current_user,
+    require_admin
+)
+from pydantic import BaseModel, EmailStr
+
+# Request/Response models
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    username: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict
+
+
+# Temporary in-memory user store (replace with Supabase in next step)
+# In production, this will be in Supabase database
+# Pre-hashed passwords for initial setup
+users_db = {
+    "admin@example.com": {
+        "id": "1",
+        "username": "admin",
+        "email": "admin@example.com",
+        # Password: "admin123" (CHANGE IN PRODUCTION!)
+        "hashed_password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5aeB6xYJ9T.8K",
+        "role": "admin"
+    }
+}
+
+
+@app.post("/api/auth/login", response_model=TokenResponse)
+@limiter.limit(f"{os.getenv('RATE_LIMIT_PER_MINUTE', '10')}/minute")
+async def login(request: Request, credentials: LoginRequest):
+    """
+    Authenticate user and return JWT token
+    Rate limited to prevent brute force attacks
+    """
+    try:
+        user = users_db.get(credentials.email)
+        
+        if not user or not verify_password(credentials.password, user["hashed_password"]):
+            raise HTTPException(
+                status_code=401,
+                detail="Incorrect email or password"
+            )
+        
+        # Create access token
+        token = create_user_token(
+            user_id=user["id"],
+            username=user["username"],
+            email=user["email"],
+            role=user["role"]
+        )
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": user["id"],
+                "username": user["username"],
+                "email": user["email"],
+                "role": user["role"]
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail="Authentication failed")
+
+
+@app.post("/api/auth/signup", response_model=TokenResponse)
+@limiter.limit("5/hour")  # Stricter limit for signups
+async def signup(request: Request, user_data: SignupRequest):
+    """
+    Register new user
+    Strictly rate limited to prevent spam
+    """
+    try:
+        # Check if user exists
+        if user_data.email in users_db:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Create new user
+        user_id = str(len(users_db) + 1)
+        users_db[user_data.email] = {
+            "id": user_id,
+            "username": user_data.username,
+            "email": user_data.email,
+            "hashed_password": get_password_hash(user_data.password),
+            "role": "user"
+        }
+        
+        # Create access token
+        token = create_user_token(
+            user_id=user_id,
+            username=user_data.username,
+            email=user_data.email,
+            role="user"
+        )
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": user_id,
+                "username": user_data.username,
+                "email": user_data.email,
+                "role": "user"
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Signup error: {e}")
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+
+@app.get("/api/auth/me")
+@limiter.limit("30/minute")
+async def get_current_user_info(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    Get current authenticated user information
+    Requires valid JWT token
+    """
+    return current_user
+
+
+@app.post("/api/auth/logout")
+async def logout():
+    """
+    Logout endpoint (client-side token removal)
+    """
+    return {"message": "Successfully logged out"}
+
+
+# ============================================================================
+# PROTECTED ENDPOINTS EXAMPLE
+# ============================================================================
+
+@app.post("/api/admin/refresh-all-cache")
+@limiter.limit("5/minute")
+async def admin_refresh_cache(request: Request, current_user: dict = Depends(require_admin)):
+    """
+    Admin-only endpoint to refresh all caches
+    Requires admin role
+    """
+    try:
+        cache["sheets"] = {}
+        cache["available_sheets"] = None
+        cache["sheets_timestamp"] = None
+        
+        devices = get_survey_data(SHEET_NAME)
+        
+        return {
+            "status": "success",
+            "message": "All caches refreshed by admin",
+            "admin": current_user.get("username"),
+            "devices_loaded": len(devices)
+        }
+    except Exception as e:
+        logger.error(f"Admin cache refresh error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# FRONTEND SERVING
+# ============================================================================
 
 
 # Mount frontend static files (after API routes)
