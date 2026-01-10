@@ -151,6 +151,48 @@
   transform: scale(1.1);
 }
 
+.custom-device-icon-svg {
+  background: none !important;
+  border: none !important;
+}
+
+/* Device Type Dropdown */
+.device-type-dropdown {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.device-type-select {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.device-type-select:hover {
+  border-color: rgba(102, 126, 234, 0.5);
+  background: white;
+}
+
+.device-type-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 /* Filters Panel */
 .map-filters-panel {
   position: absolute;
