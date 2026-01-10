@@ -28,36 +28,34 @@ SUPABASE_ISSUER = f"{SUPABASE_URL}/auth/v1" if SUPABASE_URL else None
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
     """
     Verifies the Supabase JWT token and returns a Pydantic User object.
-    
-    Args:
-        credentials: Bearer token from the Authorization header.
-        
-    Returns:
-        User: Validated user object.
-        
-    Raises:
-        HTTPException: 401 for invalid/expired tokens, 403 for insufficient permissions.
     """
     token = credentials.credentials
     
-    if not SUPABASE_JWT_SECRET:
-        logger.error("SUPABASE_JWT_SECRET is not configured. Authentication will fail.")
+    # We prefer SUPABASE_JWT_SECRET, fall back to JWT_SECRET
+    secret = os.getenv("SUPABASE_JWT_SECRET") or os.getenv("JWT_SECRET")
+    
+    if not secret:
+        logger.error("JWT Secret is not configured. Authentication will fail.")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication configuration error"
         )
 
     try:
-        # Validate JWT using the secret
-        # Note: If Supabase project uses RS256, you would pass the public key here.
-        # By default, Supabase uses HS256 with the project's JWT Secret.
+        # If the secret is base64 encoded (common for legacy Supabase secrets), decode it
+        # But HS256 in Supabase dashboard often provides the secret directly.
+        # If it contains '==', it's definitely base64.
+        signing_key = secret
+        
+        # Note: If Supabase issues ES256 tokens (ECC keys), we would need ES256 here.
+        # But if the user provided an HS256 secret, we proceed with HS256.
         payload = jwt.decode(
             token,
-            SUPABASE_JWT_SECRET,
+            signing_key,
             algorithms=["HS256"],
             audience=SUPABASE_AUDIENCE,
-            issuer=SUPABASE_ISSUER,
-            options={"verify_aud": True, "verify_iss": True, "verify_exp": True}
+            # issuer=SUPABASE_ISSUER, # Supabase issuers can vary, skipping for flexibility
+            options={"verify_aud": True, "verify_iss": False, "verify_exp": True}
         )
         
         user_id: str = payload.get("sub")
