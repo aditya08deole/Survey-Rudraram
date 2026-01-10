@@ -9,7 +9,7 @@ services:
     region: singapore
     plan: free
     buildCommand: cd backend-python && pip install -r requirements.txt && cd ../frontend && npm install --legacy-peer-deps && CI=false npm run build
-    startCommand: cd backend-python && uvicorn app:app --host 0.0.0.0 --port $PORT
+    startCommand: cd backend-python && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
