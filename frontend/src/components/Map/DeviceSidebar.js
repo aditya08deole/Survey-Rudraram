@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, MapPin, Droplet, Zap, Ruler, Clock, Home, FileText, Image as ImageIcon, Trash2, Camera } from 'lucide-react';
 import ImageUpload from '../DeviceImages/ImageUpload';
 import ImageGallery from '../DeviceImages/ImageGallery';
-import { getDeviceImages } from '../../services/imageService';
+import { imageService } from '../../services/imageService';
 import './DeviceSidebar.css';
 
 const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
@@ -11,7 +11,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
     useEffect(() => {
         if (device?.surveyCode) {
-            getDeviceImages(device.surveyCode)
+            imageService.getDeviceImages(device.surveyCode)
                 .then(images => {
                     if (images && images.length > 0) {
                         // Prefer primary image, otherwise first image
@@ -163,16 +163,16 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
                 {activeTab === 'images' && (
                     <div className="images-tab fade-in">
-                        <ImageUpload device={device} onUploadSuccess={() => {
+                        <ImageUpload surveyCode={device.surveyCode} onUploadSuccess={() => {
                             // Determine if we need to refresh cover image
-                            getDeviceImages(device.surveyCode).then(images => {
+                            imageService.getDeviceImages(device.surveyCode).then(images => {
                                 const primary = images.find(img => img.is_primary) || images[0];
                                 setCoverImage(primary ? primary.url : null);
                             });
                         }} />
                         <div className="mt-6">
                             <h3 className="section-title mb-2">Gallery</h3>
-                            <ImageGallery device={device} />
+                            <ImageGallery surveyCode={device.surveyCode} />
                         </div>
                     </div>
                 )}
