@@ -487,6 +487,7 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
               }
 
               const isSelected = selectedDeviceIndex === idx;
+              const deviceName = device.originalName || device.surveyCode || device.surveyCodeId || `Device ${idx + 1}`;
 
               return (
                 <Marker

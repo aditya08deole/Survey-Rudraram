@@ -1,50 +1,76 @@
 import L from 'leaflet';
 
-// Custom icon factory for device types with status-based colors
+// Custom icon factory using uploaded images with status-based glow
 const createCustomIcon = (deviceType, status) => {
   const colors = {
     Working: '#10b981', // Green
-    'Non-Working': '#ef4444', // Red
+    'Non-Working': '#ef4444', // Red  
     Failed: '#6b7280', // Grey
+    'Not Work': '#ef4444', // Red (alias)
     default: '#3b82f6' // Blue fallback
   };
 
-  const color = colors[status] || colors.default;
-
-  const icons = {
-    Borewell: `
-      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="16" cy="16" r="14" fill="${color}" stroke="white" stroke-width="2"/>
-        <path d="M16 8 L16 24 M12 12 L20 12 M12 16 L20 16 M12 20 L20 20" 
-              stroke="white" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    `,
-    Sump: `
-      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="10" width="24" height="18" rx="2" fill="${color}" stroke="white" stroke-width="2"/>
-        <path d="M8 14 L24 14 M8 18 L24 18 M8 22 L24 22" 
-              stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    `,
-    OHSR: `
-      <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="6" width="12" height="20" rx="1" fill="${color}" stroke="white" stroke-width="2"/>
-        <rect x="14" y="26" width="4" height="4" fill="${color}" stroke="white" stroke-width="1"/>
-        <circle cx="16" cy="12" r="2" fill="white"/>
-        <rect x="13" y="16" width="6" height="1.5" fill="white"/>
-        <rect x="13" y="19" width="6" height="1.5" fill="white"/>
-      </svg>
-    `
+  const glowColors = {
+    Working: 'rgba(16, 185, 129, 0.8)',
+    'Non-Working': 'rgba(239, 68, 68, 0.8)',
+    Failed: 'rgba(107, 116, 128, 0.6)',
+    'Not Work': 'rgba(239, 68, 68, 0.8)',
+    default: 'rgba(59, 130, 246, 0.6)'
   };
 
-  const iconSvg = icons[deviceType] || icons.Borewell;
+  const color = colors[status] || colors.default;
+  const glowColor = glowColors[status] || glowColors.default;
+
+  // Map device types to icon paths
+  const iconPaths = {
+    Borewell: '/assets/icons/borewell.png',
+    Sump: '/assets/icons/sump.png',
+    OHSR: '/assets/icons/ohsr.png',
+    OHT: '/assets/icons/ohsr.png' // Use same icon for OHT
+  };
+
+  const iconPath = iconPaths[deviceType] || iconPaths.Borewell;
+
+  // Create HTML with image and glow effect
+  const iconHtml = `
+    <div class="custom-device-marker" style="
+      filter: drop-shadow(0 0 12px ${glowColor}) 
+              drop-shadow(0 0 24px ${glowColor})
+              drop-shadow(0 0 36px ${glowColor});
+      transition: all 0.3s ease;
+    ">
+      <div style="
+        position: relative;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: radial-gradient(circle, ${color}40, ${color}10);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid ${color};
+        box-shadow: 0 0 20px ${glowColor}, inset 0 0 10px ${glowColor};
+      ">
+        <img 
+          src="${iconPath}" 
+          alt="${deviceType}"
+          style="
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            filter: brightness(1.2);
+          "
+        />
+      </div>
+    </div>
+  `;
 
   return L.divIcon({
-    html: iconSvg,
+    html: iconHtml,
     className: 'custom-device-icon',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32]
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40]
   });
 };
 
@@ -55,7 +81,8 @@ export const getDeviceIcon = (deviceType, status) => {
 export const deviceTypes = {
   BOREWELL: 'Borewell',
   SUMP: 'Sump',
-  OHSR: 'OHSR'
+  OHSR: 'OHSR',
+  OHT: 'OHT'
 };
 
 export const deviceStatuses = {
