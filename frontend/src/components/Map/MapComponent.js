@@ -7,13 +7,14 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, LayersControl, useMap } from 'react-leaflet';
 import { Eye, Search, Filter, Download, X } from 'lucide-react';
 import L from 'leaflet';
 import html2canvas from 'html2canvas';
 import 'leaflet/dist/leaflet.css';
 import { MAP_CONFIG, getStatusColor, STATUS_CONFIG } from '../../utils/constants';
 import { getDeviceIcon } from './CustomMarkerIcons';
+import DeviceInfoPanel from './DeviceInfoPanel';
 import DrawingTools from './tools/DrawingTools';
 import MeasurementTool from './tools/MeasurementTool';
 import './MapComponent.css';
@@ -143,6 +144,7 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
     'Failed': true
   });
   const [selectedDeviceType, setSelectedDeviceType] = useState('All'); // Dropdown for device type
+  const [selectedDevice, setSelectedDevice] = useState(null); // For floating panel
   const [selectedDeviceIndex, setSelectedDeviceIndex] = useState(-1);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const mapRef = useRef(null);
@@ -413,60 +415,24 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
               eventHandlers={{
                 click: () => {
                   setSelectedDeviceIndex(idx);
+                  setSelectedDevice(device);
                   if (onMarkerClick) onMarkerClick(device);
                 }
               }}
-            >
-              <Popup className="device-popup" maxWidth={350} minWidth={300}>
-                <div className="device-popup-content">
-                  <div className="device-popup-header">
-                    <div className="device-popup-title">
-                      <h3>{deviceName}</h3>
-                      <span className="device-popup-code">
-                        {device.surveyCode || device.surveyCodeId || 'N/A'}
-                      </span>
-                    </div>
-                    {device.status && (
-                      <div
-                        className="device-popup-status"
-                        style={{
-                          backgroundColor: STATUS_CONFIG[device.status]?.color || '#6B7280',
-                          boxShadow: `0 0 15px ${STATUS_CONFIG[device.status]?.glowColor || 'transparent'}`
-                        }}
-                      >
-                        {device.status}
-                      </div>
-                    )}
-                  </div>
-                  <div className="device-popup-body">
-                    <div className="info-card-grid">
-                      <div className="info-card">
-                        <span className="info-label">📍 Zone</span>
-                        <span className="info-value">{device.zone || 'N/A'}</span>
-                      </div>
-                      <div className="info-card">
-                        <span className="info-label">📌 Location</span>
-                        <span className="info-value">{device.location || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <div className="device-popup-coordinates">
-                      <span>📍 {lat.toFixed(6)}, {lng.toFixed(6)}</span>
-                    </div>
-                  </div>
-                  <div className="device-popup-footer">
-                    <button
-                      className="device-popup-btn"
-                      onClick={() => onMarkerClick && onMarkerClick(device)}
-                    >
-                      <Eye size={16} />
-                      View Full Details
-                    </button>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
+            />
           );
         })}
+
+        {/* Floating Device Info Panel */}
+        {selectedDevice && (
+          <DeviceInfoPanel
+            device={selectedDevice}
+            onClose={() => {
+              setSelectedDevice(null);
+              setSelectedDeviceIndex(-1);
+            }}
+          />
+        )}
       </MapContainer>
     </div>
   );
