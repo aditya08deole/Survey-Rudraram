@@ -125,6 +125,7 @@ async def refresh_cache(sheet: Optional[str] = None):
     """
     Manually refresh cache
     """
+    from dashboard_app.cache.redis_client import redis_client
     try:
         if sheet:
             redis_client.delete(f"sheet:{sheet}")
