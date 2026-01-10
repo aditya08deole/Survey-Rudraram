@@ -1,10 +1,10 @@
-from app.celery_worker import celery_app
-from app.services.excel_service import fetch_excel_from_github, get_survey_data, SHEET_NAME
+from dashboard_app.celery_worker import celery_app
+from dashboard_app.services.excel_service import fetch_excel_from_github, get_survey_data, SHEET_NAME
 import logging
 
 logger = logging.getLogger(__name__)
 
-@celery_app.task(name="app.tasks.excel_tasks.prewarm_cache")
+@celery_app.task(name="dashboard_app.tasks.excel_tasks.prewarm_cache")
 def prewarm_cache(sheet_name: str = SHEET_NAME):
     """
     Background task to fetch Excel data and warm up the Redis cache.
@@ -20,10 +20,10 @@ def prewarm_cache(sheet_name: str = SHEET_NAME):
         logger.error(f"Error in prewarm_cache task: {e}")
         return {"status": "error", "message": str(e)}
 
-@celery_app.task(name="app.tasks.excel_tasks.clear_all_caches")
+@celery_app.task(name="dashboard_app.tasks.excel_tasks.clear_all_caches")
 def clear_all_caches():
     """Task to clear Redis manually (can be triggered by admin)"""
-    from app.cache.redis_client import redis_client
+    from dashboard_app.cache.redis_client import redis_client
     redis_client.flush_all()
     logger.info("Background task: All Redis caches cleared")
     return {"status": "success"}

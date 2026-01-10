@@ -12,7 +12,7 @@ celery_app = Celery(
     "rudraram_tasks",
     broker=redis_url,
     backend=redis_url,
-    include=["app.tasks.excel_tasks"]
+    include=["dashboard_app.tasks.excel_tasks"]
 )
 
 # Optional configuration

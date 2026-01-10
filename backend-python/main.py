@@ -16,9 +16,9 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # Import routers
-from app.api.v1.auth import router as auth_router
-from app.api.v1.survey import router as survey_router
-from app.api.v1.database import router as db_router
+from dashboard_app.api.v1.auth import router as auth_router
+from dashboard_app.api.v1.survey import router as survey_router
+from dashboard_app.api.v1.database import router as db_router
 
 # Load environment
 env_file = ".env.development" if os.getenv("ENV") != "production" else ".env.production"

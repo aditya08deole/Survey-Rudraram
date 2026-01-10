@@ -6,12 +6,12 @@ import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.auth.jwt_handler import (
+from dashboard_app.auth.jwt_handler import (
     create_user_token,
     verify_password,
     get_password_hash
 )
-from app.auth.permissions import get_current_user
+from dashboard_app.auth.permissions import get_current_user
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)

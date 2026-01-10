@@ -1,7 +1,7 @@
 import pytest
 import os
 from httpx import AsyncClient
-from app import app
+from dashboard_app.import app
 
 # Set testing environment
 os.environ["ENV"] = "test"

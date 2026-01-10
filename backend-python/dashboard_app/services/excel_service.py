@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
-from app.cache.redis_client import redis_client
+from dashboard_app.cache.redis_client import redis_client
 
 # Configuration
 GITHUB_RAW_EXCEL_URL = "https://raw.githubusercontent.com/aditya08deole/Survey-Rudraram/main/backend/data/rudraram_survey.xlsx"

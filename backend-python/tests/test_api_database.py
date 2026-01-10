@@ -4,7 +4,7 @@ Backend API Database Tests
 
 import pytest
 from httpx import AsyncClient
-from app import app
+from dashboard_app.import app
 
 @pytest.fixture
 async def client():

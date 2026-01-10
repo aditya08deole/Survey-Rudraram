@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, Any
 import logging
 from datetime import datetime
 
-from app.services.excel_service import (
+from dashboard_app.services.excel_service import (
     get_survey_data,
     is_cache_valid,
     fetch_excel_from_github,
