@@ -318,6 +318,43 @@
     animation: fadeIn 0.3s ease;
 }
 
+.upload-trigger-btn {
+    width: 100%;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    margin-bottom: 20px;
+}
+
+.upload-trigger-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.upload-trigger-btn:active {
+    transform: translateY(0);
+}
+
+.mt-6 {
+    margin-top: 24px;
+}
+
+.mb-2 {
+    margin-bottom: 8px;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;

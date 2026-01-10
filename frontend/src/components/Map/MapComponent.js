@@ -149,6 +149,21 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const mapRef = useRef(null);
 
+  // Helper function to detect device type from survey code
+  const getDeviceTypeFromCode = (device) => {
+    const code = (device.surveyCode || device.originalName || '').toUpperCase();
+    if (code.includes('BW') || code.includes('BORE')) return 'Borewell';
+    if (code.includes('SM') || code.includes('SUMP')) return 'Sump';
+    if (code.includes('OH') || code.includes('OHSR') || code.includes('OHT')) return 'OHSR';
+
+    // Fallback to tableName if available
+    if (device.tableName === 'borewells') return 'Borewell';
+    if (device.tableName === 'sumps') return 'Sump';
+    if (device.tableName === 'overhead_tanks') return 'OHSR';
+
+    return 'Unknown';
+  };
+
   // Filter devices based on search, status, and device type dropdown
   const filteredDevices = useMemo(() => {
     return devices.filter(device => {
@@ -178,13 +193,8 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
 
       // Device type dropdown filter
       if (selectedDeviceType !== 'All') {
-        const deviceType = device.deviceType || device.type;
-        const tableName = device.tableName; // From database
-
-        // Match against database table names
-        if (selectedDeviceType === 'Borewell' && tableName !== 'borewells') return false;
-        if (selectedDeviceType === 'Sump' && tableName !== 'sumps') return false;
-        if (selectedDeviceType === 'OHSR' && tableName !== 'overhead_tanks') return false;
+        const deviceType = getDeviceTypeFromCode(device);
+        if (selectedDeviceType !== deviceType) return false;
       }
 
       // Must have coordinates
@@ -400,25 +410,17 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
           const lng = device.longitude || device.long;
           if (!lat || !lng) return null;
 
-          // Detect device type from database table name or fallback to type field
-          let deviceType = device.deviceType || device.type;
-          const tableName = device.tableName;
-
-          // Map database table names to device types
-          if (tableName === 'borewells') deviceType = 'Borewell';
-          else if (tableName === 'sumps') deviceType = 'Sump';
-          else if (tableName === 'overhead_tanks') deviceType = 'OHSR';
-
-          const isSelected = selectedDeviceIndex === idx;
-          const deviceName = device.originalName || device.surveyCode || device.surveyCodeId || `Device ${idx + 1}`;
+          // Use helper function to detect device type
+          const deviceType = getDeviceTypeFromCode(device);
+          const deviceName = device.originalName || device.surveyCode || device.surveyCodeId || 'Unknown Device';
 
           return (
             <Marker
-              key={device.surveyCode || device.surveyCodeId || idx}
+              key={`${device.surveyCode}-${idx}`}
               position={[lat, lng]}
               icon={getDeviceIcon(deviceType, device.status)}
-              opacity={isSelected ? 1 : 0.9}
-              zIndexOffset={isSelected ? 1000 : 0}
+              opacity={selectedDeviceIndex === idx ? 1 : 0.9}
+              zIndexOffset={selectedDeviceIndex === idx ? 1000 : 0}
               eventHandlers={{
                 click: () => {
                   setSelectedDeviceIndex(idx);

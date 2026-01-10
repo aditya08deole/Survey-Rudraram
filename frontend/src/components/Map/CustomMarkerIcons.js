@@ -1,26 +1,40 @@
 import L from 'leaflet';
 import './MapComponent.css';
 
-// Get status color for markers
-const getStatusColor = (status) => {
-  if (!status) return '#39FF14'; // Default Neon Green
+// Get color based on device type and status
+const getMarkerColor = (type, status) => {
+  // Borewells: Use Excel status column
+  if (type === 'Borewell') {
+    if (!status) return '#39FF14'; // Default Green if no status
 
-  const s = status.toLowerCase();
+    const s = status.toLowerCase();
 
-  // Working -> Neon Green
-  if (s.includes('working') && !s.includes('not')) return '#39FF14';
+    // Working -> Neon Green
+    if (s.includes('working') && !s.includes('not')) return '#39FF14';
 
-  // Not Working -> Red
-  if (s.includes('not') || s.includes('non')) return '#FF3131';
+    // Not Working -> Red
+    if (s.includes('not') || s.includes('non')) return '#FF3131';
 
-  // Failed/Repair -> Grey
-  if (s.includes('failed') || s.includes('repair')) return '#808080';
+    // On Repair, Failed, or anything else -> Grey
+    return '#808080';
+  }
 
-  return '#39FF14'; // Default
+  // Sumps: Always Light Blue (no status column)
+  if (type === 'Sump') {
+    return '#87CEEB'; // Light Blue
+  }
+
+  // OHSR/OHT: Always Orange (no status column)
+  if (type === 'OHSR' || type === 'OHT' || type === 'overhead_tank') {
+    return '#FFA500'; // Orange
+  }
+
+  // Default fallback
+  return '#39FF14';
 };
 
 export const getDeviceIcon = (type, status) => {
-  const color = getStatusColor(status);
+  const color = getMarkerColor(type, status);
   let shapeClass = '';
 
   // Determine shape class based on type

@@ -8,6 +8,7 @@ import './DeviceSidebar.css';
 const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
     const [activeTab, setActiveTab] = useState('details');
     const [coverImage, setCoverImage] = useState(null);
+    const [showUploadModal, setShowUploadModal] = useState(false);
 
     useEffect(() => {
         if (device?.surveyCode) {
@@ -163,13 +164,28 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
                 {activeTab === 'images' && (
                     <div className="images-tab fade-in">
-                        <ImageUpload surveyCode={device.surveyCode} onUploadSuccess={() => {
-                            // Determine if we need to refresh cover image
-                            imageService.getDeviceImages(device.surveyCode).then(images => {
-                                const primary = images.find(img => img.is_primary) || images[0];
-                                setCoverImage(primary ? primary.url : null);
-                            });
-                        }} />
+                        <button
+                            className="upload-trigger-btn"
+                            onClick={() => setShowUploadModal(true)}
+                        >
+                            <Camera size={20} /> Upload Images
+                        </button>
+
+                        {showUploadModal && (
+                            <ImageUpload
+                                surveyCode={device.surveyCode}
+                                onUploadSuccess={() => {
+                                    // Refresh cover image
+                                    imageService.getDeviceImages(device.surveyCode).then(images => {
+                                        const primary = images.find(img => img.is_primary) || images[0];
+                                        setCoverImage(primary ? primary.url : null);
+                                    });
+                                    setShowUploadModal(false);
+                                }}
+                                onClose={() => setShowUploadModal(false)}
+                            />
+                        )}
+
                         <div className="mt-6">
                             <h3 className="section-title mb-2">Gallery</h3>
                             <ImageGallery surveyCode={device.surveyCode} />
