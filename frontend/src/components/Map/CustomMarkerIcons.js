@@ -33,75 +33,79 @@ const getMarkerColor = (type, status) => {
   return '#39FF14';
 };
 
-export const getDeviceIcon = (type, status) => {
+export const getDeviceIcon = (type, status, label) => {
   const color = getMarkerColor(type, status);
   let shapeClass = '';
   // Borewell -> Circle, Sump -> Square (Icon), OHSR -> Square (Icon)
-  // Per request: "keep the circle for borewell... for sumps keep blue colour and its icon for ohsr keep orange colour and its icon"
-  // We'll use specific classes to render these icons via CSS or SVG-in-HTML
 
   const deviceType = type || 'Unknown';
 
+  // Label HTML (Text below icon)
+  const labelHtml = label ?
+    `<div style="
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #000;
+      white-space: nowrap;
+      text-shadow: 0 0 2px white;
+      pointer-events: none;
+      border: 1px solid rgba(0,0,0,0.2);
+      z-index: 1000;
+    ">${label}</div>` : '';
+
+  let iconHtml = '';
+
   if (deviceType === 'Borewell') {
-    // Circle with status color
-    return L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="
+    // Circle
+    iconHtml = `<div style="
         width: 16px;
         height: 16px;
         background-color: ${color};
         border-radius: 50%;
         border: 2px solid white;
         box-shadow: 0 0 4px rgba(0,0,0,0.4);
-      "></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -10]
-    });
+      "></div>`;
   }
-
-  if (deviceType === 'Sump') {
-    // Blue Icon (Using a simple SVG shape for 'drop' or 'square')
-    // We'll use a Square with a 'S' or just solid
-    return L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="
+  else if (deviceType === 'Sump') {
+    // Blue Box
+    iconHtml = `<div style="
         width: 18px;
         height: 18px;
         background-color: ${color};
-        border-radius: 4px; /* Square/Box for Sump */
+        border-radius: 4px; 
         border: 2px solid white;
         box-shadow: 0 0 4px rgba(0,0,0,0.4);
         display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px;
-      ">S</div>`,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11],
-      popupAnchor: [0, -11]
-    });
+      ">S</div>`;
   }
-
-  if (deviceType === 'OHSR' || deviceType === 'OHT') {
-    // Orange Icon (Cylinder/Triangle representation or just O)
-    return L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="
+  else if (deviceType === 'OHSR' || deviceType === 'OHT') {
+    // Orange Shape
+    iconHtml = `<div style="
         width: 20px;
         height: 20px;
         background-color: ${color};
-        clip-path: polygon(50% 0%, 0% 100%, 100% 100%); /* Triangle for OHSR height */
+        clip-path: polygon(50% 0%, 0% 100%, 100% 100%); 
         border-bottom: 2px solid white; 
         box-shadow: 0 0 4px rgba(0,0,0,0.4);
-      "></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -10]
-    });
+      "></div>`;
+  }
+  else {
+    // Fallback
+    iconHtml = `<div style="width: 14px; height: 14px; background-color: ${color}; border-radius: 50%;"></div>`;
   }
 
-  // Fallback
   return L.divIcon({
     className: 'custom-div-icon',
-    html: `<div style="width: 14px; height: 14px; background-color: ${color}; border-radius: 50%;"></div>`,
-    iconSize: [14, 14]
+    html: `<div style="position: relative;">${iconHtml}${labelHtml}</div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10]
   });
 };
