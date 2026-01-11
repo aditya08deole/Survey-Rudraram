@@ -8,7 +8,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import 'leaflet-measure/dist/leaflet-measure.css';
 import {
     Pencil, Type, Square, Circle, Trash2,
-    Ruler, MousePointer2
+    Ruler, MousePointer2, Move
 } from 'lucide-react';
 import './CanvasTools.css';
 
