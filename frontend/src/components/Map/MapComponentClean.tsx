@@ -83,7 +83,7 @@ export function MapComponent({
     return (
         <div className="map-component-clean">
             <MapContainer
-                center={MAP_CONFIG.center}
+                center={MAP_CONFIG.center as [number, number]}
                 zoom={MAP_CONFIG.defaultZoom}
                 style={{ width: '100%', height: '100%' }}
                 zoomControl={true}

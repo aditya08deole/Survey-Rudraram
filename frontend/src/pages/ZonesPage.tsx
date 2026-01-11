@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchSurveyData } from '../services/apiService';
 import { computeZoneMetrics } from '../types/metrics';
 import { MapPin, AlertTriangle } from 'lucide-react';
+import type { ApiResponse } from '../types/device';
 import type { Device } from '../types/device';
 import LoadingAnimation from '../components/LoadingAnimation';
 import './ZonesPage.css';
@@ -25,7 +26,7 @@ export function ZonesPage() {
     }, []);
 
     const loadData = async () => {
-        const response = await fetchSurveyData();
+        const response = await fetchSurveyData() as ApiResponse;
         if (response.success) setAllDevices(response.devices);
         setLoading(false);
     };

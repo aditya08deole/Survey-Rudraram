@@ -51,29 +51,21 @@ export interface FilterCount {
     filtered: number;
 }
 
-export interface ApiResponse<T> {
-    success: boolean;
-    data?: T;
-    devices?: Device[];
-    metadata?: ApiMetadata;
-    error?: string;
-    errors?: string[];
-}
-
 export interface ApiMetadata {
-    sheet_name: string;
-    total_rows: number;
+    total_count: number;
     valid_count: number;
     invalid_count: number;
-    validation_rate: number;
-    error_breakdown: Record<string, number>;
-    header_validation: {
-        valid: boolean;
-        missing_headers: string[];
-        extra_headers: string[];
-        warnings: string[];
-    };
-    cached_at: string;
+    validation_errors?: any[];
+}
+
+export interface ApiResponse {
+    success: boolean;
+    devices: Device[];
+    metadata?: ApiMetadata | null;
+    sheet?: string;
+    stats?: Stats | null;
+    errors?: string[];
+    warnings?: string[];
 }
 
 export interface Stats {

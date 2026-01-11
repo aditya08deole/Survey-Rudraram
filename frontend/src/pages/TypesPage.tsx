@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchSurveyData } from '../services/apiService';
 import { computeTypeMetrics } from '../types/metrics';
 import { Layers, Circle, Square, Triangle } from 'lucide-react';
-import type { Device } from '../types/device';
+import type { Device, ApiResponse } from '../types/device';
 import LoadingAnimation from '../components/LoadingAnimation';
 import './TypesPage.css';
 
@@ -25,7 +25,7 @@ export function TypesPage() {
     }, []);
 
     const loadData = async () => {
-        const response = await fetchSurveyData();
+        const response = await fetchSurveyData() as ApiResponse;
         if (response.success) setAllDevices(response.devices);
         setLoading(false);
     };
