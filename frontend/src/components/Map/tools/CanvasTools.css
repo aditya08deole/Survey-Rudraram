@@ -108,6 +108,7 @@
     width: 80px;
     height: 4px;
     -webkit-appearance: none;
+    appearance: none;
     background: #e5e7eb;
     border-radius: 2px;
     outline: none;
