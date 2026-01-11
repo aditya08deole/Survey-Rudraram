@@ -9,7 +9,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useDeviceFilters } from '../hooks/useDeviceFilters';
 import { fetchSurveyData } from '../services/apiService';
 import CommandBar from '../components/Dashboard/CommandBar';
-import FilterSidebar from '../components/Dashboard/FilterSidebar';
 import MapComponent from '../components/Map/MapComponentClean';
 import DeviceSidebar from '../components/Map/DeviceSidebar';
 import LoadingAnimation from '../components/LoadingAnimation';
