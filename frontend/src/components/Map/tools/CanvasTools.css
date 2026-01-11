@@ -75,8 +75,10 @@
 
 /* Color Picker */
 .color-picker {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 6px;
+    padding: 0 4px;
 }
 
 .color-dot {
@@ -211,4 +213,27 @@
     white-space: nowrap;
     pointer-events: none;
     transform: translate(10px, -20px);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+    .canvas-toolbar {
+        right: 10px;
+        padding: 8px 4px;
+        gap: 8px;
+    }
+
+    .canvas-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .color-dot {
+        width: 20px;
+        height: 20px;
+    }
+
+    .size-slider {
+        width: 60px;
+    }
 }
