@@ -6,15 +6,15 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useDeviceFilters } from '../../hooks/useDeviceFilters';
-import { fetchSurveyData } from '../../services/apiService';
-import CommandBar from '../../components/Dashboard/CommandBar';
-import FilterSidebar from '../../components/Dashboard/FilterSidebar';
-import MapComponent from '../../components/Map/MapComponent';
-import DeviceSidebar from '../../components/Map/DeviceSidebar';
-import LoadingAnimation from '../../components/LoadingAnimation';
+import { useDeviceFilters } from '../hooks/useDeviceFilters';
+import { fetchSurveyData } from '../services/apiService';
+import CommandBar from '../components/Dashboard/CommandBar';
+import FilterSidebar from '../components/Dashboard/FilterSidebar';
+import MapComponent from '../components/Map/MapComponent';
+import DeviceSidebar from '../components/Map/DeviceSidebar';
+import LoadingAnimation from '../components/LoadingAnimation';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import type { Device, DeviceType, DeviceStatus } from '../../types/device';
+import type { Device, DeviceType, DeviceStatus } from '../types/device';
 import * as XLSX from 'xlsx';
 import './MapPage.css';
 
