@@ -35,7 +35,7 @@ const getMarkerColor = (type, status) => {
 
 export const getDeviceIcon = (type, status, label) => {
   const color = getMarkerColor(type, status);
-  let shapeClass = '';
+
   // Borewell -> Circle, Sump -> Square (Icon), OHSR -> Square (Icon)
 
   const deviceType = type || 'Unknown';
