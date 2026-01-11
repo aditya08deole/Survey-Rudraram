@@ -15,18 +15,18 @@ const initialState = {
   devices: [],
   zones: [],
   stats: null,
-  
+
   // Data source
   useDatabase: true, // Use database API by default (set to false for Excel fallback)
-  
+
   // Sheet selection (Excel mode)
   currentSheet: 'All',
   availableSheets: ['All'],
-  
+
   // Selected/Active items
   selectedDevice: null,
   selectedZone: null,
-  
+
   // Filters
   filters: {
     zone: '',
@@ -34,12 +34,12 @@ const initialState = {
     status: '',
     search: ''
   },
-  
+
   // UI state
   isLoading: true,
   error: null,
   showDevicePanel: false,
-  
+
   // Data status
   lastUpdated: null,
   hasData: false
@@ -69,42 +69,42 @@ function appReducer(state, action) {
   switch (action.type) {
     case ActionTypes.SET_LOADING:
       return { ...state, isLoading: action.payload };
-    
+
     case ActionTypes.SET_ERROR:
       return { ...state, error: action.payload, isLoading: false };
-    
+
     case ActionTypes.SET_DEVICES:
       return { ...state, devices: action.payload };
-    
+
     case ActionTypes.SET_ZONES:
       return { ...state, zones: action.payload };
-    
+
     case ActionTypes.SET_STATS:
       return { ...state, stats: action.payload };
-    
+
     case ActionTypes.SET_SELECTED_DEVICE:
-      return { 
-        ...state, 
+      return {
+        ...state,
         selectedDevice: action.payload,
-        showDevicePanel: !!action.payload 
+        showDevicePanel: !!action.payload
       };
-    
+
     case ActionTypes.SET_SELECTED_ZONE:
-      return { 
-        ...state, 
+      return {
+        ...state,
         selectedZone: action.payload,
         filters: {
           ...state.filters,
           zone: action.payload || ''
         }
       };
-    
+
     case ActionTypes.SET_FILTERS:
-      return { 
-        ...state, 
+      return {
+        ...state,
         filters: { ...state.filters, ...action.payload }
       };
-    
+
     case ActionTypes.RESET_FILTERS:
       return {
         ...state,
@@ -115,32 +115,32 @@ function appReducer(state, action) {
           search: ''
         }
       };
-    
+
     case ActionTypes.SHOW_DEVICE_PANEL:
       return { ...state, showDevicePanel: true };
-    
+
     case ActionTypes.HIDE_DEVICE_PANEL:
       return { ...state, showDevicePanel: false, selectedDevice: null };
-    
+
     case ActionTypes.SET_DATA_STATUS:
       return {
         ...state,
         hasData: action.payload.hasData,
         lastUpdated: action.payload.lastUpdated
       };
-    
+
     case ActionTypes.SET_CURRENT_SHEET:
       return {
         ...state,
         currentSheet: action.payload
       };
-    
+
     case ActionTypes.SET_AVAILABLE_SHEETS:
       return {
         ...state,
         availableSheets: action.payload
       };
-    
+
     default:
       return state;
   }
@@ -165,11 +165,11 @@ export function AppProvider({ children }) {
   // Function to load data from DATABASE API (new Supabase integration)
   const loadDatabaseData = async () => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-    
+
     try {
       // Fetch all devices from database
       const devicesResult = await fetchDevicesFromDB();
-      
+
       if (!devicesResult.success || !devicesResult.devices) {
         throw new Error(devicesResult.error || 'Failed to load devices from database');
       }
@@ -185,14 +185,15 @@ export function AppProvider({ children }) {
         zone: device.zone,
         location: device.location,
         status: device.status || 'Unknown',
-        
+
         // Coordinates
-        lat: device.latitude,
-        long: device.longitude,
-        
+        lat: parseFloat(device.latitude),
+        long: parseFloat(device.longitude),
+        lng: parseFloat(device.longitude),
+
         // Device-specific fields
         ...device,
-        
+
         // Street name from location
         streetName: device.location || device.original_name
       }));
@@ -204,7 +205,7 @@ export function AppProvider({ children }) {
       // Fetch zones
       const zonesResult = await fetchZonesFromDB();
       const zonesList = zonesResult.success ? zonesResult.zones : [];
-      
+
       const zonesWithCounts = zonesList.map(zoneName => ({
         name: zoneName,
         deviceCount: transformedDevices.filter(d => d.zone === zoneName).length
@@ -233,30 +234,32 @@ export function AppProvider({ children }) {
 
       dispatch({ type: ActionTypes.SET_DEVICES, payload: transformedDevices });
       dispatch({ type: ActionTypes.SET_ZONES, payload: zonesWithCounts });
-      dispatch({ type: ActionTypes.SET_STATS, payload: {
-        overview: {
-          totalDevices: transformedDevices.length,
-          mappedDevices: mappedDevices,
-          unmappedDevices: transformedDevices.length - mappedDevices,
-          lastUpdated: new Date().toISOString()
-        },
-        byType: dbStats.by_type || {},
-        byStatus: dbStats.by_status || {},
-        byZone: dbStats.by_zone || {},
-        deviceTypes: deviceTypesArray,
-        statusBreakdown: statusArray,
-        zones: zonesArray,
-        summary: {
-          totalBorewells: dbStats.by_type?.borewell || 0,
-          totalSumps: dbStats.by_type?.sump || 0,
-          totalOHSR: dbStats.by_type?.overhead_tank || 0,
-          workingDevices: dbStats.by_status?.Working || 0,
-          notWorkingDevices: dbStats.by_status?.['Not Working'] || 0
+      dispatch({
+        type: ActionTypes.SET_STATS, payload: {
+          overview: {
+            totalDevices: transformedDevices.length,
+            mappedDevices: mappedDevices,
+            unmappedDevices: transformedDevices.length - mappedDevices,
+            lastUpdated: new Date().toISOString()
+          },
+          byType: dbStats.by_type || {},
+          byStatus: dbStats.by_status || {},
+          byZone: dbStats.by_zone || {},
+          deviceTypes: deviceTypesArray,
+          statusBreakdown: statusArray,
+          zones: zonesArray,
+          summary: {
+            totalBorewells: dbStats.by_type?.borewell || 0,
+            totalSumps: dbStats.by_type?.sump || 0,
+            totalOHSR: dbStats.by_type?.overhead_tank || 0,
+            workingDevices: dbStats.by_status?.Working || 0,
+            notWorkingDevices: dbStats.by_status?.['Not Working'] || 0
+          }
         }
-      }});
-      dispatch({ 
-        type: ActionTypes.SET_DATA_STATUS, 
-        payload: { 
+      });
+      dispatch({
+        type: ActionTypes.SET_DATA_STATUS,
+        payload: {
           hasData: transformedDevices.length > 0,
           lastUpdated: new Date().toISOString()
         }
@@ -271,19 +274,19 @@ export function AppProvider({ children }) {
 
     } catch (error) {
       console.error('Failed to load database:', error);
-      dispatch({ 
-        type: ActionTypes.SET_ERROR, 
-        payload: `Failed to load data from database: ${error.message}` 
+      dispatch({
+        type: ActionTypes.SET_ERROR,
+        payload: `Failed to load data from database: ${error.message}`
       });
     }
-    
+
     dispatch({ type: ActionTypes.SET_LOADING, payload: false });
   };
 
   // Function to load all data from Excel API backend (legacy)
   const loadData = async (sheetName = 'All') => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-    
+
     try {
       // Fetch data from FastAPI backend with sheet parameter
       const result = await fetchSurveyData(sheetName);
@@ -305,20 +308,22 @@ export function AppProvider({ children }) {
 
       dispatch({ type: ActionTypes.SET_DEVICES, payload: result.devices });
       dispatch({ type: ActionTypes.SET_ZONES, payload: zones });
-      dispatch({ type: ActionTypes.SET_STATS, payload: {
-        overview: {
-          totalDevices: stats.totalDevices,
-          mappedDevices: stats.mappedDevices,
-          unmappedDevices: stats.unmappedDevices,
-          lastUpdated: result.loadedAt
-        },
-        byZone: stats.byZone,
-        byType: stats.byType,
-        byStatus: stats.byStatus
-      }});
-      dispatch({ 
-        type: ActionTypes.SET_DATA_STATUS, 
-        payload: { 
+      dispatch({
+        type: ActionTypes.SET_STATS, payload: {
+          overview: {
+            totalDevices: stats.totalDevices,
+            mappedDevices: stats.mappedDevices,
+            unmappedDevices: stats.unmappedDevices,
+            lastUpdated: result.loadedAt
+          },
+          byZone: stats.byZone,
+          byType: stats.byType,
+          byStatus: stats.byStatus
+        }
+      });
+      dispatch({
+        type: ActionTypes.SET_DATA_STATUS,
+        payload: {
           hasData: result.devices.length > 0,
           lastUpdated: result.loadedAt
         }
@@ -332,12 +337,12 @@ export function AppProvider({ children }) {
 
     } catch (error) {
       console.error('Failed to load data:', error);
-      dispatch({ 
-        type: ActionTypes.SET_ERROR, 
-        payload: `Failed to load Excel file from GitHub: ${error.message}` 
+      dispatch({
+        type: ActionTypes.SET_ERROR,
+        payload: `Failed to load Excel file from GitHub: ${error.message}`
       });
     }
-    
+
     dispatch({ type: ActionTypes.SET_LOADING, payload: false });
   };
 
@@ -356,7 +361,7 @@ export function AppProvider({ children }) {
     }
     if (state.filters.search) {
       const query = state.filters.search.toLowerCase();
-      filtered = filtered.filter(d => 
+      filtered = filtered.filter(d =>
         d.surveyCode.toLowerCase().includes(query) ||
         (d.streetName && d.streetName.toLowerCase().includes(query))
       );
@@ -367,7 +372,7 @@ export function AppProvider({ children }) {
 
   // Get only mapped devices (with coordinates)
   const getMappedDevices = () => {
-    return getFilteredDevices().filter(d => 
+    return getFilteredDevices().filter(d =>
       d.lat && d.long && !isNaN(d.lat) && !isNaN(d.long)
     );
   };
@@ -381,7 +386,7 @@ export function AppProvider({ children }) {
         loadData(state.currentSheet);
       }
     },
-    
+
     toggleDataSource: () => {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       // Toggle between database and Excel
@@ -394,35 +399,35 @@ export function AppProvider({ children }) {
         loadData(state.currentSheet);
       }
     },
-    
+
     setCurrentSheet: (sheetName) => {
       dispatch({ type: ActionTypes.SET_CURRENT_SHEET, payload: sheetName });
     },
-    
+
     setAvailableSheets: (sheets) => {
       dispatch({ type: ActionTypes.SET_AVAILABLE_SHEETS, payload: sheets });
     },
-    
+
     setSelectedDevice: (device) => {
       dispatch({ type: ActionTypes.SET_SELECTED_DEVICE, payload: device });
     },
-    
+
     setSelectedZone: (zone) => {
       dispatch({ type: ActionTypes.SET_SELECTED_ZONE, payload: zone });
     },
-    
+
     setFilters: (filters) => {
       dispatch({ type: ActionTypes.SET_FILTERS, payload: filters });
     },
-    
+
     resetFilters: () => {
       dispatch({ type: ActionTypes.RESET_FILTERS });
     },
-    
+
     hideDevicePanel: () => {
       dispatch({ type: ActionTypes.HIDE_DEVICE_PANEL });
     },
-    
+
     showDevicePanel: () => {
       dispatch({ type: ActionTypes.SHOW_DEVICE_PANEL });
     }
