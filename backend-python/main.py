@@ -81,6 +81,8 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(survey_router, prefix="/api")
 app.include_router(db_router) # Already has /api/db
 app.include_router(device_images_router, prefix="/api")
+from dashboard_app.api.v1.zones import router as zones_router
+app.include_router(zones_router, prefix="/api")
 
 # Directories
 BASE_DIR = Path(__file__).parent

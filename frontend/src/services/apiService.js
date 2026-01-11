@@ -403,6 +403,63 @@ export const checkDatabaseHealth = async () => {
   }
 };
 
+/**
+ * ========================================
+ * MAP ZONE API FUNCTIONS
+ * ========================================
+ */
+
+export const getMapZones = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/zones`);
+    if (!response.ok) throw new Error("Failed to fetch zones");
+    return await response.json();
+  } catch (error) {
+    console.error("Error loading zones:", error);
+    return [];
+  }
+};
+
+export const saveMapZone = async (zone) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/zones`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(zone),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error saving zone:", error);
+    return { success: false };
+  }
+};
+
+export const deleteMapZone = async (zoneId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/zones/${zoneId}`, {
+      method: "DELETE",
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting zone:", error);
+    return { success: false };
+  }
+};
+
+export const updateMapZone = async (zoneId, zone) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/zones/${zoneId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(zone),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating zone:", error);
+    return { success: false };
+  }
+};
+
 // Export API base URL for debugging
 export { API_BASE_URL };
 
