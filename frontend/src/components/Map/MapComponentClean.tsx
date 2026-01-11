@@ -74,6 +74,10 @@ function MapController({ selectedDevice }: { selectedDevice?: Device | null }) {
  * Main Map Component
  * CLEAN VERSION - No internal filtering, just renders what it receives
  */
+import CanvasTools from './tools/CanvasTools';
+
+// ... existing imports ...
+
 export function MapComponent({
     devices,
     selectedDevice,
@@ -91,7 +95,11 @@ export function MapComponent({
             >
                 <MapController selectedDevice={selectedDevice} />
 
+                {/* Advanced Canvas Tools (Drawing, Text, Measure) */}
+                <CanvasTools />
+
                 <LayersControl position="topright">
+// ... existing content ...
                     {/* Satellite View */}
                     <BaseLayer checked name="Satellite">
                         <TileLayer
