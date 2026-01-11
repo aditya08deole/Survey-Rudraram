@@ -3,55 +3,169 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from typing import Optional, List, Dict, Any
 import logging
+import os
+from dotenv import load_dotenv
+from supabase import create_client
 from datetime import datetime
 
 from dashboard_app.services.excel_service import (
-    get_survey_data,
+    get_survey_data as get_excel_data,
     is_cache_valid,
     CACHE_DURATION_SECONDS
 )
 
+# Load environment
+load_dotenv(".env.development")
+load_dotenv(".env.production")
+
 logger = logging.getLogger(__name__)
 
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    logger.error("Supabase credentials not found!")
+    supabase = None
+else:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info(f"Supabase client initialized: {SUPABASE_URL}")
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase: {e}")
+        supabase = None
+
 router = APIRouter(tags=["Survey Data"])
+
+def map_db_to_frontend(record: Dict[str, Any], device_type: str) -> Dict[str, Any]:
+    """Map database record columns to frontend Device interface"""
+    return {
+        "survey_id": record.get("survey_code"),
+        "original_name": record.get("survey_code"),
+        "zone": record.get("zone"),
+        "street": record.get("location_address") or record.get("street_name"),
+        "device_type": device_type,
+        "status": record.get("status"),
+        "lat": record.get("latitude"),
+        "lng": record.get("longitude"),
+        "houses": record.get("connected_houses") or record.get("houses_connected"),
+        "usage_hours": record.get("daily_usage_hours") or record.get("daily_usage"),
+        "pipe_size": record.get("pipe_size"),
+        "motor_hp": record.get("motor_capacity") or record.get("motor_hp"),
+        "notes": record.get("remarks") or record.get("notes"),
+        "id": record.get("id")
+    }
+
+async def fetch_from_supabase(sheet_filter: str) -> List[Dict[str, Any]]:
+    """Fetch and normalize data from Supabase"""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection not available")
+
+    all_devices = []
+    
+    # Simple mapping: if sheet is "Borewell", only fetch borewells
+    fetch_borewell = sheet_filter in ["All", "Borewell"]
+    fetch_sump = sheet_filter in ["All", "Sump"]
+    fetch_ohsr = sheet_filter in ["All", "OHSR", "OHT", "Overhead Tank"]
+
+    # 1. Fetch Borewells
+    if fetch_borewell:
+        try:
+            res = supabase.table("borewells").select("*").execute()
+            for r in res.data:
+                all_devices.append(map_db_to_frontend(r, "Borewell"))
+        except Exception as e:
+            logger.error(f"Error fetching borewells: {e}")
+
+    # 2. Fetch Sumps
+    if fetch_sump:
+        try:
+            res = supabase.table("sumps").select("*").execute()
+            for r in res.data:
+                all_devices.append(map_db_to_frontend(r, "Sump"))
+        except Exception as e:
+            logger.error(f"Error fetching sumps: {e}")
+
+    # 3. Fetch Overhead Tanks
+    if fetch_ohsr:
+        try:
+            res = supabase.table("overhead_tanks").select("*").execute()
+            for r in res.data:
+                all_devices.append(map_db_to_frontend(r, "OHSR"))
+        except Exception as e:
+            logger.error(f"Error fetching tanks: {e}")
+            
+    return all_devices
 
 @router.get("/survey-data")
 async def get_all_survey_data(
     sheet: str = "All",
+    source: str = Query("supabase", description="Data source: 'supabase' or 'excel'"),
     include_invalid: bool = Query(False, description="Include quarantined invalid devices")
 ):
     """
-    Get all survey data from Excel
-    Aggregates Borewell, Sump, and OHSR sheets if sheet="All"
+    Get all survey data.
+    - Default source='supabase': Fetches from Database (Repliable, Fast)
+    - source='excel': Fetches from GitHub Excel file (For Table View comparison)
     """
     try:
-        result = get_survey_data(sheet, include_invalid=include_invalid)
-        json_safe_content = jsonable_encoder(result)
+        response_data = {}
+        headers = {}
         
-        metadata = result.get("metadata", {})
-        
-        return JSONResponse(
-            content=json_safe_content,
-            headers={
-                "Cache-Control": f"public, max-age={CACHE_DURATION_SECONDS}",
-                "X-Total-Devices": str(metadata.get("valid_count", 0)),
-                "X-Source": "Excel (GitHub)"
+        if source == "excel":
+            # --- EXCEL PATH ---
+            result = get_excel_data(sheet, include_invalid=include_invalid)
+            # Result already has {devices, metadata, etc}
+            json_safe_content = jsonable_encoder(result)
+            metadata = result.get("metadata", {})
+            return JSONResponse(
+                content=json_safe_content,
+                headers={
+                    "Cache-Control": f"public, max-age={CACHE_DURATION_SECONDS}",
+                    "X-Total-Devices": str(metadata.get("valid_count", 0)),
+                    "X-Source": "Excel (GitHub)"
+                }
+            )
+        else:
+            # --- SUPABASE PATH (DEFAULT) ---
+            all_devices = await fetch_from_supabase(sheet)
+            
+            # Construct response matching Excel format structure
+            total = len(all_devices)
+            response_data = {
+                "devices": all_devices,
+                "invalid_devices": [], # DB assumes valid
+                "metadata": {
+                    "total_rows": total,
+                    "valid_count": total,
+                    "invalid_count": 0,
+                    "validation_rate": 100.0,
+                    "source": "database"
+                }
             }
-        )
+            
+            return JSONResponse(
+                content=jsonable_encoder(response_data),
+                headers={
+                    "X-Total-Devices": str(total),
+                    "X-Source": "database"
+                }
+            )
+            
     except Exception as e:
         logger.error(f"Error in /api/survey-data: {str(e)}")
-        # Return 500 but log detailed error
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/survey-data/stats")
-async def get_survey_stats():
-    """Get fast distribution statistics"""
+async def get_survey_stats(source: str = Query("supabase")):
+    """Get statistics (Calculated from DB or Excel)"""
     try:
-        # Get 'All' sheet data for global stats (this internally fetches all sheets)
-        result = get_survey_data("All")
-        valid_devices = result.get("devices", [])
-        
+        if source == "excel":
+            result = get_excel_data("All")
+            valid_devices = result.get("devices", [])
+        else:
+            valid_devices = await fetch_from_supabase("All")
+
         stats = {
             "total_devices": len(valid_devices),
             "zones": {},
