@@ -14,7 +14,8 @@ import MapPage from './pages/MapPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ZonesPage from './pages/ZonesPage';
 import TypesPage from './pages/TypesPage';
-import TableView from './pages/TableView';
+import DeviceTablePage from './pages/DeviceTablePage';
+import ExportPage from './pages/ExportPage';
 import './App.css';
 
 function App() {
@@ -31,8 +32,8 @@ function App() {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/zones" element={<ZonesPage />} />
               <Route path="/types" element={<TypesPage />} />
-              <Route path="/table" element={<TableView />} />
-              {/* Export view can be added later */}
+              <Route path="/table" element={<DeviceTablePage />} />
+              <Route path="/export" element={<ExportPage />} />
             </Routes>
           </main>
         </div>
