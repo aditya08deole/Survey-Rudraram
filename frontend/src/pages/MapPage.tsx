@@ -1,116 +1,32 @@
 /**
  * Map Page Component
  * 
- * Professional geospatial dashboard with command-bar architecture
- * Single source of truth for all filtering
+ * Professional geospatial dashboard with unified header architecture
+ * Relies on AppContext for state management
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useDeviceFilters } from '../hooks/useDeviceFilters';
-import { fetchSurveyData } from '../services/apiService';
-import CommandBar from '../components/Dashboard/CommandBar';
+import React from 'react';
 import MapComponent from '../components/Map/MapComponentClean';
 import DeviceSidebar from '../components/Map/DeviceSidebar';
 import LoadingAnimation from '../components/LoadingAnimation';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import type { Device, DeviceType, DeviceStatus, ApiResponse } from '../types/device';
-import * as XLSX from 'xlsx';
+// @ts-ignore
+import { useApp } from '../context/AppContext';
 import './MapPage.css';
 
 export function MapPage() {
-    const [allDevices, setAllDevices] = useState<Device[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-    const [metadata, setMetadata] = useState<any>(null);
-
-    // Single source of truth for filtering
+    // Use Global Context instead of local state
     const {
-        filters,
-        updateFilters,
-        resetFilters,
-        hasActiveFilters,
-        filteredDevices,
-        filterCount
-    } = useDeviceFilters(allDevices);
+        getFilteredDevices,
+        isLoading,
+        error,
+        selectedDevice,
+        actions
+    } = useApp();
 
-    // Fetch devices on mount
-    useEffect(() => {
-        loadDevices();
-    }, []);
+    const filteredDevices = getFilteredDevices();
 
-    const loadDevices = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await fetchSurveyData() as unknown as ApiResponse;
-
-            if (response.success) {
-                setAllDevices(response.devices);
-                setMetadata(response.metadata);
-            } else {
-                setError(response.errors?.[0] || 'Failed to load devices');
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Extract unique values for dropdowns
-    const zones = useMemo(() =>
-        [...new Set(allDevices.map(d => d.zone).filter(Boolean))] as string[],
-        [allDevices]
-    );
-
-    const deviceTypes = useMemo(() =>
-        [...new Set(allDevices.map(d => d.device_type).filter(Boolean))] as DeviceType[],
-        [allDevices]
-    );
-
-    const statuses = useMemo(() =>
-        [...new Set(allDevices.map(d => d.status).filter(Boolean))] as DeviceStatus[],
-        [allDevices]
-    );
-
-    // Export filtered devices to Excel
-    const handleExport = () => {
-        try {
-            // Prepare data for export
-            const exportData = filteredDevices.map(device => ({
-                'Survey Code': device.survey_id,
-                'Zone': device.zone || '',
-                'Street / Landmark': device.street || '',
-                'Device Type': device.device_type || '',
-                'Status': device.status || '',
-                'Latitude': device.lat || '',
-                'Longitude': device.lng || '',
-                'Connected Houses': device.houses || '',
-                'Daily Usage (hrs)': device.usage_hours || '',
-                'Pipe Size (inch)': device.pipe_size || '',
-                'Motor HP': device.motor_hp || '',
-                'Notes': device.notes || ''
-            }));
-
-            // Create workbook
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Filtered Devices');
-
-            // Generate filename with timestamp
-            const timestamp = new Date().toISOString().split('T')[0];
-            const filename = `rudraram-survey-filtered-${timestamp}.xlsx`;
-
-            // Download
-            XLSX.writeFile(wb, filename);
-        } catch (err) {
-            console.error('Export failed:', err);
-            alert('Failed to export data');
-        }
-    };
-
-    if (loading) {
+    if (isLoading) {
         return <LoadingAnimation fullScreen message="Loading water infrastructure data..." />;
     }
 
@@ -119,8 +35,8 @@ export function MapPage() {
             <div className="map-page-error">
                 <AlertTriangle size={48} />
                 <h2>Error Loading Data</h2>
-                <p>{error}</p>
-                <button className="btn btn-primary" onClick={loadDevices}>
+                <p>{typeof error === 'string' ? error : 'Unknown error occurred'}</p>
+                <button className="btn btn-primary" onClick={() => actions.refreshData()}>
                     <RefreshCw size={18} />
                     Retry
                 </button>
@@ -130,43 +46,19 @@ export function MapPage() {
 
     return (
         <div className="map-page">
-            {/* Command Bar Header */}
-            <CommandBar
-                filters={filters}
-                onFilterChange={updateFilters}
-                onResetFilters={resetFilters}
-                filterCount={filterCount}
-                zones={zones}
-                deviceTypes={deviceTypes}
-                statuses={statuses}
-                onExport={handleExport}
-                hasActiveFilters={hasActiveFilters}
-            />
+            {/* Command Bar Removed - Functions merged into NavigationHeader */}
 
             <div className="map-page-content">
-                {/* Left Sidebar Filters */}
-
-
                 {/* Main Content Area */}
                 <div className="map-page-main">
                     {/* Map */}
                     <div className="map-container">
                         <MapComponent
                             devices={filteredDevices}
-                            onDeviceClick={setSelectedDevice}
+                            onDeviceClick={actions.setSelectedDevice}
                             selectedDevice={selectedDevice}
                         />
                     </div>
-
-                    {/* Validation Metrics (if available) */}
-                    {metadata && metadata.invalid_count > 0 && (
-                        <div className="validation-alert">
-                            <AlertTriangle size={16} />
-                            <span>
-                                {metadata.invalid_count} devices hidden due to missing GPS coordinates or invalid data
-                            </span>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -174,8 +66,11 @@ export function MapPage() {
             {selectedDevice && (
                 <DeviceSidebar
                     device={selectedDevice}
-                    onClose={() => setSelectedDevice(null)}
-                    onImageUpload={() => { }}
+                    onClose={() => actions.setSelectedDevice(null)}
+                    onImageUpload={() => {
+                        // Image upload completion handler
+                        actions.refreshData();
+                    }}
                 />
             )}
         </div>
