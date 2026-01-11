@@ -16,6 +16,7 @@ import './MapPage.css';
 
 export function MapPage() {
     // Use Global Context instead of local state
+    // @ts-ignore
     const {
         getFilteredDevices,
         isLoading,

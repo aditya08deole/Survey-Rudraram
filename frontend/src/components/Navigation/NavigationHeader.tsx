@@ -10,7 +10,6 @@ import {
     Map as MapIcon, LayoutDashboard, Table, BarChart3, MapPin, Layers,
     FileSpreadsheet, Menu, X, Search, Filter, Bell, Download
 } from 'lucide-react';
-// @ts-ignore
 import { useApp } from '../../context/AppContext';
 import './NavigationHeader.css';
 
@@ -20,6 +19,7 @@ export function NavigationHeader() {
     const location = useLocation();
 
     // Context State
+    // @ts-ignore
     const {
         filters,
         actions,
