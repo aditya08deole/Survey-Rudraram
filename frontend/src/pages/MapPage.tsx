@@ -25,7 +25,8 @@ export function MapPage() {
         actions
     } = useApp() as any;
 
-    const filteredDevices = getFilteredDevices();
+    const filteredDevices = typeof getFilteredDevices === 'function' ? getFilteredDevices() : [];
+    const safeActions = actions || { setSelectedDevice: () => { }, refreshData: () => { } };
 
     if (isLoading) {
         return <LoadingAnimation fullScreen message="Loading water infrastructure data..." />;
@@ -37,7 +38,7 @@ export function MapPage() {
                 <AlertTriangle size={48} />
                 <h2>Error Loading Data</h2>
                 <p>{typeof error === 'string' ? error : 'Unknown error occurred'}</p>
-                <button className="btn btn-primary" onClick={() => actions.refreshData()}>
+                <button className="btn btn-primary" onClick={() => safeActions.refreshData()}>
                     <RefreshCw size={18} />
                     Retry
                 </button>
@@ -56,7 +57,7 @@ export function MapPage() {
                     <div className="map-container">
                         <MapComponent
                             devices={filteredDevices}
-                            onDeviceClick={actions.setSelectedDevice}
+                            onDeviceClick={safeActions.setSelectedDevice}
                             selectedDevice={selectedDevice}
                         />
                     </div>
@@ -67,10 +68,10 @@ export function MapPage() {
             {selectedDevice && (
                 <DeviceSidebar
                     device={selectedDevice}
-                    onClose={() => actions.setSelectedDevice(null)}
+                    onClose={() => safeActions.setSelectedDevice(null)}
                     onImageUpload={() => {
                         // Image upload completion handler
-                        actions.refreshData();
+                        safeActions.refreshData();
                     }}
                 />
             )}

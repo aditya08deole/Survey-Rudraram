@@ -30,13 +30,15 @@ export function NavigationHeader() {
     } = useApp() as any;
 
     const isMapPage = location.pathname === '/map';
-    const filteredCount = isMapPage ? getFilteredDevices().length : 0;
-    const totalCount = isMapPage ? devices.length : 0;
+    // Defensive checks
+    const safeGetFilteredDevices = typeof getFilteredDevices === 'function' ? getFilteredDevices : () => [];
+    const filteredCount = isMapPage ? safeGetFilteredDevices().length : 0;
+    const totalCount = isMapPage && devices ? devices.length : 0;
 
     // Derived lists (fallback to defaults if stats not loaded)
     const deviceTypes = stats?.deviceTypes?.map((t: any) => t.type) || ['Borewell', 'Sump', 'OHSR'];
     const statusList = ['Working', 'Not Working', 'Repair', 'Unknown'];
-    const zoneList = zones.map((z: any) => z.name);
+    const zoneList = Array.isArray(zones) ? zones.map((z: any) => z.name) : [];
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
