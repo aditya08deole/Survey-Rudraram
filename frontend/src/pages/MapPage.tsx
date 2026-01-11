@@ -22,7 +22,7 @@ export function MapPage() {
         error,
         selectedDevice,
         actions
-    } = useApp();
+    } = useApp() as any;
 
     const filteredDevices = getFilteredDevices();
 

@@ -27,7 +27,7 @@ export function NavigationHeader() {
         stats,
         getFilteredDevices,
         devices
-    } = useApp();
+    } = useApp() as any;
 
     const isMapPage = location.pathname === '/map';
     const filteredCount = isMapPage ? getFilteredDevices().length : 0;
