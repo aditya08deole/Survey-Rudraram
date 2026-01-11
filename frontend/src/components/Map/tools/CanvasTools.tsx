@@ -31,9 +31,11 @@ const CanvasTools = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [isDeleteMode, setIsDeleteMode] = useState(false);
 
     const drawHandlerRef = useRef<any>(null);
     const editHandlerRef = useRef<any>(null);
+    const deleteHandlerRef = useRef<any>(null);
     const measurePointsRef = useRef<L.LatLng[]>([]);
     const measureLineRef = useRef<L.Polyline | null>(null);
     const measureTooltipRef = useRef<L.Marker | null>(null);
@@ -66,7 +68,7 @@ const CanvasTools = () => {
                 const options = {
                     color: z.color,
                     weight: 2,
-                    fillOpacity: 0.1,
+                    fillOpacity: 0.05,
                     className: 'zone-glow', // Glow effect
                     interactive: false // Default non-interactive (click-through)
                 };
@@ -196,7 +198,7 @@ const CanvasTools = () => {
                 color: selectedColor,
                 weight: 4,
                 opacity: 0.7,
-                fillOpacity: 0.2
+                fillOpacity: 0.05,
             }
         };
 
@@ -252,7 +254,6 @@ const CanvasTools = () => {
         measureTooltipRef.current = null;
     };
 
-    // Edit Mode
     const toggleEditMode = () => {
         if (!map || !drawnItems) return;
 
@@ -273,6 +274,7 @@ const CanvasTools = () => {
             if (drawHandlerRef.current) drawHandlerRef.current.disable();
             resetMeasure();
             setActiveTool(null);
+            if (isDeleteMode) toggleDeleteMode();
 
             // Enable interaction
             drawnItems.eachLayer((layer: any) => {
@@ -296,6 +298,33 @@ const CanvasTools = () => {
             }
             editHandlerRef.current.enable();
             setIsEditMode(true);
+        }
+    };
+
+    const toggleDeleteMode = () => {
+        if (!map || !drawnItems) return;
+
+        if (isDeleteMode) {
+            if (deleteHandlerRef.current) {
+                deleteHandlerRef.current.save();
+                deleteHandlerRef.current.disable();
+            }
+            setIsDeleteMode(false);
+        } else {
+            // Disable other tools
+            resetMeasure();
+            setActiveTool(null);
+            if (isEditMode) toggleEditMode(); // Switch off edit mode
+
+            // @ts-ignore
+            if (!deleteHandlerRef.current) {
+                // @ts-ignore
+                deleteHandlerRef.current = new L.EditToolbar.Delete(map, {
+                    featureGroup: drawnItems
+                });
+            }
+            deleteHandlerRef.current.enable();
+            setIsDeleteMode(true);
         }
     };
 
@@ -415,7 +444,7 @@ const CanvasTools = () => {
                 <button className={`canvas-btn ${activeTool === 'text' ? 'active' : ''}`} onClick={() => setActiveTool('text')} title="Text">
                     <Type size={20} />
                 </button>
-                <button className={`canvas-btn ${isEditMode ? 'active' : ''}`} onClick={toggleEditMode} title="Edit Mode (Drag/Resize/Delete)">
+                <button className={`canvas-btn ${isEditMode ? 'active' : ''}`} onClick={toggleEditMode} title="Edit Mode (Drag/Resize)">
                     <Maximize size={20} />
                 </button>
             </div>
@@ -445,8 +474,21 @@ const CanvasTools = () => {
                 <button className="canvas-btn" onClick={handleSave} title="Save Zones Globally" style={{ color: '#10B981' }}>
                     {saving ? <RefreshCw className="spin" size={20} /> : <Save size={20} />}
                 </button>
-                <button className="canvas-btn" onClick={clearCanvas} title="Clear Unsaved" style={{ color: '#EF4444' }}>
+                <button
+                    className={`canvas-btn ${isDeleteMode ? 'active' : ''}`}
+                    onClick={toggleDeleteMode}
+                    title="Delete Mode (Click shapes to remove)"
+                    style={{ color: '#EF4444' }}
+                >
                     <Trash2 size={20} />
+                </button>
+                <button
+                    className="canvas-btn"
+                    onClick={clearCanvas}
+                    title="Clear Unsaved Only"
+                    style={{ color: '#F59E0B' }}
+                >
+                    <RefreshCw size={20} />
                 </button>
             </div>
         </div>
