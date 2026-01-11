@@ -1,6 +1,9 @@
+/* eslint-disable import/first */
 import React, { useState, useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+// @ts-ignore
+window.L = L;
 import 'leaflet-draw';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -24,6 +27,9 @@ const COLORS = [
 
 const CanvasTools = () => {
     const map = useMap();
+
+
+
     const [activeTool, setActiveTool] = useState<string | null>(null);
     const [selectedColor, setSelectedColor] = useState('#3B82F6');
     const [fontSize, setFontSize] = useState(16);
@@ -203,6 +209,8 @@ const CanvasTools = () => {
 
         // @ts-ignore
         const LeafletDraw = L.Draw;
+        if (!LeafletDraw) return;
+
         if (type === 'polygon') drawHandlerRef.current = new LeafletDraw.Polygon(map, options);
         else if (type === 'polyline') drawHandlerRef.current = new LeafletDraw.Polyline(map, options);
         else if (type === 'rectangle') drawHandlerRef.current = new LeafletDraw.Rectangle(map, options);
@@ -306,7 +314,7 @@ const CanvasTools = () => {
             });
 
             // @ts-ignore
-            if (!editHandlerRef.current) {
+            if (!editHandlerRef.current && L.EditToolbar) {
                 // @ts-ignore
                 editHandlerRef.current = new L.EditToolbar.Edit(map, {
                     featureGroup: drawnItems,
@@ -319,7 +327,7 @@ const CanvasTools = () => {
                     }
                 });
             }
-            editHandlerRef.current.enable();
+            if (editHandlerRef.current) editHandlerRef.current.enable();
             setIsEditMode(true);
         }
     };
@@ -340,13 +348,13 @@ const CanvasTools = () => {
             if (isEditMode) toggleEditMode(); // Switch off edit mode
 
             // @ts-ignore
-            if (!deleteHandlerRef.current) {
+            if (!deleteHandlerRef.current && L.EditToolbar) {
                 // @ts-ignore
                 deleteHandlerRef.current = new L.EditToolbar.Delete(map, {
                     featureGroup: drawnItems
                 });
             }
-            deleteHandlerRef.current.enable();
+            if (deleteHandlerRef.current) deleteHandlerRef.current.enable();
             setIsDeleteMode(true);
         }
     };
@@ -378,6 +386,9 @@ const CanvasTools = () => {
 
     // Created Event
     useEffect(() => {
+        // @ts-ignore
+        if (!L.Draw) return;
+
         const handleCreated = (e: any) => {
             if (drawnItems) drawnItems.addLayer(e.layer);
             setActiveTool(null);
@@ -420,6 +431,9 @@ const CanvasTools = () => {
 
     // Catch Deletion
     useEffect(() => {
+        // @ts-ignore
+        if (!L.Draw) return;
+
         const handleDeleted = (e: any) => {
             const layers = e.layers;
             layers.eachLayer((layer: any) => {
