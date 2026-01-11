@@ -9,19 +9,23 @@ const ImageGallery = ({ surveyCode }) => {
     const [selectedImage, setSelectedImage] = useState(null);
 
     useEffect(() => {
-        loadImages();
-    }, [surveyCode]);
+        const loadImages = async () => {
+            try {
+                const response = await imageService.getDeviceImages(surveyCode);
+                // Handle response format variations (array direct or inside data property)
+                const imagesData = Array.isArray(response) ? response : (response?.data || []);
+                setImages(imagesData);
+            } catch (error) {
+                console.error('Failed to load images:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const loadImages = async () => {
-        try {
-            const response = await imageService.getDeviceImages(surveyCode);
-            setImages(response.data || []);
-        } catch (error) {
-            console.error('Failed to load images:', error);
-        } finally {
-            setLoading(false);
+        if (surveyCode) {
+            loadImages();
         }
-    };
+    }, [surveyCode]);
 
     const handleDelete = async (imageId) => {
         if (!window.confirm('Are you sure you want to delete this image?')) return;
