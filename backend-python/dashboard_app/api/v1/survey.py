@@ -1,170 +1,168 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from typing import Optional, List, Dict, Any
+from typing import Dict, Any, List
 import logging
-from datetime import datetime
+import os
+from dotenv import load_dotenv
+from supabase import create_client
 
-from dashboard_app.services.excel_service import (
-    get_survey_data,
-    is_cache_valid,
-    fetch_excel_from_github,
-    make_json_safe,
-    get_cached_available_sheets,
-    SHEET_NAME,
-    CACHE_DURATION_SECONDS
-)
-import pandas as pd
+# Load environment
+load_dotenv(".env.development")
+load_dotenv(".env.production")
 
 logger = logging.getLogger(__name__)
 
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    logger.error("Supabase credentials not found!")
+    supabase = None
+else:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info(f"Supabase client initialized: {SUPABASE_URL}")
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase: {e}")
+        supabase = None
+
 router = APIRouter(tags=["Survey Data"])
+
+def map_db_to_frontend(record: Dict[str, Any], device_type: str) -> Dict[str, Any]:
+    """Map database record columns to frontend Device interface"""
+    return {
+        "survey_id": record.get("survey_code"),
+        "original_name": record.get("survey_code"),
+        "zone": record.get("zone"),
+        "street": record.get("location_address") or record.get("street_name"),
+        "device_type": device_type,
+        "status": record.get("status"),
+        "lat": record.get("latitude"),
+        "lng": record.get("longitude"),
+        "houses": record.get("connected_houses") or record.get("houses_connected"),
+        "usage_hours": record.get("daily_usage_hours") or record.get("daily_usage"),
+        "pipe_size": record.get("pipe_size"),
+        "motor_hp": record.get("motor_capacity") or record.get("motor_hp"),
+        "notes": record.get("remarks") or record.get("notes"),
+        "id": record.get("id")
+    }
 
 @router.get("/survey-data")
 async def get_all_survey_data(
-    sheet: str = SHEET_NAME,
-    include_invalid: bool = Query(False, description="Include quarantined invalid devices")
+    sheet: str = "All",
+    include_invalid: bool = Query(False)
 ):
     """
-    Get all survey data from specified Excel sheet with validation metrics
-    
-    Returns:
-        {
-            "devices": [...],           # Valid devices only
-            "invalid_devices": [...],   # If include_invalid=true
+    Get all survey data from Database (migrated from Excel)
+    Returns data in the format expected by the frontend.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection not available")
+
+    try:
+        all_devices = []
+        
+        # 1. Fetch Borewells
+        try:
+            res = supabase.table("borewells").select("*").execute()
+            for r in res.data:
+                all_devices.append(map_db_to_frontend(r, "Borewell"))
+        except Exception as e:
+            logger.error(f"Error fetching borewells: {e}")
+
+        # 2. Fetch Sumps
+        try:
+            res = supabase.table("sumps").select("*").execute()
+            for r in res.data:
+                all_devices.append(map_db_to_frontend(r, "Sump"))
+        except Exception as e:
+            logger.error(f"Error fetching sumps: {e}")
+
+        # 3. Fetch Overhead Tanks
+        try:
+            res = supabase.table("overhead_tanks").select("*").execute()
+            for r in res.data:
+                all_devices.append(map_db_to_frontend(r, "OHSR"))
+        except Exception as e:
+            logger.error(f"Error fetching tanks: {e}")
+
+        # Filter by sheet/type if requested
+        if sheet and sheet != "All":
+            type_map = {
+                "Borewell": "Borewell",
+                "Sump": "Sump",
+                "OHSR": "OHSR",
+                "OHT": "OHSR"
+            }
+            target_type = type_map.get(sheet)
+            if target_type:
+                all_devices = [d for d in all_devices if d["device_type"] == target_type]
+
+        # Basic metadata
+        total = len(all_devices)
+        
+        # Construct response matching old Excel format
+        response_data = {
+            "devices": all_devices,
+            "invalid_devices": [],
             "metadata": {
-                "total_rows": 187,
-                "valid_count": 175,
-                "invalid_count": 12,
-                "validation_rate": 93.6,
-                "error_breakdown": {...}
+                "total_rows": total,
+                "valid_count": total,
+                "invalid_count": 0,
+                "validation_rate": 100.0,
+                "error_breakdown": {}
             }
         }
-    """
-    try:
-        result = get_survey_data(sheet, include_invalid=include_invalid)
-        json_safe_content = jsonable_encoder(result)
-        
-        metadata = result.get("metadata", {})
         
         return JSONResponse(
-            content=json_safe_content,
+            content=jsonable_encoder(response_data),
             headers={
-                "Cache-Control": f"public, max-age={CACHE_DURATION_SECONDS}",
-                "X-Total-Devices": str(metadata.get("valid_count", 0)),
-                "X-Invalid-Devices": str(metadata.get("invalid_count", 0)),
-                "X-Validation-Rate": str(metadata.get("validation_rate", 0)),
-                "X-Sheet-Name": sheet,
-                "X-Cache-Status": "hit" if is_cache_valid(sheet) else "miss"
+                "X-Total-Devices": str(total),
+                "X-Source": "database"
             }
         )
-    except Exception as e:
-        logger.error(f"Error in /api/survey-data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/sheets")
-async def get_available_sheets():
-    """
-    Get list of all available sheets
-    """
-    try:
-        available_sheets = get_cached_available_sheets()
-        if available_sheets is not None:
-            return {
-                "sheets": available_sheets,
-                "default_sheet": SHEET_NAME,
-                "total_sheets": len(available_sheets)
-            }
         
-        fetch_excel_from_github(SHEET_NAME)
-        available_sheets = get_cached_available_sheets()
-        return {
-            "sheets": available_sheets,
-            "default_sheet": SHEET_NAME,
-            "total_sheets": len(available_sheets) if available_sheets else 0
-        }
     except Exception as e:
-        logger.error(f"Error fetching sheet list: {e}")
+        logger.error(f"Critical error in get_all_survey_data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/survey-data/stats")
-async def get_survey_stats(sheet: str = SHEET_NAME):
-    """
-    Get statistical summary of survey data with validation metrics
-    """
+async def get_survey_stats():
+    """Get statistics (Calculated from DB data)"""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not configured")
+
     try:
-        result = get_survey_data(sheet, include_invalid=False)
-        devices = result.get("devices", [])
-        metadata = result.get("metadata", {})
+        # Re-fetch data (inefficient but consistent) or do aggregation queries
+        # For simplicity/speed of implementation, we'll do lightweight aggregation queries
         
-        df = pd.DataFrame(devices)
-        
-        total_devices = len(df)
-        devices_with_coords = 0
-        if not df.empty and 'lat' in df.columns and 'lng' in df.columns:
-            devices_with_coords = df[['lat', 'lng']].notna().all(axis=1).sum()
-        
-        zones = df['zone'].value_counts().to_dict() if not df.empty and 'zone' in df.columns else {}
-        device_types = df['device_type'].value_counts().to_dict() if not df.empty and 'device_type' in df.columns else {}
-        statuses = df['status'].value_counts().to_dict() if not df.empty and 'status' in df.columns else {}
-        
-        return {
-            "sheet_name": sheet,
-            "total_devices": int(total_devices),
-            "devices_with_coordinates": int(devices_with_coords),
-            "by_zone": {k: int(v) for k, v in zones.items()},
-            "by_type": {k: int(v) for k, v in device_types.items()},
-            "by_status": {k: int(v) for k, v in statuses.items()},
-            "validation_metrics": {
-                "total_rows": metadata.get("total_rows", 0),
-                "valid_count": metadata.get("valid_count", 0),
-                "invalid_count": metadata.get("invalid_count", 0),
-                "validation_rate": metadata.get("validation_rate", 0),
-                "error_breakdown": metadata.get("error_breakdown", {})
-            },
-            "cache_info": {
-                "is_valid": is_cache_valid(sheet),
-                "last_fetch": "Redis Managed"
-            }
+        stats = {
+            "total_devices": 0,
+            "zones": {},
+            "types": {},
+            "status": {}
         }
-    except Exception as e:
-        logger.error(f"Error generating stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/survey-data/{survey_code}")
-async def get_device_by_code(survey_code: str, sheet: str = SHEET_NAME):
-    """
-    Get specific device by survey code
-    """
-    try:
-        result = get_survey_data(sheet, include_invalid=False)
-        devices = result.get("devices", [])
-        device = next((d for d in devices if d.get('survey_id') == survey_code), None)
-        
-        if not device:
-            raise HTTPException(status_code=404, detail=f"Device {survey_code} not found")
-        
-        return device
-    except Exception as e:
-        if isinstance(e, HTTPException): raise e
-        logger.error(f"Error fetching device {survey_code}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Helper to process table stats
+        def process_table(table, type_name):
+            res = supabase.table(table).select("zone, status").execute()
+            count = len(res.data)
+            stats["total_devices"] += count
+            stats["types"][type_name] = count
+            
+            for r in res.data:
+                z = r.get("zone") or "Unknown"
+                s = r.get("status") or "Unknown"
+                stats["zones"][z] = stats["zones"].get(z, 0) + 1
+                stats["status"][s] = stats["status"].get(s, 0) + 1
 
-@router.post("/cache/refresh")
-async def refresh_cache(sheet: Optional[str] = None):
-    """
-    Manually refresh cache
-    """
-    from dashboard_app.cache.redis_client import redis_client
-    try:
-        if sheet:
-            redis_client.delete(f"sheet:{sheet}")
-            get_survey_data(sheet)
-            return {"status": "success", "message": f"Cache refreshed for {sheet}"}
-        else:
-            redis_client.flush_all()
-            get_survey_data(SHEET_NAME)
-            return {"status": "success", "message": "All caches refreshed"}
+        process_table("borewells", "Borewell")
+        process_table("sumps", "Sump")
+        process_table("overhead_tanks", "OHSR")
+
+        return stats
     except Exception as e:
-        logger.error(f"Error refreshing cache: {e}")
+        logger.error(f"Error calculating stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
