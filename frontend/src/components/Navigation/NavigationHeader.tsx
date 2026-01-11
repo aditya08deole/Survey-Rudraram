@@ -22,12 +22,14 @@ export function NavigationHeader() {
     // @ts-ignore
     const {
         filters,
-        actions,
+        setFilters,
         zones,
         stats,
         getFilteredDevices,
         devices
     } = useApp() as any;
+
+    const actions = { setFilters };
 
     const isMapPage = location.pathname === '/map';
     // Defensive checks

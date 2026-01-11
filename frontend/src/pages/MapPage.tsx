@@ -22,11 +22,15 @@ export function MapPage() {
         isLoading,
         error,
         selectedDevice,
-        actions
+        setSelectedDevice,
+        refreshData
     } = useApp() as any;
 
     const filteredDevices = typeof getFilteredDevices === 'function' ? getFilteredDevices() : [];
-    const safeActions = actions || { setSelectedDevice: () => { }, refreshData: () => { } };
+
+    // safe handlers
+    const handleSetSelectedDevice = setSelectedDevice || ((d: any) => console.warn('setSelectedDevice missing', d));
+    const handleRefreshData = refreshData || (() => console.warn('refreshData missing'));
 
     if (isLoading) {
         return <LoadingAnimation fullScreen message="Loading water infrastructure data..." />;
@@ -38,7 +42,7 @@ export function MapPage() {
                 <AlertTriangle size={48} />
                 <h2>Error Loading Data</h2>
                 <p>{typeof error === 'string' ? error : 'Unknown error occurred'}</p>
-                <button className="btn btn-primary" onClick={() => safeActions.refreshData()}>
+                <button className="btn btn-primary" onClick={() => handleRefreshData()}>
                     <RefreshCw size={18} />
                     Retry
                 </button>
@@ -57,7 +61,7 @@ export function MapPage() {
                     <div className="map-container">
                         <MapComponent
                             devices={filteredDevices}
-                            onDeviceClick={safeActions.setSelectedDevice}
+                            onDeviceClick={handleSetSelectedDevice}
                             selectedDevice={selectedDevice}
                         />
                     </div>
@@ -68,10 +72,10 @@ export function MapPage() {
             {selectedDevice && (
                 <DeviceSidebar
                     device={selectedDevice}
-                    onClose={() => safeActions.setSelectedDevice(null)}
+                    onClose={() => handleSetSelectedDevice(null)}
                     onImageUpload={() => {
                         // Image upload completion handler
-                        safeActions.refreshData();
+                        handleRefreshData();
                     }}
                 />
             )}
