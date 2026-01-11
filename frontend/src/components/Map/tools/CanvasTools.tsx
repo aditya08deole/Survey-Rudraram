@@ -9,7 +9,7 @@ import {
     Ruler, MousePointer2, Maximize, ChevronRight, ChevronLeft, Save, RefreshCw
 } from 'lucide-react';
 import './CanvasTools.css';
-import { getMapZones, saveMapZone, deleteMapZone } from '../../../services/apiService';
+import { getMapZones, saveMapZone, deleteMapZone, updateMapZone } from '../../../services/apiService';
 
 // Colors for the palette
 const COLORS = [
@@ -263,13 +263,37 @@ const CanvasTools = () => {
                 editHandlerRef.current.save();
                 editHandlerRef.current.disable();
             }
+
+            // Auto-save edited zones
+            drawnItems.eachLayer((layer: any) => {
+                if (layer.zoneId) {
+                    let geometry: any;
+                    // @ts-ignore
+                    if (layer.getLatLngs) geometry = layer.getLatLngs();
+                    // @ts-ignore
+                    else if (layer.getLatLng) geometry = layer.getLatLng();
+
+                    if (geometry) {
+                        // We only update geometry for now, preserving other props is harder without full state
+                        // But we attached 'zoneData' to layer in loadZones!
+                        const z = layer.zoneData || {};
+                        const updatedZone = {
+                            ...z,
+                            id: layer.zoneId,
+                            geometry: geometry,
+                            // Ensure type matches
+                        };
+                        updateMapZone(layer.zoneId, updatedZone);
+                    }
+                }
+            });
+
             // Re-disable interaction
             drawnItems.eachLayer((layer: any) => {
                 if (layer.setStyle) layer.setStyle({ interactive: false }); // Click-through
                 if (layer.dragging) layer.dragging.disable();
             });
             setIsEditMode(false);
-            // Optionally auto-save updates to backend here (complex mapping needed)
         } else {
             if (drawHandlerRef.current) drawHandlerRef.current.disable();
             resetMeasure();
