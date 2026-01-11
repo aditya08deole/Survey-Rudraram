@@ -160,7 +160,9 @@ const CanvasTools = () => {
         // @ts-ignore
         const createdEvent = L.Draw.Event.CREATED;
         map.on(createdEvent, handleCreated);
-        return () => map.off(createdEvent, handleCreated);
+        return () => {
+            map.off(createdEvent, handleCreated);
+        };
     }, [map, drawnItems]);
 
     // Clear All
