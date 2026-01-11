@@ -13,6 +13,7 @@ import { MAP_CONFIG } from '../../utils/constants';
 import { getDeviceIcon } from './CustomMarkerIcons';
 import type { Device } from '../../types/device';
 import './MapComponent.css';
+import CanvasTools from './tools/CanvasTools';
 
 // Fix Leaflet default marker icon issue (TypeScript workaround)
 // @ts-ignore - Leaflet types don't include _getIconUrl but it exists at runtime
@@ -74,9 +75,7 @@ function MapController({ selectedDevice }: { selectedDevice?: Device | null }) {
  * Main Map Component
  * CLEAN VERSION - No internal filtering, just renders what it receives
  */
-import CanvasTools from './tools/CanvasTools';
 
-// ... existing imports ...
 
 export function MapComponent({
     devices,
@@ -99,7 +98,7 @@ export function MapComponent({
                 <CanvasTools />
 
                 <LayersControl position="topright">
-// ... existing content ...
+
                     {/* Satellite View */}
                     <BaseLayer checked name="Satellite">
                         <TileLayer
