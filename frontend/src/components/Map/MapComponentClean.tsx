@@ -86,6 +86,10 @@ export function MapComponent({
 
     return (
         <div className="map-component-clean">
+            {/* Map Legend - Placed outside to avoid Leaflet context issues */}
+            {/* @ts-ignore */}
+            <MapLegend />
+
             <MapContainer
                 center={MAP_CONFIG.center as [number, number]}
                 zoom={MAP_CONFIG.defaultZoom}
@@ -97,10 +101,6 @@ export function MapComponent({
 
                 {/* Advanced Canvas Tools (Drawing, Text, Measure) */}
                 <CanvasTools />
-
-                {/* Map Legend */}
-                {/* @ts-ignore */}
-                <MapLegend />
 
                 <LayersControl position="topright">
 
