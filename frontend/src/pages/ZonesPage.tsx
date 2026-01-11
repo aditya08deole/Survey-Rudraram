@@ -14,13 +14,13 @@ import type { Device } from '../types/device';
 import LoadingAnimation from '../components/LoadingAnimation';
 import './ZonesPage.css';
 
+// Zones specific constraint
+const ALLOWED_ZONES = ["Waddera Colony", "Village", "SC Colony"];
+
 export function ZonesPage() {
     const [allDevices, setAllDevices] = useState<Device[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-
-    // Zones specific constraint
-    const ALLOWED_ZONES = ["Waddera Colony", "Village", "SC Colony"];
 
     const zoneMetrics = useMemo(() => {
         const metrics = computeZoneMetrics(allDevices);
