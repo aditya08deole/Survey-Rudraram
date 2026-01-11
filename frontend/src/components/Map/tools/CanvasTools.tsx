@@ -7,8 +7,8 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import 'leaflet-measure/dist/leaflet-measure.css';
 import {
-    Pencil, Type, Move, Square, Circle, Trash2,
-    Palette, Ruler, MousePointer2
+    Pencil, Type, Square, Circle, Trash2,
+    Ruler, MousePointer2
 } from 'lucide-react';
 import './CanvasTools.css';
 
@@ -25,46 +25,39 @@ const COLORS = [
 
 const CanvasTools = () => {
     const map = useMap();
-    const [activeTool, setActiveTool] = useState(null); // 'draw_poly', 'draw_line', 'text', 'measure'
+    const [activeTool, setActiveTool] = useState<string | null>(null);
     const [selectedColor, setSelectedColor] = useState('#3B82F6');
     const [fontSize, setFontSize] = useState(16);
-    const [drawnItems, setDrawnItems] = useState(null);
-    const drawHandlerRef = useRef(null);
-    const measureControlRef = useRef(null);
+    const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);
+    const drawHandlerRef = useRef<any>(null);
+    const measureControlRef = useRef<any>(null);
 
     // Initialize FeatureGroup for drawn items
     useEffect(() => {
         if (!map) return;
 
         const items = new L.FeatureGroup();
+        // @ts-ignore
         map.addLayer(items);
         setDrawnItems(items);
 
-        // Load leaflet-measure explicitly if needed?
-        // Leaflet-measure usually attaches to L.Control.Measure
-
         return () => {
+            // @ts-ignore
             map.removeLayer(items);
         };
     }, [map]);
 
     // Handle standard Drawing Tools
-    const startDrawing = (type) => {
+    const startDrawing = (type: string) => {
         if (drawHandlerRef.current) {
             drawHandlerRef.current.disable();
-        }
-
-        // Reset measurement
-        if (measureControlRef.current) {
-            // leaflet-measure doesn't have an easy 'stop' programmatically if it's a control
-            // We'll trust the user to toggle
         }
 
         setActiveTool(type);
 
         if (type === 'measure') {
-            // Leaflet Measure implementation
             if (!measureControlRef.current) {
+                // @ts-ignore
                 const measureControl = new L.Control.Measure({
                     position: 'topleft',
                     primaryLengthUnit: 'meters',
@@ -72,10 +65,8 @@ const CanvasTools = () => {
                     completedColor: selectedColor
                 });
                 measureControlRef.current = measureControl;
+                // @ts-ignore
                 map.addControl(measureControl);
-                // Auto start?
-                // measureControl._startMeasure(); // Private API, risky
-                // Just let user use the control
             }
             return;
         }
@@ -91,19 +82,22 @@ const CanvasTools = () => {
             icon: new L.DivIcon({
                 className: 'custom-marker',
                 html: `<div style="background:${selectedColor};width:10px;height:10px;border-radius:50%"></div>`
-            }) // for markers
+            })
         };
 
+        // @ts-ignore
+        const LeafletDraw = L.Draw;
+
         if (type === 'polygon') {
-            drawHandlerRef.current = new L.Draw.Polygon(map, options);
+            drawHandlerRef.current = new LeafletDraw.Polygon(map, options);
         } else if (type === 'polyline') {
-            drawHandlerRef.current = new L.Draw.Polyline(map, options);
+            drawHandlerRef.current = new LeafletDraw.Polyline(map, options);
         } else if (type === 'rectangle') {
-            drawHandlerRef.current = new L.Draw.Rectangle(map, options);
+            drawHandlerRef.current = new LeafletDraw.Rectangle(map, options);
         } else if (type === 'circle') {
-            drawHandlerRef.current = new L.Draw.Circle(map, options);
+            drawHandlerRef.current = new LeafletDraw.Circle(map, options);
         } else if (type === 'marker') {
-            drawHandlerRef.current = new L.Draw.Marker(map, options);
+            drawHandlerRef.current = new LeafletDraw.Marker(map, options);
         }
 
         if (drawHandlerRef.current) {
@@ -128,7 +122,7 @@ const CanvasTools = () => {
         };
     }, [activeTool, selectedColor, fontSize, drawnItems]);
 
-    const handleMapClickForText = (e) => {
+    const handleMapClickForText = (e: any) => {
         if (!drawnItems) return;
 
         const textIcon = L.divIcon({
@@ -149,26 +143,24 @@ const CanvasTools = () => {
             draggable: true
         });
 
-        marker.addTo(drawnItems);
-
-        // Auto-select logic?
-        setActiveTool(null); // Switch back to pointer after placing
+        drawnItems.addLayer(marker);
+        setActiveTool(null);
     };
 
     // Leaflet Draw Created Event
     useEffect(() => {
-        const handleCreated = (e) => {
+        const handleCreated = (e: any) => {
             const layer = e.layer;
             if (drawnItems) {
                 drawnItems.addLayer(layer);
-
-                // If it's a marker/circle/rect, it already has the style from options.
             }
-            setActiveTool(null); // Reset tool
+            setActiveTool(null);
         };
 
-        map.on(L.Draw.Event.CREATED, handleCreated);
-        return () => map.off(L.Draw.Event.CREATED, handleCreated);
+        // @ts-ignore
+        const createdEvent = L.Draw.Event.CREATED;
+        map.on(createdEvent, handleCreated);
+        return () => map.off(createdEvent, handleCreated);
     }, [map, drawnItems]);
 
     // Clear All
