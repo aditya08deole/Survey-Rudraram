@@ -21,20 +21,39 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Survey Data"])
 
 @router.get("/survey-data")
-async def get_all_survey_data(sheet: str = SHEET_NAME):
+async def get_all_survey_data(
+    sheet: str = SHEET_NAME,
+    include_invalid: bool = Query(False, description="Include quarantined invalid devices")
+):
     """
-    Get all survey data from specified Excel sheet
+    Get all survey data from specified Excel sheet with validation metrics
+    
+    Returns:
+        {
+            "devices": [...],           # Valid devices only
+            "invalid_devices": [...],   # If include_invalid=true
+            "metadata": {
+                "total_rows": 187,
+                "valid_count": 175,
+                "invalid_count": 12,
+                "validation_rate": 93.6,
+                "error_breakdown": {...}
+            }
+        }
     """
     try:
-        devices = get_survey_data(sheet)
-        safe_devices = make_json_safe(devices)
-        json_safe_content = jsonable_encoder(safe_devices)
+        result = get_survey_data(sheet, include_invalid=include_invalid)
+        json_safe_content = jsonable_encoder(result)
+        
+        metadata = result.get("metadata", {})
         
         return JSONResponse(
             content=json_safe_content,
             headers={
                 "Cache-Control": f"public, max-age={CACHE_DURATION_SECONDS}",
-                "X-Total-Devices": str(len(safe_devices)),
+                "X-Total-Devices": str(metadata.get("valid_count", 0)),
+                "X-Invalid-Devices": str(metadata.get("invalid_count", 0)),
+                "X-Validation-Rate": str(metadata.get("validation_rate", 0)),
                 "X-Sheet-Name": sheet,
                 "X-Cache-Status": "hit" if is_cache_valid(sheet) else "miss"
             }
@@ -71,19 +90,22 @@ async def get_available_sheets():
 @router.get("/survey-data/stats")
 async def get_survey_stats(sheet: str = SHEET_NAME):
     """
-    Get statistical summary of survey data
+    Get statistical summary of survey data with validation metrics
     """
     try:
-        devices = get_survey_data(sheet)
+        result = get_survey_data(sheet, include_invalid=False)
+        devices = result.get("devices", [])
+        metadata = result.get("metadata", {})
+        
         df = pd.DataFrame(devices)
         
         total_devices = len(df)
         devices_with_coords = 0
-        if not df.empty and 'lat' in df.columns and 'long' in df.columns:
-            devices_with_coords = df[['lat', 'long']].notna().all(axis=1).sum()
+        if not df.empty and 'lat' in df.columns and 'lng' in df.columns:
+            devices_with_coords = df[['lat', 'lng']].notna().all(axis=1).sum()
         
         zones = df['zone'].value_counts().to_dict() if not df.empty and 'zone' in df.columns else {}
-        device_types = df['deviceType'].value_counts().to_dict() if not df.empty and 'deviceType' in df.columns else {}
+        device_types = df['device_type'].value_counts().to_dict() if not df.empty and 'device_type' in df.columns else {}
         statuses = df['status'].value_counts().to_dict() if not df.empty and 'status' in df.columns else {}
         
         return {
@@ -93,6 +115,13 @@ async def get_survey_stats(sheet: str = SHEET_NAME):
             "by_zone": {k: int(v) for k, v in zones.items()},
             "by_type": {k: int(v) for k, v in device_types.items()},
             "by_status": {k: int(v) for k, v in statuses.items()},
+            "validation_metrics": {
+                "total_rows": metadata.get("total_rows", 0),
+                "valid_count": metadata.get("valid_count", 0),
+                "invalid_count": metadata.get("invalid_count", 0),
+                "validation_rate": metadata.get("validation_rate", 0),
+                "error_breakdown": metadata.get("error_breakdown", {})
+            },
             "cache_info": {
                 "is_valid": is_cache_valid(sheet),
                 "last_fetch": "Redis Managed"
@@ -108,8 +137,9 @@ async def get_device_by_code(survey_code: str, sheet: str = SHEET_NAME):
     Get specific device by survey code
     """
     try:
-        devices = get_survey_data(sheet)
-        device = next((d for d in devices if d.get('surveyCode') == survey_code), None)
+        result = get_survey_data(sheet, include_invalid=False)
+        devices = result.get("devices", [])
+        device = next((d for d in devices if d.get('survey_id') == survey_code), None)
         
         if not device:
             raise HTTPException(status_code=404, detail=f"Device {survey_code} not found")
