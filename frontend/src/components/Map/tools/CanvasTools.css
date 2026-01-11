@@ -2,7 +2,8 @@
 .canvas-toolbar {
     position: absolute;
     top: 50%;
-    left: 20px;
+    right: 20px;
+    left: auto;
     transform: translateY(-50%);
     z-index: 2000;
     /* Above Leaflet controls */
@@ -23,7 +24,7 @@
 
 .canvas-toolbar:hover {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-    transform: translateY(-50%) translateX(2px);
+    transform: translateY(-50%) translateX(-2px);
 }
 
 /* Tool Groups - Vertical Separators */
