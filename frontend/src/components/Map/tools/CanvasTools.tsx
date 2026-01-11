@@ -29,8 +29,10 @@ const CanvasTools = () => {
     const [selectedColor, setSelectedColor] = useState('#3B82F6');
     const [fontSize, setFontSize] = useState(16);
     const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
     const drawHandlerRef = useRef<any>(null);
     const measureControlRef = useRef<any>(null);
+    const editHandlerRef = useRef<any>(null);
 
     // Initialize FeatureGroup for drawn items
     useEffect(() => {
@@ -102,6 +104,42 @@ const CanvasTools = () => {
 
         if (drawHandlerRef.current) {
             drawHandlerRef.current.enable();
+        }
+    };
+
+    // Toggle Edit Mode (Drag/Resize)
+    const toggleEditMode = () => {
+        if (!map || !drawnItems) return;
+
+        if (isEditMode) {
+            // Save & Disable
+            if (editHandlerRef.current) {
+                editHandlerRef.current.save();
+                editHandlerRef.current.disable();
+            }
+            setIsEditMode(false);
+        } else {
+            // Enable
+            // Turn off other tools
+            if (drawHandlerRef.current) drawHandlerRef.current.disable();
+            setActiveTool(null);
+
+            // @ts-ignore
+            if (!editHandlerRef.current) {
+                // @ts-ignore
+                editHandlerRef.current = new L.EditToolbar.Edit(map, {
+                    featureGroup: drawnItems,
+                    selectedPathOptions: {
+                        dashArray: '10, 10',
+                        fill: true,
+                        fillColor: '#fe57a1',
+                        fillOpacity: 0.1,
+                        maintainColor: false
+                    }
+                });
+            }
+            editHandlerRef.current.enable();
+            setIsEditMode(true);
         }
     };
 
@@ -208,6 +246,13 @@ const CanvasTools = () => {
                     title="Add Text"
                 >
                     <Type size={20} />
+                </button>
+                <button
+                    className={`canvas-btn ${isEditMode ? 'active' : ''}`}
+                    onClick={toggleEditMode}
+                    title={isEditMode ? "Finish Editing" : "Edit Shapes (Drag/Resize)"}
+                >
+                    <Move size={20} />
                 </button>
             </div>
 

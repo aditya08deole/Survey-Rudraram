@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, Droplet, Zap, Ruler, Clock, Home, FileText, Camera } from 'lucide-react';
+import { X, MapPin, Droplet, Zap, Ruler, Clock, Home, FileText, Camera, Info } from 'lucide-react';
 import ImageUpload from '../DeviceImages/ImageUpload';
 import ImageGallery from '../DeviceImages/ImageGallery';
 import { imageService } from '../../services/imageService';
@@ -11,11 +11,10 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
 
     useEffect(() => {
-        if (device?.surveyCode) {
-            imageService.getDeviceImages(device.surveyCode)
+        if (device?.survey_id) {
+            imageService.getDeviceImages(device.survey_id)
                 .then(images => {
                     if (images && images.length > 0) {
-                        // Prefer primary image, otherwise first image
                         const primary = images.find(img => img.is_primary) || images[0];
                         setCoverImage(primary.url);
                     } else {
@@ -30,52 +29,50 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
     if (!device) return null;
 
-    const getDeviceType = () => {
-        const checkStr = ((device.surveyCode || '') + (device.originalName || '')).toUpperCase();
-        if (checkStr.includes('BW') || checkStr.includes('BORE')) return 'Borewell';
-        if (checkStr.includes('SM') || checkStr.includes('SUMP')) return 'Sump';
-        if (checkStr.includes('OH') || checkStr.includes('OHSR')) return 'OHSR';
-        return device.deviceType || device.type || 'Unknown';
-    };
-
-    const deviceType = getDeviceType();
-    const deviceName = device.originalName || device.surveyCode || device.surveyCodeId || 'Unknown Device';
+    // Use normalized keys from backend
+    const deviceType = device.device_type || device.deviceType || 'Unknown';
+    const deviceName = device.original_name || device.originalName || device.survey_id || 'Unknown Device';
+    const surveyId = device.survey_id || device.surveyCode;
 
     const renderDetails = () => {
+        // Borewell Details
         if (deviceType === 'Borewell') {
             return (
                 <div className="sidebar-details-grid">
-                    <DetailRow icon={<Zap size={16} />} label="Motor HP" value={device.motorHp || device.motorHP} highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Depth" value={device.depthFt ? `${device.depthFt} ft` : null} highlight />
-                    <DetailRow icon={<Droplet size={16} />} label="Pipe Size" value={device.pipeSizeInch ? `${device.pipeSizeInch}"` : null} />
-                    <DetailRow icon={<Zap size={16} />} label="Power" value={device.powerType1Ph3Ph || device.powerType} />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.housesConnected} />
-                    <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.dailyUsageHrs ? `${device.dailyUsageHrs} hrs` : null} />
+                    <DetailRow icon={<Zap size={16} />} label="Motor HP" value={device.motor_hp} unit="HP" highlight />
+                    <DetailRow icon={<Ruler size={16} />} label="Depth" value={device.depth || device.depth_ft} unit="ft" highlight />
+                    <DetailRow icon={<Droplet size={16} />} label="Pipe Size" value={device.pipe_size} unit="inch" />
+                    <DetailRow icon={<Zap size={16} />} label="Power" value={device.power_type} />
+                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses} />
+                    <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.usage_hours} unit="hrs" />
+                    <DetailRow icon={<Info size={16} />} label="Yield" value={device.yield} unit="GPM" />
                 </div>
             );
         }
+        // Sump Details
         if (deviceType === 'Sump') {
             return (
                 <div className="sidebar-details-grid">
-                    <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.tankHeightM ? `${device.tankHeightM} m` : null} highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Circumference" value={device.tankCircumference} />
-                    <DetailRow icon={<Zap size={16} />} label="Power Dist." value={device.powerDistanceM ? `${device.powerDistanceM} m` : null} />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.housesConnected} />
+                    <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} unit="L" highlight />
+                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.height || device.tankHeightM} unit="m" highlight />
+                    <DetailRow icon={<Ruler size={16} />} label="Dimensions" value={device.dimensions || device.tankCircumference} />
+                    <DetailRow icon={<Zap size={16} />} label="Power Dist." value={device.power_distance} unit="m" />
+                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses} />
                 </div>
             );
         }
-        if (deviceType === 'OHSR') {
+        // OHSR Details
+        if (deviceType === 'OHSR' || deviceType === 'OHT') {
             return (
                 <div className="sidebar-details-grid">
-                    <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.tankHeightM ? `${device.tankHeightM} m` : null} highlight />
+                    <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} unit="L" highlight />
+                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.height || device.tankHeightM} unit="m" highlight />
                     <DetailRow icon={<FileText size={16} />} label="Material" value={device.material} />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.housesConnected} />
+                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses} />
                 </div>
             );
         }
-        return <p className="text-gray-500 italic">No specific details available.</p>;
+        return <p className="text-gray-500 italic p-4">No specific technical details available for this device type.</p>;
     };
 
     return (
@@ -89,7 +86,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
             <div className={`sidebar-header ${coverImage ? 'has-cover' : ''}`}>
                 <div>
                     <h2 className="sidebar-title">{deviceName}</h2>
-                    <span className="sidebar-subtitle">{device.surveyCode || device.surveyCodeId || 'No ID'}</span>
+                    <span className="sidebar-subtitle">{surveyId || 'No ID'}</span>
                 </div>
                 <button onClick={onClose} className="sidebar-close-btn">
                     <X size={24} />
@@ -136,7 +133,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                                     <MapPin size={16} className="text-primary" />
                                     <div>
                                         <span className="loc-label">Address</span>
-                                        <p className="loc-value">{device.location || 'N/A'}</p>
+                                        <p className="loc-value">{device.street || device.location || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -157,7 +154,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                         )}
 
                         <div className="metadata-footer">
-                            <p>Coordinates: {device.latitude?.toFixed(6)}, {device.longitude?.toFixed(6)}</p>
+                            <p>Coordinates: {device.lat?.toFixed(6) || device.latitude?.toFixed(6)}, {device.lng?.toFixed(6) || device.longitude?.toFixed(6)}</p>
                         </div>
                     </div>
                 )}
@@ -173,10 +170,9 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
                         {showUploadModal && (
                             <ImageUpload
-                                surveyCode={device.surveyCode}
+                                surveyCode={surveyId}
                                 onUploadSuccess={() => {
-                                    // Refresh cover image
-                                    imageService.getDeviceImages(device.surveyCode).then(images => {
+                                    imageService.getDeviceImages(surveyId).then(images => {
                                         const primary = images.find(img => img.is_primary) || images[0];
                                         setCoverImage(primary ? primary.url : null);
                                     });
@@ -188,7 +184,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
                         <div className="mt-6">
                             <h3 className="section-title mb-2">Gallery</h3>
-                            <ImageGallery surveyCode={device.surveyCode} />
+                            <ImageGallery surveyCode={surveyId} />
                         </div>
                     </div>
                 )}
@@ -197,14 +193,14 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
     );
 };
 
-const DetailRow = ({ icon, label, value, highlight }) => {
-    if (!value) return null;
+const DetailRow = ({ icon, label, value, unit, highlight }) => {
+    if (value === undefined || value === null || value === '') return null;
     return (
         <div className={`detail-card ${highlight ? 'highlight' : ''}`}>
             <div className="detail-icon">{icon}</div>
             <div className="detail-content">
                 <span className="detail-label">{label}</span>
-                <span className="detail-value">{value}</span>
+                <span className="detail-value">{value}{unit ? ` ${unit}` : ''}</span>
             </div>
         </div>
     );
