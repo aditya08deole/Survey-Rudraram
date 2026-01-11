@@ -361,6 +361,16 @@ const CanvasTools = () => {
 
     // Handle Text
     useEffect(() => {
+        const handleMapClickForText = (e: any) => {
+            if (!drawnItems) return;
+            const icon = L.divIcon({
+                className: 'canvas-text-marker',
+                html: `<div class="text-annotation-wrapper"><div class="text-annotation" contenteditable="true" style="color:${selectedColor};font-size:${fontSize}px;font-weight:bold">Click Edit</div></div>`
+            });
+            L.marker(e.latlng, { icon, draggable: true }).addTo(drawnItems);
+            setActiveTool(null);
+        };
+
         if (activeTool !== 'text') {
             map.off('click', handleMapClickForText);
             L.DomUtil.removeClass(map.getContainer(), 'crosshair-cursor');
@@ -372,17 +382,7 @@ const CanvasTools = () => {
             map.off('click', handleMapClickForText);
             L.DomUtil.removeClass(map.getContainer(), 'crosshair-cursor');
         };
-    }, [activeTool, selectedColor, fontSize]);
-
-    const handleMapClickForText = (e: any) => {
-        if (!drawnItems) return;
-        const icon = L.divIcon({
-            className: 'canvas-text-marker',
-            html: `<div class="text-annotation-wrapper"><div class="text-annotation" contenteditable="true" style="color:${selectedColor};font-size:${fontSize}px;font-weight:bold">Click Edit</div></div>`
-        });
-        const marker = L.marker(e.latlng, { icon, draggable: true }).addTo(drawnItems);
-        setActiveTool(null);
-    };
+    }, [activeTool, selectedColor, fontSize, drawnItems, map]);
 
     // Created Event
     useEffect(() => {
@@ -420,6 +420,7 @@ const CanvasTools = () => {
     };
 
     // Explicit Delete Saved Zone
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const clearAllZones = async () => {
         if (!window.confirm("Delete ALL saved zones globally?")) return;
         // This would require a delete-all endpoint or loop
