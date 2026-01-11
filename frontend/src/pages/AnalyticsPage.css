@@ -1,0 +1,251 @@
+/**
+ * Analytics Page Styles
+ * Professional analytics dashboard
+ */
+
+.analytics-page {
+    min-height: 100vh;
+    background: #f9fafb;
+    padding: 40px 48px;
+}
+
+.analytics-header {
+    margin-bottom: 32px;
+}
+
+.analytics-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.analytics-header p {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.analytics-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    color: #6366F1;
+}
+
+.card-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+/* Status Distribution */
+.status-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.status-bar-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 120px;
+    gap: 16px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.status-bar-row:hover {
+    background: #f9fafb;
+}
+
+.status-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.status-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.status-bar-container {
+    position: relative;
+    height: 32px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.status-bar-fill {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    transition: width 0.5s ease;
+}
+
+.bar-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.status-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: right;
+}
+
+/* Device Types */
+.type-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.type-card {
+    padding: 20px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.type-card:hover {
+    border-color: #6366F1;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.type-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.type-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.type-count {
+    font-size: 24px;
+    font-weight: 700;
+    color: #6366F1;
+}
+
+.type-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.stat-value.success {
+    color: #22C55E;
+}
+
+.stat-value.warning {
+    color: #F59E0B;
+}
+
+.stat-value.danger {
+    color: #EF4444;
+}
+
+.type-progress {
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22C55E, #10B981);
+    transition: width 0.5s ease;
+}
+
+.type-percent {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .status-bar-row {
+        grid-template-columns: 140px 1fr 100px;
+    }
+}
+
+@media (max-width: 768px) {
+    .analytics-page {
+        padding: 24px 16px;
+    }
+
+    .status-bar-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .status-count {
+        text-align: left;
+    }
+}

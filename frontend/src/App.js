@@ -1,41 +1,41 @@
 /**
  * Rudraram Survey - Main App Component
  * 
- * Root component that sets up routing and global state.
- * Data is loaded from FastAPI backend.
- * Enhanced with Framer Motion page transitions
+ * Enterprise dashboard with 7 professional views
+ * TypeScript + React Router
  */
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
-import Layout from './components/Layout/Layout';
-import Dashboard from './pages/Dashboard';
-import MapView from './pages/MapView';
+import NavigationHeader from './components/Navigation/NavigationHeader';
+import DashboardPage from './pages/DashboardPage';
+import MapPage from './pages/MapPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import ZonesPage from './pages/ZonesPage';
+import TypesPage from './pages/TypesPage';
 import TableView from './pages/TableView';
-
-function AnimatedRoutes() {
-  const location = useLocation();
-  
-  return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<MapView />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/table" element={<TableView />} />
-      </Routes>
-    </AnimatePresence>
-  );
-}
+import './App.css';
 
 function App() {
   return (
     <AppProvider>
       <Router>
-        <Layout>
-          <AnimatedRoutes />
-        </Layout>
+        <div className="app-container">
+          <NavigationHeader />
+          <main className="app-main">
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/zones" element={<ZonesPage />} />
+              <Route path="/types" element={<TypesPage />} />
+              <Route path="/table" element={<TableView />} />
+              {/* Export view can be added later */}
+            </Routes>
+          </main>
+        </div>
       </Router>
     </AppProvider>
   );

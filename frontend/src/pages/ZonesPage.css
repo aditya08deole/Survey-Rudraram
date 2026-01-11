@@ -1,0 +1,212 @@
+/**
+ * Zones Page Styles
+ */
+
+.zones-page {
+    min-height: 100vh;
+    background: #f9fafb;
+    padding: 40px 48px;
+}
+
+.zones-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.zones-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.zones-header p {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.zones-summary {
+    display: flex;
+    gap: 24px;
+}
+
+.summary-item {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.summary-item strong {
+    font-size: 24px;
+    color: #111827;
+    display: block;
+}
+
+.zone-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.zone-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: all 0.3s;
+    border-left: 4px solid #22C55E;
+}
+
+.zone-card.health-yellow {
+    border-left-color: #F59E0B;
+}
+
+.zone-card.health-red {
+    border-left-color: #EF4444;
+}
+
+.zone-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.zone-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.zone-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #F0F9FF;
+    color: #0EA5E9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zone-header h3 {
+    flex: 1;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.warning-icon {
+    color: #EF4444;
+}
+
+.zone-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.zone-stat {
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.zone-stat.success {
+    background: #F0FDF4;
+}
+
+.zone-stat.warning {
+    background: #FFFBEB;
+}
+
+.zone-stat.danger {
+    background: #FEF2F2;
+}
+
+.zone-stat .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.zone-stat .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.zone-houses {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 16px;
+}
+
+.zone-progress-bar {
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    transition: width 0.5s ease;
+}
+
+.progress-fill.health-green {
+    background: linear-gradient(90deg, #22C55E, #10B981);
+}
+
+.progress-fill.health-yellow {
+    background: linear-gradient(90deg, #F59E0B, #D97706);
+}
+
+.progress-fill.health-red {
+    background: linear-gradient(90deg, #EF4444, #DC2626);
+}
+
+.zone-operational {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.operational-percent {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.operational-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+@media (max-width: 768px) {
+    .zones-page {
+        padding: 24px 16px;
+    }
+
+    .zones-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .zone-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
