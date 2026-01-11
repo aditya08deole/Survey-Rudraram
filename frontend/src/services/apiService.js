@@ -22,11 +22,14 @@ const API_BASE_URL = getApiBaseUrl();
  * @param {string} sheet - Name of the Excel sheet to load (optional, defaults to "All")
  * @returns {Promise<Array>} Array of device objects
  */
-export const fetchSurveyData = async (sheet = 'All') => {
+export const fetchSurveyData = async (sheet = 'All', source = 'supabase') => {
   try {
     const url = new URL(`${API_BASE_URL}/api/survey-data`);
     if (sheet) {
       url.searchParams.append('sheet', sheet);
+    }
+    if (source) {
+      url.searchParams.append('source', source);
     }
 
     const response = await fetch(url, {
