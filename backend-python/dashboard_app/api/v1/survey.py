@@ -39,23 +39,50 @@ router = APIRouter(tags=["Survey Data"])
 
 def map_db_to_frontend(record: Dict[str, Any], device_type: str) -> Dict[str, Any]:
     """Map database record columns to frontend Device interface"""
-    return {
+    base_data = {
         "survey_id": record.get("survey_code"),
         "original_name": record.get("original_name") or record.get("survey_code"),
         "zone": record.get("zone"),
-        "street": record.get("location_address") or record.get("street_name"),
+        "street": record.get("location_address") or record.get("street_name") or record.get("location"),
         "device_type": device_type,
-        # Force 'Working' for Sump/OHSR as per business rule, else use DB status
         "status": "Working" if device_type in ["Sump", "OHSR", "OHT"] else record.get("status"),
         "lat": record.get("latitude"),
         "lng": record.get("longitude"),
-        "houses": record.get("connected_houses") or record.get("houses_connected"),
-        "usage_hours": record.get("daily_usage_hours") or record.get("daily_usage"),
-        "pipe_size": record.get("pipe_size"),
-        "motor_hp": record.get("motor_capacity") or record.get("motor_hp"),
-        "notes": record.get("remarks") or record.get("notes"),
-        "id": record.get("id")
+        "images": record.get("images"),
+        "notes": record.get("notes") or record.get("remarks"),
     }
+
+    # Add specific fields based on device type
+    if device_type == "Borewell":
+        base_data.update({
+            "motor_hp": record.get("motor_hp"),
+            "depth_ft": record.get("depth_ft"),
+            "pipe_size_inch": record.get("pipe_size_inch"),
+            "power_type": record.get("power_type"),
+            "houses_connected": record.get("houses_connected"),
+            "daily_usage_hrs": record.get("daily_usage_hrs"),
+            "sr_no": record.get("sr_no"),
+            "done": record.get("done")
+        })
+    elif device_type == "Sump":
+        base_data.update({
+            "capacity": record.get("capacity"),
+            "tank_height_m": record.get("tank_height_m"),
+            "tank_circumference": record.get("tank_circumference"),
+            "power_distance_m": record.get("power_distance_m"),
+            "people_connected": record.get("people_connected") # if available
+        })
+    elif device_type in ["OHSR", "OHT"]:
+        base_data.update({
+            "capacity": record.get("capacity"),
+            "tank_height_m": record.get("tank_height_m"),
+            "material": record.get("material"),
+            "lid_access": record.get("lid_access"),
+            "type": record.get("type"), # e.g. GLSR vs OHSR
+            "houses_connected": record.get("houses_connected")
+        })
+    
+    return base_data
 
 async def fetch_from_supabase(sheet_filter: str) -> List[Dict[str, Any]]:
     """Fetch and normalize data from Supabase"""

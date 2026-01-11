@@ -40,12 +40,13 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
             return (
                 <div className="sidebar-details-grid">
                     <DetailRow icon={<Zap size={16} />} label="Motor HP" value={device.motor_hp} unit="HP" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Depth" value={device.depth || device.depth_ft} unit="ft" highlight />
-                    <DetailRow icon={<Droplet size={16} />} label="Pipe Size" value={device.pipe_size} unit="inch" />
+                    <DetailRow icon={<Ruler size={16} />} label="Depth" value={device.depth_ft} unit="ft" highlight />
+                    <DetailRow icon={<Droplet size={16} />} label="Pipe Size" value={device.pipe_size_inch} unit="inch" />
                     <DetailRow icon={<Zap size={16} />} label="Power" value={device.power_type} />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses} />
-                    <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.usage_hours} unit="hrs" />
-                    <DetailRow icon={<Info size={16} />} label="Yield" value={device.yield} unit="GPM" />
+                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses_connected} />
+                    <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.daily_usage_hrs} unit="hrs" />
+                    <DetailRow icon={<FileText size={16} />} label="Serial No" value={device.sr_no} />
+                    <DetailRow icon={<Info size={16} />} label="Status" value={device.done !== undefined ? (device.done ? 'Done' : 'Pending') : null} />
                 </div>
             );
         }
@@ -54,10 +55,10 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
             return (
                 <div className="sidebar-details-grid">
                     <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} unit="L" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.height || device.tankHeightM} unit="m" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Dimensions" value={device.dimensions || device.tankCircumference} />
-                    <DetailRow icon={<Zap size={16} />} label="Power Dist." value={device.power_distance} unit="m" />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses} />
+                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.tank_height_m} unit="m" highlight />
+                    <DetailRow icon={<Ruler size={16} />} label="Circumference" value={device.tank_circumference} unit="m" />
+                    <DetailRow icon={<Zap size={16} />} label="Power Dist." value={device.power_distance_m} unit="m" />
+                    <DetailRow icon={<Home size={16} />} label="People" value={device.people_connected} />
                 </div>
             );
         }
@@ -66,9 +67,11 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
             return (
                 <div className="sidebar-details-grid">
                     <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} unit="L" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.height || device.tankHeightM} unit="m" highlight />
+                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.tank_height_m} unit="m" highlight />
                     <DetailRow icon={<FileText size={16} />} label="Material" value={device.material} />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses} />
+                    <DetailRow icon={<Info size={16} />} label="Type" value={device.type} />
+                    <DetailRow icon={<Info size={16} />} label="Lid Access" value={device.lid_access} />
+                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses_connected} />
                 </div>
             );
         }

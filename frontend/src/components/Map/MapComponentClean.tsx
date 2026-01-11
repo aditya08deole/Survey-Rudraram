@@ -99,11 +99,11 @@ export function MapComponent({
 
                 <LayersControl position="topright">
 
-                    {/* Satellite View */}
-                    <BaseLayer checked name="Satellite">
+                    {/* Google Hybrid (Satellite + Labels) */}
+                    <BaseLayer checked name="Satellite (Hybrid)">
                         <TileLayer
-                            attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                            attribution='&copy; Google Maps'
+                            url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
                             maxZoom={22}
                         />
                     </BaseLayer>
