@@ -26,7 +26,7 @@ export function ZonesPage() {
     }, []);
 
     const loadData = async () => {
-        const response = await fetchSurveyData() as ApiResponse;
+        const response = await fetchSurveyData() as unknown as ApiResponse;
         if (response.success) setAllDevices(response.devices);
         setLoading(false);
     };

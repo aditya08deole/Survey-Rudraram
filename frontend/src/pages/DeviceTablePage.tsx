@@ -12,7 +12,7 @@ import {
     Search, Filter, Download, MapPin, CheckCircle,
     XCircle, AlertTriangle, ArrowUpDown
 } from 'lucide-react';
-import type { Device } from '../types/device';
+import type { Device, ApiResponse } from '../types/device';
 import LoadingAnimation from '../components/LoadingAnimation';
 import './DeviceTablePage.css';
 
@@ -40,7 +40,7 @@ export function DeviceTablePage() {
     }, []);
 
     const loadData = async () => {
-        const response = await fetchSurveyData();
+        const response = await fetchSurveyData() as unknown as ApiResponse;
         if (response.success) setAllDevices(response.devices);
         setLoading(false);
     };

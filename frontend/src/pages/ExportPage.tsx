@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { fetchSurveyData } from '../services/apiService';
 import { useDeviceFilters } from '../hooks/useDeviceFilters';
 import { FileSpreadsheet, Download, Check, Layers } from 'lucide-react';
-import type { Device } from '../types/device';
+import type { Device, ApiResponse } from '../types/device';
 import * as XLSX from 'xlsx';
 import LoadingAnimation from '../components/LoadingAnimation';
 import './ExportPage.css';
@@ -28,7 +28,7 @@ export function ExportPage() {
     }, []);
 
     const loadData = async () => {
-        const response = await fetchSurveyData();
+        const response = await fetchSurveyData() as unknown as ApiResponse;
         if (response.success) setAllDevices(response.devices);
         setLoading(false);
     };

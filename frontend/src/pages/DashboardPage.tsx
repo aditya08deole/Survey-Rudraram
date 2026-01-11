@@ -13,7 +13,7 @@ import {
     RefreshCw, Map, Activity, CheckCircle, AlertTriangle,
     XCircle, MapPin, Clock, TrendingUp
 } from 'lucide-react';
-import type { Device } from '../types/device';
+import type { Device, ApiResponse } from '../types/device';
 import LoadingAnimation from '../components/LoadingAnimation';
 import './DashboardPage.css';
 
@@ -33,7 +33,7 @@ export function DashboardPage() {
         try {
             setLoading(true);
             setError(null);
-            const response = await fetchSurveyData();
+            const response = await fetchSurveyData() as unknown as ApiResponse;
             if (response.success) {
                 setAllDevices(response.devices);
             } else {
