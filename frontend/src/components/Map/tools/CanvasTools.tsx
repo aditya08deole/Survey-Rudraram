@@ -105,7 +105,6 @@ const CanvasTools = () => {
         setSaving(true);
 
         const layers = drawnItems.getLayers();
-        const newZones: any[] = [];
 
         for (const layer of layers) {
             // @ts-ignore
