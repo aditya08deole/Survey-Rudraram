@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet-draw';
-import 'leaflet-measure';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import 'leaflet-measure/dist/leaflet-measure.css';
 import {
     Pencil, Type, Square, Circle, Trash2,
-    Ruler, MousePointer2, Maximize
+    Ruler, MousePointer2, Maximize, ChevronRight, ChevronLeft
 } from 'lucide-react';
 import './CanvasTools.css';
 
@@ -30,9 +27,13 @@ const CanvasTools = () => {
     const [fontSize, setFontSize] = useState(16);
     const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false); // Collapsed state
+
     const drawHandlerRef = useRef<any>(null);
-    const measureControlRef = useRef<any>(null);
     const editHandlerRef = useRef<any>(null);
+    const measurePointsRef = useRef<L.LatLng[]>([]);
+    const measureLineRef = useRef<L.Polyline | null>(null);
+    const measureTooltipRef = useRef<L.Marker | null>(null);
 
     // Initialize FeatureGroup for drawn items
     useEffect(() => {
@@ -55,21 +56,16 @@ const CanvasTools = () => {
             drawHandlerRef.current.disable();
         }
 
+        // Reset manual measure if active
+        resetMeasure();
+
         setActiveTool(type);
 
         if (type === 'measure') {
-            if (!measureControlRef.current) {
-                // @ts-ignore
-                const measureControl = new L.Control.Measure({
-                    position: 'topleft',
-                    primaryLengthUnit: 'meters',
-                    activeColor: selectedColor,
-                    completedColor: selectedColor
-                });
-                measureControlRef.current = measureControl;
-                // @ts-ignore
-                map.addControl(measureControl);
-            }
+            // Manual Measure Mode
+            L.DomUtil.addClass(map.getContainer(), 'crosshair-cursor');
+            map.on('click', handleMeasureClick);
+            map.on('dblclick', finishMeasure);
             return;
         }
 
@@ -107,6 +103,77 @@ const CanvasTools = () => {
         }
     };
 
+    // MANUAL MEASUREMENT LOGIC
+    const handleMeasureClick = (e: any) => {
+        const latlng = e.latlng;
+        measurePointsRef.current.push(latlng);
+
+        // Draw/Update Line
+        if (!measureLineRef.current) {
+            measureLineRef.current = L.polyline(measurePointsRef.current, { color: selectedColor, dashArray: '5, 5' }).addTo(map);
+        } else {
+            measureLineRef.current.setLatLngs(measurePointsRef.current);
+        }
+
+        // Calculate total distance
+        let totalDistance = 0;
+        for (let i = 0; i < measurePointsRef.current.length - 1; i++) {
+            totalDistance += measurePointsRef.current[i].distanceTo(measurePointsRef.current[i + 1]);
+        }
+
+        // Show Tooltip
+        const distanceText = totalDistance > 1000
+            ? `${(totalDistance / 1000).toFixed(2)} km`
+            : `${totalDistance.toFixed(1)} m`;
+
+        if (measureTooltipRef.current) {
+            measureTooltipRef.current.setLatLng(latlng);
+            measureTooltipRef.current.setIcon(L.divIcon({
+                className: 'measure-tooltip',
+                html: `<div class="measure-tag">${distanceText}</div>`
+            }));
+        } else {
+            measureTooltipRef.current = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'measure-tooltip',
+                    html: `<div class="measure-tag">${distanceText}</div>`
+                })
+            }).addTo(map);
+        }
+    };
+
+    const finishMeasure = () => {
+        if (measurePointsRef.current.length > 1 && drawnItems && measureLineRef.current) {
+            // Persist the line
+            const line = L.polyline(measurePointsRef.current, { color: selectedColor, weight: 3 }).addTo(drawnItems);
+
+            // Add a permanent label at the end
+            if (measureTooltipRef.current) {
+                const label = L.marker(measurePointsRef.current[measurePointsRef.current.length - 1], {
+                    icon: measureTooltipRef.current.getIcon()
+                }).addTo(drawnItems);
+            }
+        }
+        resetMeasure();
+    };
+
+    const resetMeasure = () => {
+        map.off('click', handleMeasureClick);
+        map.off('dblclick', finishMeasure);
+        L.DomUtil.removeClass(map.getContainer(), 'crosshair-cursor');
+
+        if (measureLineRef.current) {
+            map.removeLayer(measureLineRef.current);
+            measureLineRef.current = null;
+        }
+        if (measureTooltipRef.current) {
+            map.removeLayer(measureTooltipRef.current);
+            measureTooltipRef.current = null;
+        }
+        measurePointsRef.current = [];
+    };
+
+
     // Toggle Edit Mode (Drag/Resize)
     const toggleEditMode = () => {
         if (!map || !drawnItems) return;
@@ -122,6 +189,7 @@ const CanvasTools = () => {
             // Enable
             // Turn off other tools
             if (drawHandlerRef.current) drawHandlerRef.current.disable();
+            resetMeasure();
             setActiveTool(null);
 
             // @ts-ignore
@@ -206,10 +274,30 @@ const CanvasTools = () => {
     // Clear All
     const clearCanvas = () => {
         if (drawnItems) drawnItems.clearLayers();
+        resetMeasure();
     };
+
+    if (isCollapsed) {
+        return (
+            <div className="canvas-toolbar collapsed" onClick={() => setIsCollapsed(false)}>
+                <ChevronLeft size={20} />
+            </div>
+        );
+    }
 
     return (
         <div className="canvas-toolbar">
+            {/* Collapse Button */}
+            <div className="tool-group collapse-group">
+                <button
+                    className="canvas-btn collapse-btn"
+                    onClick={() => setIsCollapsed(true)}
+                    title="Collapse Toolbar"
+                >
+                    <ChevronRight size={20} />
+                </button>
+            </div>
+
             {/* Shapes */}
             <div className="tool-group">
                 <button
@@ -261,7 +349,7 @@ const CanvasTools = () => {
                 <button
                     className={`canvas-btn ${activeTool === 'measure' ? 'active' : ''}`}
                     onClick={() => startDrawing('measure')}
-                    title="Measure Distance"
+                    title="Measure Distance (Click Points, Dbl Click to End)"
                 >
                     <Ruler size={20} />
                 </button>

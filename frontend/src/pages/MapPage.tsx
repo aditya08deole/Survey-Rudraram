@@ -146,14 +146,7 @@ export function MapPage() {
 
             <div className="map-page-content">
                 {/* Left Sidebar Filters */}
-                <FilterSidebar
-                    filters={filters}
-                    onFilterChange={updateFilters}
-                    zones={zones}
-                    deviceTypes={deviceTypes}
-                    statuses={statuses}
-                    filterCount={filterCount}
-                />
+
 
                 {/* Main Content Area */}
                 <div className="map-page-main">

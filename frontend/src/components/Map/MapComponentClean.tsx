@@ -14,6 +14,7 @@ import { getDeviceIcon } from './CustomMarkerIcons';
 import type { Device } from '../../types/device';
 import './MapComponent.css';
 import CanvasTools from './tools/CanvasTools';
+import MapLegend from './MapLegend';
 
 // Fix Leaflet default marker icon issue (TypeScript workaround)
 // @ts-ignore - Leaflet types don't include _getIconUrl but it exists at runtime
@@ -96,6 +97,10 @@ export function MapComponent({
 
                 {/* Advanced Canvas Tools (Drawing, Text, Measure) */}
                 <CanvasTools />
+
+                {/* Map Legend */}
+                {/* @ts-ignore */}
+                <MapLegend />
 
                 <LayersControl position="topright">
 
