@@ -38,9 +38,12 @@ export const getDeviceIcon = (type, status) => {
   let shapeClass = '';
 
   // Determine shape class based on type
-  if (type === 'Borewell') shapeClass = 'marker-circle';
-  else if (type === 'Sump') shapeClass = 'marker-triangle';
-  else if (type === 'OHSR' || type === 'OHT' || type === 'overhead_tank') shapeClass = 'marker-square';
+  // Handle both old and new field names for compatibility
+  const deviceType = type || 'Unknown';
+
+  if (deviceType === 'Borewell') shapeClass = 'marker-circle';
+  else if (deviceType === 'Sump') shapeClass = 'marker-triangle';
+  else if (deviceType === 'OHSR' || deviceType === 'OHT' || deviceType === 'overhead_tank') shapeClass = 'marker-square';
   else shapeClass = 'marker-circle'; // Default
 
   // Create DivIcon with CSS styling

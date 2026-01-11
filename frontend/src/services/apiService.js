@@ -28,7 +28,7 @@ export const fetchSurveyData = async (sheet = 'All') => {
     if (sheet) {
       url.searchParams.append('sheet', sheet);
     }
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -41,11 +41,14 @@ export const fetchSurveyData = async (sheet = 'All') => {
     }
 
     const data = await response.json();
+    // Handle new API structure with metadata
+    const devices = data.devices || data;
     return {
       success: true,
-      devices: data,
+      devices: devices,
+      metadata: data.metadata || null,
       sheet: sheet,
-      stats: calculateStats(data),
+      stats: calculateStats(devices),
       errors: [],
       warnings: []
     };
@@ -69,7 +72,7 @@ export const fetchSurveyData = async (sheet = 'All') => {
 export const fetchSurveyStats = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/survey-data/stats`);
-    
+
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
@@ -89,7 +92,7 @@ export const fetchSurveyStats = async () => {
 export const fetchDeviceByCode = async (surveyCode) => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/survey-data/${surveyCode}`);
-    
+
     if (!response.ok) {
       throw new Error(`Device not found: ${surveyCode}`);
     }
@@ -110,7 +113,7 @@ export const refreshCache = async () => {
     const response = await fetch(`${API_BASE_URL}/api/cache/refresh`, {
       method: 'POST',
     });
-    
+
     if (!response.ok) {
       throw new Error(`Cache refresh failed: ${response.status}`);
     }
@@ -129,7 +132,7 @@ export const refreshCache = async () => {
 export const checkApiHealth = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/health`);
-    
+
     if (!response.ok) {
       throw new Error('API unhealthy');
     }
@@ -156,8 +159,8 @@ const calculateStats = (devices) => {
   };
 
   devices.forEach(device => {
-    // Count devices with coordinates
-    if (device.lat && device.long) {
+    // Count devices with coordinates (updated field name: lng)
+    if (device.lat && device.lng) {
       stats.devicesWithCoordinates++;
     }
 
@@ -165,8 +168,8 @@ const calculateStats = (devices) => {
     const zone = device.zone || 'Unknown';
     stats.byZone[zone] = (stats.byZone[zone] || 0) + 1;
 
-    // Count by type
-    const type = device.deviceType || 'Unknown';
+    // Count by type (updated field name: device_type)
+    const type = device.device_type || 'Unknown';
     stats.byType[type] = (stats.byType[type] || 0) + 1;
 
     // Count by status
@@ -227,7 +230,7 @@ export const fetchAvailableSheets = async () => {
 export const fetchDevicesFromDB = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
-    
+
     if (filters.device_type) params.append('device_type', filters.device_type);
     if (filters.zone) params.append('zone', filters.zone);
     if (filters.status) params.append('status', filters.status);
@@ -240,7 +243,7 @@ export const fetchDevicesFromDB = async (filters = {}) => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error(`Database API error: ${response.status} ${response.statusText}`);
     }
@@ -277,7 +280,7 @@ export const fetchStatsFromDB = async () => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error(`Database stats error: ${response.status}`);
     }
@@ -312,7 +315,7 @@ export const fetchDeviceByCodeDB = async (surveyCode) => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error(`Device not found: ${surveyCode}`);
     }
@@ -346,7 +349,7 @@ export const fetchZonesFromDB = async () => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error(`Zones fetch error: ${response.status}`);
     }
@@ -380,7 +383,7 @@ export const checkDatabaseHealth = async () => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     const data = await response.json();
     return {
       success: data.status === 'healthy',
@@ -409,14 +412,14 @@ const apiService = {
   fetchDeviceByCode,
   refreshCache,
   checkApiHealth,
-  
+
   // Database API (New)
   fetchDevicesFromDB,
   fetchStatsFromDB,
   fetchDeviceByCodeDB,
   fetchZonesFromDB,
   checkDatabaseHealth,
-  
+
   API_BASE_URL
 };
 

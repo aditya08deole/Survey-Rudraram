@@ -1,0 +1,239 @@
+/**
+ * Filter Sidebar Styles
+ * Matches reference design from Image 2
+ */
+
+.filter-sidebar {
+    width: 280px;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    flex-shrink: 0;
+}
+
+.filter-sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.collapsed .sidebar-title span {
+    display: none;
+}
+
+.collapse-btn {
+    padding: 6px;
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.collapse-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.sidebar-content {
+    padding: 20px 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Filter Sections */
+.filter-section {
+    margin-bottom: 24px;
+}
+
+.filter-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+/* Search Box */
+.search-box {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.search-input-sidebar {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #111827;
+    background: #f9fafb;
+    transition: all 0.2s;
+}
+
+.search-input-sidebar:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+}
+
+/* Radio Groups */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.radio-option:hover {
+    background: #f9fafb;
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 10px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+    flex: 1;
+}
+
+/* Indicators */
+.indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.all-indicator {
+    background: linear-gradient(135deg, #9ca3af, #6b7280);
+}
+
+.zone-indicator {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+/* Device Type Indicators */
+.type-indicator.type-borewell {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-radius: 50%;
+}
+
+.type-indicator.type-sump {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-radius: 2px;
+}
+
+.type-indicator.type-ohsr,
+.type-indicator.type-oht {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+/* Status Indicators */
+.status-indicator.status-working {
+    background: #22c55e;
+}
+
+.status-indicator.status-not-working {
+    background: #ef4444;
+}
+
+.status-indicator.status-on-repair {
+    background: #f59e0b;
+}
+
+.status-indicator.status-failed {
+    background: #9ca3af;
+}
+
+/* Device Count Box */
+.device-count-box {
+    margin-top: 24px;
+    padding: 16px;
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+}
+
+.count-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.count-number {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0284c7;
+    line-height: 1;
+}
+
+.count-text {
+    font-size: 12px;
+    color: #0369a1;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .filter-sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        z-index: 50;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+}

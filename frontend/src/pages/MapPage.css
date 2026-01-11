@@ -1,0 +1,107 @@
+/**
+ * Map Page Styles
+ * Professional industrial dashboard layout
+ */
+
+.map-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #f9fafb;
+}
+
+.map-page-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.map-page-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.map-container {
+    flex: 1;
+    position: relative;
+    background: #e5e7eb;
+}
+
+/* Remove all floating filter UI from map */
+.map-container .map-filters-panel,
+.map-container .map-controls,
+.map-container .filter-toggle-btn {
+    display: none !important;
+}
+
+/* Validation Alert */
+.validation-alert {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    color: #92400e;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    max-width: 600px;
+}
+
+/* Error State */
+.map-page-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 16px;
+    color: #6b7280;
+}
+
+.map-page-error h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.map-page-error p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.map-page-error .btn {
+    margin-top: 8px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .map-page-content {
+        flex-direction: column;
+    }
+
+    .validation-alert {
+        bottom: 80px;
+        left: 20px;
+        right: 20px;
+        transform: none;
+        max-width: none;
+    }
+}
+
+/* Ensure map takes full space */
+.map-page .leaflet-container {
+    width: 100%;
+    height: 100%;
+}

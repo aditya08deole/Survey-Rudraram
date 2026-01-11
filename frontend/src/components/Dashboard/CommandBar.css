@@ -1,0 +1,270 @@
+/**
+ * Command Bar Styles
+ * Professional industrial dashboard header
+ */
+
+.command-bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 16px 24px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Brand Section */
+.command-bar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+}
+
+.brand-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-radius: 10px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.brand-text h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.brand-text p {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 2px 0 0 0;
+    line-height: 1;
+}
+
+/* Filters Section */
+.command-bar-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.filter-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.filter-icon {
+    position: absolute;
+    left: 12px;
+    color: #9ca3af;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.search-control {
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 36px 10px 40px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    background: #f9fafb;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.clear-search {
+    position: absolute;
+    right: 10px;
+    padding: 4px;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.clear-search:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.filter-select {
+    padding: 10px 36px 10px 40px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    background: #f9fafb;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 160px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+
+.filter-select:hover {
+    border-color: #d1d5db;
+    background-color: #ffffff;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.reset-filters-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reset-filters-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+/* Actions Section */
+.command-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.export-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.export-btn:active {
+    transform: translateY(0);
+}
+
+.device-count {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 10px 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.count-value {
+    font-size: 18px;
+    color: #3b82f6;
+}
+
+.count-separator {
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.count-total {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.notifications-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.notifications-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #111827;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .command-bar {
+        flex-wrap: wrap;
+    }
+
+    .command-bar-filters {
+        order: 3;
+        width: 100%;
+        margin-top: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .brand-text p {
+        display: none;
+    }
+
+    .export-btn span {
+        display: none;
+    }
+
+    .filter-select {
+        min-width: 120px;
+    }
+}
