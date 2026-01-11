@@ -14,7 +14,8 @@ import { getDeviceIcon } from './CustomMarkerIcons';
 import type { Device } from '../../types/device';
 import './MapComponent.css';
 
-// Fix Leaflet default marker icon issue
+// Fix Leaflet default marker icon issue (TypeScript workaround)
+// @ts-ignore - Leaflet types don't include _getIconUrl but it exists at runtime
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
