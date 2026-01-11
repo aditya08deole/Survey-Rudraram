@@ -19,7 +19,16 @@ export function ZonesPage() {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const zoneMetrics = useMemo(() => computeZoneMetrics(allDevices), [allDevices]);
+    // Zones specific constraint
+    const ALLOWED_ZONES = ["Waddera Colony", "Village", "SC Colony"];
+
+    const zoneMetrics = useMemo(() => {
+        const metrics = computeZoneMetrics(allDevices);
+        return metrics.filter(z => ALLOWED_ZONES.some(allowed =>
+            z.zone.toLowerCase().includes(allowed.toLowerCase()) ||
+            allowed.toLowerCase().includes(z.zone.toLowerCase())
+        ));
+    }, [allDevices]);
 
     useEffect(() => {
         loadData();

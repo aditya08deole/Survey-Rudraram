@@ -45,7 +45,8 @@ def map_db_to_frontend(record: Dict[str, Any], device_type: str) -> Dict[str, An
         "zone": record.get("zone"),
         "street": record.get("location_address") or record.get("street_name"),
         "device_type": device_type,
-        "status": record.get("status"),
+        # Force 'Working' for Sump/OHSR as per business rule, else use DB status
+        "status": "Working" if device_type in ["Sump", "OHSR", "OHT"] else record.get("status"),
         "lat": record.get("latitude"),
         "lng": record.get("longitude"),
         "houses": record.get("connected_houses") or record.get("houses_connected"),
