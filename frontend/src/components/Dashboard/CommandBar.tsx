@@ -35,20 +35,7 @@ export function CommandBar({
 }: CommandBarProps) {
     return (
         <header className="command-bar">
-            <div className="command-bar-brand">
-                <div className="brand-icon">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <path d="M16 4C16 4 8 8 8 16C8 24 16 28 16 28C16 28 24 24 24 16C24 8 16 4 16 4Z"
-                            fill="currentColor" opacity="0.2" />
-                        <path d="M16 4V28M8 16C8 8 16 4 16 4C16 4 24 8 24 16C24 24 16 28 16 28C16 28 8 24 8 16Z"
-                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                </div>
-                <div className="brand-text">
-                    <h1>Rudraram Survey</h1>
-                    <p>Water Infrastructure Dashboard</p>
-                </div>
-            </div>
+
 
             <div className="command-bar-filters">
                 {/* Search Input */}

@@ -4,12 +4,27 @@
  * Professional navigation bar for enterprise dashboard
  */
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Map, LayoutDashboard, Table, BarChart3, MapPin, Layers, FileSpreadsheet } from 'lucide-react';
+import { Map, LayoutDashboard, Table, BarChart3, MapPin, Layers, FileSpreadsheet, Menu, X } from 'lucide-react';
 import './NavigationHeader.css';
 
 export function NavigationHeader() {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
     return (
         <nav className="navigation-header">
             <div className="nav-brand">
@@ -38,30 +53,44 @@ export function NavigationHeader() {
                     <span>Dashboard</span>
                 </NavLink>
 
-                <NavLink to="/table" className="nav-link">
-                    <Table size={18} />
-                    <span>Table View</span>
-                </NavLink>
+                <div className="nav-dropdown" ref={dropdownRef}>
+                    <button
+                        className={`nav-link menu-btn ${isMenuOpen ? 'active' : ''}`}
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    >
+                        {isMenuOpen ? <X size={18} /> : <Menu size={18} />}
+                        <span>More</span>
+                    </button>
 
-                <NavLink to="/analytics" className="nav-link">
-                    <BarChart3 size={18} />
-                    <span>Analytics</span>
-                </NavLink>
+                    {isMenuOpen && (
+                        <div className="dropdown-menu">
+                            <NavLink to="/table" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                                <Table size={16} />
+                                <span>Table View</span>
+                            </NavLink>
 
-                <NavLink to="/zones" className="nav-link">
-                    <MapPin size={18} />
-                    <span>Zones</span>
-                </NavLink>
+                            <NavLink to="/analytics" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                                <BarChart3 size={16} />
+                                <span>Analytics</span>
+                            </NavLink>
 
-                <NavLink to="/types" className="nav-link">
-                    <Layers size={18} />
-                    <span>Device Types</span>
-                </NavLink>
+                            <NavLink to="/zones" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                                <MapPin size={16} />
+                                <span>Zones</span>
+                            </NavLink>
 
-                <NavLink to="/export" className="nav-link">
-                    <FileSpreadsheet size={18} />
-                    <span>Export</span>
-                </NavLink>
+                            <NavLink to="/types" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                                <Layers size={16} />
+                                <span>Device Types</span>
+                            </NavLink>
+
+                            <NavLink to="/export" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                                <FileSpreadsheet size={16} />
+                                <span>Export</span>
+                            </NavLink>
+                        </div>
+                    )}
+                </div>
             </div>
         </nav>
     );
