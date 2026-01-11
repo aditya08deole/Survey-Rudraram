@@ -121,7 +121,7 @@ export function MapComponent({
                         <Marker
                             key={device.survey_id || idx}
                             position={[device.lat, device.lng]}
-                            icon={getDeviceIcon(device.device_type, device.status)}
+                            icon={getDeviceIcon(device.device_type, device.status, device.original_name || device.survey_id)}
                             opacity={isSelected ? 1 : 0.9}
                             zIndexOffset={isSelected ? 1000 : 0}
                             eventHandlers={{

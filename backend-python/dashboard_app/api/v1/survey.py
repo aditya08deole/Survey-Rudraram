@@ -41,7 +41,7 @@ def map_db_to_frontend(record: Dict[str, Any], device_type: str) -> Dict[str, An
     """Map database record columns to frontend Device interface"""
     return {
         "survey_id": record.get("survey_code"),
-        "original_name": record.get("survey_code"),
+        "original_name": record.get("original_name") or record.get("survey_code"),
         "zone": record.get("zone"),
         "street": record.get("location_address") or record.get("street_name"),
         "device_type": device_type,
