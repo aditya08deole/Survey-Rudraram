@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, Droplet, Zap, Ruler, Clock, Home, FileText, Image as ImageIcon, Trash2, Camera } from 'lucide-react';
+import { X, MapPin, Droplet, Zap, Ruler, Clock, Home, FileText, Camera } from 'lucide-react';
 import ImageUpload from '../DeviceImages/ImageUpload';
 import ImageGallery from '../DeviceImages/ImageGallery';
 import { imageService } from '../../services/imageService';

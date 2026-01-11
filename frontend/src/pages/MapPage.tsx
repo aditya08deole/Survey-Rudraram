@@ -10,11 +10,11 @@ import { useDeviceFilters } from '../hooks/useDeviceFilters';
 import { fetchSurveyData } from '../services/apiService';
 import CommandBar from '../components/Dashboard/CommandBar';
 import FilterSidebar from '../components/Dashboard/FilterSidebar';
-import MapComponent from '../components/Map/MapComponent';
+import MapComponent from '../components/Map/MapComponentClean';
 import DeviceSidebar from '../components/Map/DeviceSidebar';
 import LoadingAnimation from '../components/LoadingAnimation';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import type { Device, DeviceType, DeviceStatus } from '../types/device';
+import type { Device, DeviceType, DeviceStatus, ApiResponse } from '../types/device';
 import * as XLSX from 'xlsx';
 import './MapPage.css';
 
@@ -44,7 +44,7 @@ export function MapPage() {
         try {
             setLoading(true);
             setError(null);
-            const response = await fetchSurveyData();
+            const response = await fetchSurveyData() as unknown as ApiResponse;
 
             if (response.success) {
                 setAllDevices(response.devices);
@@ -183,6 +183,7 @@ export function MapPage() {
                 <DeviceSidebar
                     device={selectedDevice}
                     onClose={() => setSelectedDevice(null)}
+                    onImageUpload={() => { }}
                 />
             )}
         </div>
