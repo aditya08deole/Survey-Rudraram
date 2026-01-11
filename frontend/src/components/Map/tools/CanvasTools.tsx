@@ -8,7 +8,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import 'leaflet-measure/dist/leaflet-measure.css';
 import {
     Pencil, Type, Square, Circle, Trash2,
-    Ruler, MousePointer2, Move
+    Ruler, MousePointer2, Maximize
 } from 'lucide-react';
 import './CanvasTools.css';
 
@@ -252,7 +252,7 @@ const CanvasTools = () => {
                     onClick={toggleEditMode}
                     title={isEditMode ? "Finish Editing" : "Edit Shapes (Drag/Resize)"}
                 >
-                    <Move size={20} />
+                    <Maximize size={20} />
                 </button>
             </div>
 
