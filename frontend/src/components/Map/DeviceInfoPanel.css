@@ -150,19 +150,27 @@
 }
 
 .status-badge.status-working {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
+    background: rgba(57, 255, 20, 0.15);
+    color: #00a000;
+    border: 1px solid #39FF14;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+    text-shadow: 0 0 1px rgba(57, 255, 20, 0.5);
 }
 
 .status-badge.status-non-working,
 .status-badge.status-not-work {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
+    background: rgba(255, 7, 58, 0.15);
+    color: #d00000;
+    border: 1px solid #FF073A;
+    box-shadow: 0 0 10px rgba(255, 7, 58, 0.4);
+    text-shadow: 0 0 1px rgba(255, 7, 58, 0.5);
 }
 
 .status-badge.status-failed {
-    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-    color: white;
+    background: rgba(156, 163, 175, 0.15);
+    color: #374151;
+    border: 1px solid #9CA3AF;
+    box-shadow: 0 0 8px rgba(156, 163, 175, 0.4);
 }
 
 /* Location Section */

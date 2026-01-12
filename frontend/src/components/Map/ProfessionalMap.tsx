@@ -32,7 +32,7 @@ const CONFIG = {
     // Zoom settings
     defaultZoom: 15,
     minZoom: 3,
-    maxZoom: 30, // Allow extreme zoom (upscaling)
+    maxZoom: 22, // High zoom without pixelation errors
 
     // Performance
     updateWhenZooming: false,
@@ -52,15 +52,6 @@ const TILE_PROVIDERS = {
         attribution: '© Esri, DigitalGlobe, GeoEye',
         maxNativeZoom: 19,
         errorTileUrl: '', // Hide broken tiles
-    },
-
-    // Google Hybrid - High zoom satellite + labels
-    googleHybrid: {
-        name: '🌍 Google Hybrid',
-        url: 'http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        attribution: '© Google',
-        maxNativeZoom: 20,
     },
 
     // OpenStreetMap - Most reliable street map
@@ -285,18 +276,7 @@ export function ProfessionalMap({
                         />
                     </BaseLayer>
 
-                    {/* Google Hybrid */}
-                    <BaseLayer name={TILE_PROVIDERS.googleHybrid.name}>
-                        <TileLayer
-                            url={TILE_PROVIDERS.googleHybrid.url}
-                            // @ts-ignore
-                            subdomains={TILE_PROVIDERS.googleHybrid.subdomains}
-                            attribution={TILE_PROVIDERS.googleHybrid.attribution}
-                            maxNativeZoom={TILE_PROVIDERS.googleHybrid.maxNativeZoom}
-                            maxZoom={CONFIG.maxZoom}
-                            keepBuffer={CONFIG.keepBuffer}
-                        />
-                    </BaseLayer>
+
 
                     {/* Street Map */}
                     <BaseLayer name={TILE_PROVIDERS.street.name}>
