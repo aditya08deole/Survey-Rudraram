@@ -84,26 +84,26 @@ export const MAP_CONFIG = {
   center: [17.558599, 78.166078], // Rudraram focus area
   // Default zoom level (15 for clear area view)
   defaultZoom: 15,
-  // Min/Max zoom
+  // Min/Max zoom - IMPORTANT: Keep maxZoom <= 20 to avoid missing tiles
   minZoom: 10,
-  maxZoom: 30,
-  // OpenStreetMap tile providers
+  maxZoom: 20,  // Reduced from 30 - most providers only support up to 18-20
+  // Tile providers with proper maxNativeZoom to prevent grey tiles
   tileProviders: {
     standard: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxNativeZoom: 19
+      maxNativeZoom: 19  // OSM max native zoom
     },
     satellite: {
-      // Switched to Google Hybrid for better performance ("microsec load") and labels ("satellite hybrid")
-      url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-      attribution: '&copy; Google Maps',
-      maxNativeZoom: 20 // Google supports higher native zoom
+      // ESRI World Imagery - reliable, no API key required
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attribution: '&copy; Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN',
+      maxNativeZoom: 18  // Esri max native zoom
     },
     terrain: {
       url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-      attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
-      maxNativeZoom: 17
+      attribution: 'Map data: &copy; OpenStreetMap | Map style: &copy; OpenTopoMap',
+      maxNativeZoom: 17  // OpenTopoMap max native zoom
     }
   }
 };

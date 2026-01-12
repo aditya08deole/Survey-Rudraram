@@ -2,10 +2,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-// @ts-ignore
-window.L = L;
+// NOTE: leaflet.css is already imported in MapComponentClean.tsx - do NOT import again
+// NOTE: window.L assignment removed - caused tile loading conflicts
 import 'leaflet-draw';
-import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import {
     Pencil, Type, Square, Circle, Trash2, Eraser,

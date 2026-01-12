@@ -1,30 +1,26 @@
 /**
- * Professional Map Component
+ * Map Component - FIXED VERSION
  * 
- * Complete rewrite with bulletproof tile loading:
- * - Multiple tile providers with fallbacks
- * - Proper maxNativeZoom for unlimited zooming
- * - Error handling for tile failures
- * - Performance optimizations
- * 
- * @author Rudraram Survey Team
- * @version 2.0.0
+ * Fixes applied based on analysis:
+ * 1. Uses Esri World Imagery (reliable, no API key)
+ * 2. Proper maxNativeZoom on all TileLayers
+ * 3. invalidateSize() on baselayerchange
+ * 4. Sensible zoom limits (maxZoom: 20)
+ * 5. Proper container sizing
  */
 
 import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import { MapContainer, TileLayer, Marker, LayersControl, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MAP_CONFIG, getStatusColor } from '../../utils/constants';
+import { MAP_CONFIG } from '../../utils/constants';
 import { getDeviceIcon } from './CustomMarkerIcons';
 import type { Device } from '../../types/device';
 import './MapComponent.css';
 import CanvasTools from './tools/CanvasTools';
 import MapLegend from './MapLegend';
 
-// ============================================
-// LEAFLET ICON FIX
-// ============================================
+// Fix Leaflet default marker icon issue
 // @ts-ignore
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -33,111 +29,67 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// ============================================
-// TILE PROVIDER CONFIGURATION
-// ============================================
-// These are reliable, tested tile providers with proper maxNativeZoom
-const TILE_PROVIDERS = {
-    // Google Hybrid (Satellite + Roads) - Most reliable
-    googleHybrid: {
-        name: 'Satellite',
-        url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-        subdomains: ['0', '1', '2', '3'],
-        attribution: '© Google',
-        maxNativeZoom: 21, // Google goes up to 21
-        maxZoom: 30,
-    },
-    // Google Satellite (No labels)
-    googleSatellite: {
-        name: 'Satellite (No Labels)',
-        url: 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-        subdomains: ['0', '1', '2', '3'],
-        attribution: '© Google',
-        maxNativeZoom: 21,
-        maxZoom: 30,
-    },
-    // OpenStreetMap - Very reliable
-    osm: {
-        name: 'Street Map',
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        subdomains: ['a', 'b', 'c'],
-        attribution: '© OpenStreetMap contributors',
-        maxNativeZoom: 19,
-        maxZoom: 30,
-    },
-    // ESRI World Imagery - High quality satellite
-    esriSatellite: {
-        name: 'ESRI Satellite',
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attribution: '© Esri',
-        maxNativeZoom: 18,
-        maxZoom: 30,
-    },
-    // CartoDB Light - Clean minimal style
-    cartoLight: {
-        name: 'Light Theme',
-        url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        subdomains: ['a', 'b', 'c', 'd'],
-        attribution: '© CartoDB',
-        maxNativeZoom: 19,
-        maxZoom: 30,
-    },
-};
-
 const { BaseLayer } = LayersControl;
 
-// ============================================
-// COMPONENT INTERFACES
-// ============================================
 interface MapComponentProps {
     devices: Device[];
     selectedDevice?: Device | null;
     onDeviceClick?: (device: Device) => void;
 }
 
-// ============================================
-// MAP REFRESHER - Fixes grey/black map on load
-// ============================================
-function MapRefresher() {
+/**
+ * MapInitializer - Handles map setup and invalidateSize on events
+ */
+function MapInitializer() {
     const map = useMap();
 
     useEffect(() => {
-        // Force map to recalculate size
-        const refresh = () => {
-            if (map) {
-                map.invalidateSize({ animate: false, pan: false });
-            }
+        if (!map) return;
+
+        // Force size recalculation - critical for preventing grey tiles
+        const invalidate = () => {
+            map.invalidateSize({ animate: false, pan: false });
         };
 
-        // Multiple refresh attempts to catch all layout changes
-        refresh();
-        const timers = [
-            setTimeout(refresh, 50),
-            setTimeout(refresh, 150),
-            setTimeout(refresh, 300),
-            setTimeout(refresh, 500),
-            setTimeout(refresh, 1000),
-        ];
+        // Initial invalidation with delays to catch all layout changes
+        invalidate();
+        const t1 = setTimeout(invalidate, 100);
+        const t2 = setTimeout(invalidate, 300);
+        const t3 = setTimeout(invalidate, 500);
 
-        // Also refresh on window resize
-        window.addEventListener('resize', refresh);
+        // CRITICAL: Invalidate when base layer changes - fixes grey tiles on layer switch
+        const onBaseLayerChange = () => {
+            setTimeout(invalidate, 200);
+        };
+        map.on('baselayerchange', onBaseLayerChange);
 
-        // Refresh when visibility changes (tab switch)
-        document.addEventListener('visibilitychange', refresh);
+        // Invalidate on window resize
+        window.addEventListener('resize', invalidate);
+
+        // Invalidate when tab becomes visible
+        const onVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                setTimeout(invalidate, 100);
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibility);
 
         return () => {
-            timers.forEach(t => clearTimeout(t));
-            window.removeEventListener('resize', refresh);
-            document.removeEventListener('visibilitychange', refresh);
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+            map.off('baselayerchange', onBaseLayerChange);
+            window.removeEventListener('resize', invalidate);
+            document.removeEventListener('visibilitychange', onVisibility);
         };
     }, [map]);
 
     return null;
 }
 
-// ============================================
-// MAP CONTROLLER - Handles flying to devices
-// ============================================
+/**
+ * MapController - Flies to selected device
+ */
 function MapController({ selectedDevice }: { selectedDevice?: Device | null }) {
     const map = useMap();
 
@@ -148,106 +100,25 @@ function MapController({ selectedDevice }: { selectedDevice?: Device | null }) {
         const lng = selectedDevice.lng || selectedDevice.longitude;
 
         if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-            map.flyTo([lat, lng], 18, {
-                duration: 1.2,
-                easeLinearity: 0.25
-            });
+            map.flyTo([lat, lng], 17, { duration: 1 });
         }
     }, [selectedDevice, map]);
 
     return null;
 }
 
-// ============================================
-// BOUNDS CONTROLLER - Fits map to show all devices
-// ============================================
-function BoundsController({ devices, skipInitialFit }: { devices: Device[], skipInitialFit?: boolean }) {
-    const map = useMap();
-    const [hasFitted, setHasFitted] = useState(false);
-
-    useEffect(() => {
-        if (skipInitialFit || hasFitted) return;
-
-        const validDevices = devices.filter(d => {
-            const lat = d.lat || d.latitude;
-            const lng = d.lng || d.longitude;
-            return lat && lng && !isNaN(lat) && !isNaN(lng);
-        });
-
-        if (validDevices.length === 0) return;
-
-        try {
-            const bounds = L.latLngBounds(
-                validDevices.map(d => {
-                    const lat = d.lat || d.latitude;
-                    const lng = d.lng || d.longitude;
-                    return [lat!, lng!] as [number, number];
-                })
-            );
-
-            if (bounds.isValid()) {
-                // Small delay to ensure map is ready
-                setTimeout(() => {
-                    map.fitBounds(bounds, {
-                        padding: [50, 50],
-                        maxZoom: 16,
-                        animate: false
-                    });
-                    setHasFitted(true);
-                }, 100);
-            }
-        } catch (e) {
-            console.warn('Bounds calculation failed:', e);
-        }
-    }, [devices, map, hasFitted, skipInitialFit]);
-
-    return null;
-}
-
-// ============================================
-// ZOOM DISPLAY - Shows current zoom level
-// ============================================
-function ZoomDisplay() {
-    const [zoom, setZoom] = useState(MAP_CONFIG.defaultZoom);
-
-    useMapEvents({
-        zoomend: (e) => {
-            setZoom(Math.round(e.target.getZoom()));
-        }
-    });
-
-    return (
-        <div className="zoom-display" style={{
-            position: 'absolute',
-            bottom: '10px',
-            left: '10px',
-            background: 'rgba(255,255,255,0.9)',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            zIndex: 1000,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}>
-            Zoom: {zoom}
-        </div>
-    );
-}
-
-// ============================================
-// MAIN MAP COMPONENT
-// ============================================
+/**
+ * Main Map Component
+ */
 export function MapComponent({
     devices,
     selectedDevice,
     onDeviceClick
 }: MapComponentProps) {
 
-    // Memoize center to prevent re-renders
     const center = useMemo(() => MAP_CONFIG.center as [number, number], []);
-    const defaultZoom = useMemo(() => MAP_CONFIG.defaultZoom, []);
+    const { standard, satellite, terrain } = MAP_CONFIG.tileProviders;
 
-    // Handle marker click
     const handleMarkerClick = useCallback((device: Device) => {
         if (onDeviceClick) {
             onDeviceClick(device);
@@ -255,92 +126,63 @@ export function MapComponent({
     }, [onDeviceClick]);
 
     return (
-        <div className="map-component-clean" style={{ width: '100%', height: '100%', position: 'relative' }}>
-            {/* Map Legend */}
+        <div
+            className="map-component-clean"
+            style={{
+                width: '100%',
+                height: '100%',
+                position: 'relative',
+                minHeight: '400px'  // Ensure container has height
+            }}
+        >
             {/* @ts-ignore */}
             <MapLegend />
 
             <MapContainer
                 center={center}
-                zoom={defaultZoom}
+                zoom={MAP_CONFIG.defaultZoom}
+                minZoom={MAP_CONFIG.minZoom}
+                maxZoom={MAP_CONFIG.maxZoom}
                 style={{ width: '100%', height: '100%' }}
                 zoomControl={true}
                 scrollWheelZoom={true}
-                doubleClickZoom={true}
-                maxZoom={30}
-                minZoom={3}
-                preferCanvas={true}
             >
-                {/* Critical: Refresh map size on layout changes */}
-                <MapRefresher />
-
-                {/* Fly to selected device */}
+                {/* CRITICAL: Initializer handles invalidateSize */}
+                <MapInitializer />
                 <MapController selectedDevice={selectedDevice} />
-
-                {/* Initial bounds fitting */}
-                <BoundsController devices={devices} />
-
-                {/* Show current zoom level */}
-                <ZoomDisplay />
-
-                {/* Drawing & Measurement Tools */}
                 <CanvasTools />
 
-                {/* Tile Layers with proper configuration */}
                 <LayersControl position="topright">
-
-                    {/* Google Hybrid - Default, most reliable */}
-                    <BaseLayer checked name={TILE_PROVIDERS.googleHybrid.name}>
+                    {/* Satellite - Esri World Imagery (default) */}
+                    <BaseLayer checked name="Satellite">
                         <TileLayer
-                            url={TILE_PROVIDERS.googleHybrid.url}
-                            // @ts-ignore - subdomains type issue
-                            subdomains={TILE_PROVIDERS.googleHybrid.subdomains}
-                            attribution={TILE_PROVIDERS.googleHybrid.attribution}
-                            maxNativeZoom={TILE_PROVIDERS.googleHybrid.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.googleHybrid.maxZoom}
+                            url={satellite.url}
+                            attribution={satellite.attribution}
+                            maxNativeZoom={satellite.maxNativeZoom}
+                            maxZoom={MAP_CONFIG.maxZoom}
                             tileSize={256}
-                            keepBuffer={8}
-                            updateWhenIdle={false}
-                            updateWhenZooming={false}
-                            errorTileUrl=""
                         />
                     </BaseLayer>
 
-                    {/* OpenStreetMap - Reliable fallback */}
-                    <BaseLayer name={TILE_PROVIDERS.osm.name}>
+                    {/* Street Map - OpenStreetMap */}
+                    <BaseLayer name="Street Map">
                         <TileLayer
-                            url={TILE_PROVIDERS.osm.url}
-                            // @ts-ignore
-                            subdomains={TILE_PROVIDERS.osm.subdomains}
-                            attribution={TILE_PROVIDERS.osm.attribution}
-                            maxNativeZoom={TILE_PROVIDERS.osm.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.osm.maxZoom}
-                            keepBuffer={4}
+                            url={standard.url}
+                            attribution={standard.attribution}
+                            maxNativeZoom={standard.maxNativeZoom}
+                            maxZoom={MAP_CONFIG.maxZoom}
                         />
                     </BaseLayer>
 
-                    {/* ESRI Satellite - High quality imagery */}
-                    <BaseLayer name={TILE_PROVIDERS.esriSatellite.name}>
+                    {/* Terrain - OpenTopoMap */}
+                    <BaseLayer name="Terrain">
                         <TileLayer
-                            url={TILE_PROVIDERS.esriSatellite.url}
-                            attribution={TILE_PROVIDERS.esriSatellite.attribution}
-                            maxNativeZoom={TILE_PROVIDERS.esriSatellite.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.esriSatellite.maxZoom}
+                            url={terrain.url}
+                            attribution={terrain.attribution}
+                            maxNativeZoom={terrain.maxNativeZoom}
+                            maxZoom={MAP_CONFIG.maxZoom}
                         />
                     </BaseLayer>
-
-                    {/* CartoDB Light - Clean minimal */}
-                    <BaseLayer name={TILE_PROVIDERS.cartoLight.name}>
-                        <TileLayer
-                            url={TILE_PROVIDERS.cartoLight.url}
-                            // @ts-ignore
-                            subdomains={TILE_PROVIDERS.cartoLight.subdomains}
-                            attribution={TILE_PROVIDERS.cartoLight.attribution}
-                            maxNativeZoom={TILE_PROVIDERS.cartoLight.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.cartoLight.maxZoom}
-                        />
-                    </BaseLayer>
-
                 </LayersControl>
 
                 {/* Device Markers */}
@@ -359,7 +201,7 @@ export function MapComponent({
                             key={device.survey_id || `device-${idx}`}
                             position={[lat, lng]}
                             icon={getDeviceIcon(deviceType, device.status, label)}
-                            opacity={isSelected ? 1 : 0.9}
+                            opacity={isSelected ? 1 : 0.85}
                             zIndexOffset={isSelected ? 1000 : 0}
                             eventHandlers={{
                                 click: () => handleMarkerClick(device)
