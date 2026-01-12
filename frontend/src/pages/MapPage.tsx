@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import MapComponent from '../components/Map/MapComponentClean';
+import { ProfessionalMap } from '../components/Map/ProfessionalMap';
 import DeviceSidebar from '../components/Map/DeviceSidebar';
 import LoadingAnimation from '../components/LoadingAnimation';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -59,7 +59,7 @@ export function MapPage() {
                 <div className="map-page-main">
                     {/* Map */}
                     <div className="map-container">
-                        <MapComponent
+                        <ProfessionalMap
                             devices={filteredDevices}
                             onDeviceClick={handleSetSelectedDevice}
                             selectedDevice={selectedDevice}

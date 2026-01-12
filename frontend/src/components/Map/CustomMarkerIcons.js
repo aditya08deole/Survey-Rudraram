@@ -1,156 +1,278 @@
+/**
+ * Custom Device Marker Icons
+ * 
+ * Professional icons with subtle neon effects:
+ * - Borewell: Circle with "B" - Green(working), Red(not working), Grey(other)
+ * - Sump: Square with "S" - Blue
+ * - OHSR: Triangle with "O" - Orange
+ * 
+ * @version 2.0.0
+ */
+
 import L from 'leaflet';
-import './MapComponent.css';
 
-// Type Colors (Fixed per legend)
+// ============================================================
+// COLOR CONFIGURATION
+// ============================================================
+
+// Status colors (subtle neon)
+const STATUS_NEON = {
+  WORKING: {
+    color: '#22C55E',      // Bright green
+    glow: '0 0 8px rgba(34, 197, 94, 0.6)',  // Subtle green glow
+  },
+  NOT_WORKING: {
+    color: '#EF4444',      // Bright red
+    glow: '0 0 8px rgba(239, 68, 68, 0.6)',  // Subtle red glow
+  },
+  OTHER: {
+    color: '#6B7280',      // Grey
+    glow: 'none',          // No glow
+  },
+};
+
+// Device type base colors
 const TYPE_COLORS = {
-  BOREWELL: '#22C55E', // Green (fallback)
-  SUMP: '#3B82F6',     // Blue
-  OHSR: '#F97316'      // Orange
+  SUMP: '#3B82F6',    // Blue
+  OHSR: '#F97316',    // Orange
 };
 
-// Status Colors (Badge System)
-const STATUS_COLORS = {
-  WORKING: '#4ADE80',    // Light Green dot
-  NOT_WORKING: '#EF4444', // Red dot
-  REPAIR: '#9CA3AF'      // Grey dot
-};
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
 
-// Borewell Specific Neon Colors
-const BOREWELL_COLORS = {
-  WORKING: '#39FF14',    // Neon Green
-  NOT_WORKING: '#FF3131', // Neon Red
-  OTHER: '#808080'       // Grey
-};
+/**
+ * Get neon config based on status
+ */
+const getStatusConfig = (status) => {
+  if (!status) return STATUS_NEON.OTHER;
 
-const getStatusColor = (status) => {
-  if (!status) return STATUS_COLORS.REPAIR;
   const s = status.toLowerCase();
-  if (s.includes('not') || s.includes('non') || s.includes('failed')) return STATUS_COLORS.NOT_WORKING;
-  if (s.includes('working')) return STATUS_COLORS.WORKING;
-  return STATUS_COLORS.REPAIR;
-};
 
-const getBorewellConfig = (status) => {
-  const s = (status || '').toLowerCase();
   if (s.includes('working') && !s.includes('not')) {
-    return { color: BOREWELL_COLORS.WORKING, glow: true };
+    return STATUS_NEON.WORKING;
   }
   if (s.includes('not') || s.includes('non') || s.includes('failed')) {
-    return { color: BOREWELL_COLORS.NOT_WORKING, glow: true };
+    return STATUS_NEON.NOT_WORKING;
   }
-  return { color: BOREWELL_COLORS.OTHER, glow: false };
+
+  return STATUS_NEON.OTHER;
 };
 
-export const getDeviceIcon = (type, status, label) => {
-  const t = (type || '').toLowerCase();
+/**
+ * Detect device type from string
+ */
+const detectDeviceType = (type) => {
+  if (!type) return 'BOREWELL';
 
-  // Label HTML (Text below icon) - Common for all
-  const labelHtml = label ?
-    `<div style="
-      position: absolute;
-      top: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.95);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      color: #333;
-      white-space: nowrap;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-      pointer-events: none;
-      z-index: 5;
-      border: 1px solid rgba(0,0,0,0.1);
-    ">${label}</div>` : '';
+  const t = type.toUpperCase();
 
+  if (t.includes('SUMP')) return 'SUMP';
+  if (t.includes('OHSR') || t.includes('OHT') || t.includes('OVERHEAD') || t.includes('TANK')) return 'OHSR';
 
-  // CASE 1: BOREWELL (Custom Neon Logic, No Badge)
-  if (!t.includes('sump') && !t.includes('ohsr') && !t.includes('oht') && !t.includes('overhead')) {
-    // It's a Borewell (or unknown/default)
-    const { color, glow } = getBorewellConfig(status);
-    const boxShadow = glow
-      ? `0 0 6px ${color}, 0 0 10px ${color}, inset 0 0 4px rgba(255,255,255,0.5)`
-      : `0 1px 3px rgba(0,0,0,0.3)`;
+  return 'BOREWELL';
+};
 
-    const iconHtml = `<div style="
-        width: 18px;
-        height: 18px;
-        background-color: ${color};
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: ${boxShadow};
-      "></div>`;
+// ============================================================
+// ICON CREATORS
+// ============================================================
 
-    return L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="position: relative; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-               ${iconHtml}
-               ${labelHtml}
-             </div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -10]
-    });
-  }
+/**
+ * Create BOREWELL icon - Circle with "B"
+ */
+const createBorewellIcon = (status, label) => {
+  const config = getStatusConfig(status);
 
-  // CASE 2: SUMP / OHSR (Badge System)
-  const statusColor = getStatusColor(status);
-  let mainHtml = '';
-  let shapeColor = TYPE_COLORS.SUMP; // Default to Sump color if falling through here but theoretically handled
+  const iconHtml = `
+        <div style="
+            width: 24px;
+            height: 24px;
+            background: ${config.color};
+            border-radius: 50%;
+            border: 2.5px solid white;
+            box-shadow: ${config.glow}, 0 2px 4px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        ">B</div>
+    `;
 
-  if (t.includes('sump')) {
-    shapeColor = TYPE_COLORS.SUMP;
-    // Blue Square with S
-    mainHtml = `<div style="
-        width: 20px;
-        height: 20px;
-        background-color: ${shapeColor};
-        border-radius: 4px; 
-        border: 2px solid white;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        display: flex; align-items: center; justify-content: center;
-        color: white; font-weight: 800; font-family: sans-serif; font-size: 11px;
-      ">S</div>`;
-  }
-  else {
-    // OHSR / OHT
-    shapeColor = TYPE_COLORS.OHSR;
-    // Orange Triangle
-    mainHtml = `<div style="
-        width: 0; 
-        height: 0; 
-        border-left: 11px solid transparent;
-        border-right: 11px solid transparent;
-        border-bottom: 22px solid ${shapeColor};
-        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
-        position: relative; top: -2px;
-      "></div>`;
-  }
+  return createDivIcon(iconHtml, label, 24);
+};
 
-  // Status Badge
-  const badgeHtml = `<div style="
-      position: absolute;
-      bottom: -2px;
-      right: -2px;
-      width: 10px;
-      height: 10px;
-      background-color: ${statusColor};
-      border: 1.5px solid white;
-      border-radius: 50%;
-      z-index: 10;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    "></div>`;
+/**
+ * Create SUMP icon - Square with "S"
+ */
+const createSumpIcon = (status, label) => {
+  const config = getStatusConfig(status);
+  const baseColor = TYPE_COLORS.SUMP;
+
+  // Blue base with status indicator
+  const iconHtml = `
+        <div style="
+            width: 24px;
+            height: 24px;
+            background: ${baseColor};
+            border-radius: 4px;
+            border: 2.5px solid white;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.5), 0 2px 4px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            position: relative;
+        ">
+            S
+            <div style="
+                position: absolute;
+                bottom: -4px;
+                right: -4px;
+                width: 10px;
+                height: 10px;
+                background: ${config.color};
+                border: 1.5px solid white;
+                border-radius: 50%;
+                box-shadow: ${config.glow};
+            "></div>
+        </div>
+    `;
+
+  return createDivIcon(iconHtml, label, 24);
+};
+
+/**
+ * Create OHSR icon - Triangle with "O"
+ */
+const createOhsrIcon = (status, label) => {
+  const config = getStatusConfig(status);
+  const baseColor = TYPE_COLORS.OHSR;
+
+  // SVG Triangle with "O" in center
+  const iconHtml = `
+        <div style="position: relative; width: 28px; height: 26px;">
+            <svg width="28" height="26" viewBox="0 0 28 26">
+                <defs>
+                    <filter id="neon-orange" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${baseColor}" flood-opacity="0.5"/>
+                    </filter>
+                </defs>
+                <polygon 
+                    points="14,2 26,24 2,24" 
+                    fill="${baseColor}" 
+                    stroke="white" 
+                    stroke-width="2.5"
+                    filter="url(#neon-orange)"
+                />
+                <text 
+                    x="14" 
+                    y="19" 
+                    text-anchor="middle" 
+                    fill="white" 
+                    font-size="11" 
+                    font-weight="700"
+                    font-family="Arial, sans-serif"
+                    style="text-shadow: 0 1px 2px rgba(0,0,0,0.3);"
+                >O</text>
+            </svg>
+            <div style="
+                position: absolute;
+                bottom: -2px;
+                right: 0px;
+                width: 10px;
+                height: 10px;
+                background: ${config.color};
+                border: 1.5px solid white;
+                border-radius: 50%;
+                box-shadow: ${config.glow};
+            "></div>
+        </div>
+    `;
+
+  return createDivIcon(iconHtml, label, 28, 26);
+};
+
+/**
+ * Create Leaflet divIcon wrapper
+ */
+const createDivIcon = (iconHtml, label, width, height = null) => {
+  const h = height || width;
+
+  const labelHtml = label ? `
+        <div style="
+            position: absolute;
+            top: ${h + 4}px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            color: #1f2937;
+            white-space: nowrap;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            pointer-events: none;
+            border: 1px solid rgba(0,0,0,0.08);
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        ">${label}</div>
+    ` : '';
 
   return L.divIcon({
-    className: 'custom-div-icon',
-    html: `<div style="position: relative; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
-             ${mainHtml}
-             ${badgeHtml}
-             ${labelHtml}
-           </div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -10]
+    className: 'device-marker-icon',
+    html: `
+            <div style="
+                position: relative;
+                width: ${width}px;
+                height: ${h}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                ${iconHtml}
+                ${labelHtml}
+            </div>
+        `,
+    iconSize: [width, h + (label ? 20 : 0)],
+    iconAnchor: [width / 2, h / 2],
+    popupAnchor: [0, -h / 2]
   });
 };
+
+// ============================================================
+// MAIN EXPORT
+// ============================================================
+
+/**
+ * Get appropriate device icon
+ * 
+ * @param {string} type - Device type (Borewell, Sump, OHSR)
+ * @param {string} status - Device status (Working, Not Working, etc.)
+ * @param {string} label - Label to display below marker
+ * @returns {L.DivIcon} Leaflet div icon
+ */
+export const getDeviceIcon = (type, status, label) => {
+  const deviceType = detectDeviceType(type);
+
+  switch (deviceType) {
+    case 'SUMP':
+      return createSumpIcon(status, label);
+    case 'OHSR':
+      return createOhsrIcon(status, label);
+    case 'BOREWELL':
+    default:
+      return createBorewellIcon(status, label);
+  }
+};
+
+export default getDeviceIcon;
