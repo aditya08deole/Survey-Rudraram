@@ -107,6 +107,35 @@ const createMarkerIcon = (device, isSelected = false) => {
 };
 
 
+// Map Refresher to fix rendering issues (grey/black map)
+function MapRefresher() {
+  const map = useMap();
+  useEffect(() => {
+    // Trigger invalidateSize to ensure map fills the container correctly
+    // This fixes issues where the map renders in a small box or not at all
+    const resizeMap = () => {
+      if (map) {
+        map.invalidateSize();
+      }
+    };
+
+    // Run immediately and after delays to catch animation frames
+    resizeMap();
+    const t1 = setTimeout(resizeMap, 100);
+    const t2 = setTimeout(resizeMap, 500);
+
+    // Also listen for window resize
+    window.addEventListener('resize', resizeMap);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener('resize', resizeMap);
+    };
+  }, [map]);
+  return null;
+}
+
 /**
  * Map controller to handle map instance and interactions
  */
@@ -119,7 +148,10 @@ function MapController({ selectedDevice }) {
       const lat = selectedDevice.latitude || selectedDevice.lat;
       const lng = selectedDevice.longitude || selectedDevice.long;
       if (lat && lng) {
-        map.flyTo([lat, lng], 17);
+        map.flyTo([lat, lng], 18, {
+          animate: true,
+          duration: 1.5
+        });
       }
     }
   }, [selectedDevice, map]);
@@ -391,6 +423,7 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
         style={{ height: '100%', width: '100%' }}
         ref={mapRef}
       >
+        <MapRefresher />
         <MapController selectedDevice={selectedDevice} />
         <DrawingTools />
         <MeasurementTool />
