@@ -3,15 +3,20 @@ import { X, MapPin, Droplet, Zap, Ruler, Clock, Home, FileText, Camera, Info } f
 import ImageUpload from '../DeviceImages/ImageUpload';
 import ImageGallery from '../DeviceImages/ImageGallery';
 import { imageService } from '../../services/imageService';
+import { updateDeviceNotes } from '../../services/apiService';
 import './DeviceSidebar.css';
 
 const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
     const [activeTab, setActiveTab] = useState('details');
     const [coverImage, setCoverImage] = useState(null);
     const [showUploadModal, setShowUploadModal] = useState(false);
+    const [isEditingNote, setIsEditingNote] = useState(false);
+    const [noteText, setNoteText] = useState('');
+    const [isSavingNote, setIsSavingNote] = useState(false);
 
     useEffect(() => {
         if (device?.survey_id) {
+            setNoteText(device.notes || '');
             imageService.getDeviceImages(device.survey_id)
                 .then(images => {
                     if (images && images.length > 0) {
@@ -24,6 +29,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                 .catch(err => console.error("Failed to load cover image", err));
         } else {
             setCoverImage(null);
+            setNoteText('');
         }
     }, [device]);
 
@@ -45,7 +51,8 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                     <DetailRow icon={<Zap size={16} />} label="Power" value={device.power_type} />
                     <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses_connected} />
                     <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.daily_usage_hrs} unit="hrs" />
-                    <DetailRow icon={<FileText size={16} />} label="Serial No" value={device.sr_no} />
+                    <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.daily_usage_hrs} unit="hrs" />
+                    {/* sr_no removed as per request */}
                     <DetailRow icon={<Info size={16} />} label="Status" value={device.done !== undefined ? (device.done ? 'Done' : 'Pending') : null} />
                 </div>
             );
@@ -147,14 +154,61 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                             {renderDetails()}
                         </div>
 
-                        {device.notes && (
-                            <div className="sidebar-section">
-                                <h3 className="section-title">Notes</h3>
-                                <div className="notes-box">
-                                    <p>{device.notes}</p>
-                                </div>
+                        <div className="sidebar-section">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <h3 className="section-title" style={{ marginBottom: 0 }}>Notes</h3>
+                                {!isEditingNote ? (
+                                    <button
+                                        className="edit-notes-btn"
+                                        onClick={() => setIsEditingNote(true)}
+                                    >
+                                        Edit
+                                    </button>
+                                ) : (
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                            className="save-notes-btn"
+                                            disabled={isSavingNote}
+                                            onClick={async () => {
+                                                setIsSavingNote(true);
+                                                const result = await updateDeviceNotes(surveyId, deviceType, noteText);
+                                                setIsSavingNote(false);
+                                                if (result.success) {
+                                                    setIsEditingNote(false);
+                                                    device.notes = noteText; // Optimistic update
+                                                } else {
+                                                    alert('Failed to save notes');
+                                                }
+                                            }}
+                                        >
+                                            {isSavingNote ? 'Saving...' : 'Save'}
+                                        </button>
+                                        <button
+                                            className="cancel-notes-btn"
+                                            onClick={() => {
+                                                setIsEditingNote(false);
+                                                setNoteText(device.notes || '');
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        )}
+
+                            {isEditingNote ? (
+                                <textarea
+                                    className="notes-editor"
+                                    value={noteText}
+                                    onChange={(e) => setNoteText(e.target.value)}
+                                    rows={4}
+                                />
+                            ) : (
+                                <div className="notes-box glassy-card">
+                                    <p>{noteText || <em className="text-gray-400">No notes available...</em>}</p>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="metadata-footer">
                             <p>Coordinates: {device.lat?.toFixed(6) || device.latitude?.toFixed(6)}, {device.lng?.toFixed(6) || device.longitude?.toFixed(6)}</p>

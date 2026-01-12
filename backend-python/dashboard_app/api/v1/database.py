@@ -29,6 +29,36 @@ else:
 # Create router
 router = APIRouter(prefix="/api/db", tags=["Database"])
 
+from pydantic import BaseModel
+
+class NoteUpdate(BaseModel):
+    notes: str
+    device_type: str
+
+@router.patch("/devices/{survey_code}/notes")
+async def update_device_notes(survey_code: str, update: NoteUpdate):
+    """Update notes for a specific device"""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not configured")
+    
+    table_map = {
+        "Borewell": "borewells", "borewell": "borewells",
+        "Sump": "sumps", "sump": "sumps",
+        "OHSR": "overhead_tanks", "overhead_tank": "overhead_tanks", "OHT": "overhead_tanks"
+    }
+    
+    table = table_map.get(update.device_type)
+    if not table:
+         raise HTTPException(status_code=400, detail="Invalid device type")
+
+    try:
+        supabase.table(table).update({"notes": update.notes}).eq("survey_code", survey_code).execute()
+        return {"success": True, "message": "Notes updated"}
+    except Exception as e:
+        logger.error(f"Failed to update notes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @router.get("/devices")
 async def get_all_devices(

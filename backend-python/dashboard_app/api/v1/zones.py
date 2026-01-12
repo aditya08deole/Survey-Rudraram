@@ -41,6 +41,11 @@ async def save_zone(zone: Zone):
     save_zones_to_file(zones)
     return {"success": True, "zones": zones}
 
+@router.delete("/zones/all/delete")
+async def delete_all_zones():
+    save_zones_to_file([])
+    return {"success": True, "zones": []}
+
 @router.delete("/zones/{zone_id}")
 async def delete_zone(zone_id: str):
     zones = load_zones()

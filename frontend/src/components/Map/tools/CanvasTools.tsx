@@ -8,11 +8,11 @@ import 'leaflet-draw';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import {
-    Pencil, Type, Square, Circle, Trash2,
+    Pencil, Type, Square, Circle, Trash2, Eraser,
     Ruler, MousePointer2, Maximize, ChevronRight, ChevronLeft, Save, RefreshCw
 } from 'lucide-react';
 import './CanvasTools.css';
-import { getMapZones, saveMapZone, deleteMapZone, updateMapZone } from '../../../services/apiService';
+import { getMapZones, saveMapZone, deleteMapZone, updateMapZone, deleteAllMapZones } from '../../../services/apiService';
 
 // Colors for the palette
 const COLORS = [
@@ -541,13 +541,17 @@ const CanvasTools = () => {
 
     // Explicit Delete Saved Zone
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const clearAllZones = async () => {
-        if (!window.confirm("Delete ALL saved zones globally?")) return;
-        // This would require a delete-all endpoint or loop
-        // implementing single delete for now via Edit Mode context menu would be better but complex.
-        // For now, simpler: Clear UNSAVED.
-        // To delete SAVED: User must use Edit Mode -> Delete.
-        // But Leaflet Draw Delete removes from map. We need to catch that event and call API.
+    // Explicit Delete Saved Zone
+    const handleDeleteAll = async () => {
+        if (!window.confirm("⚠️ WARNING: This will delete ALL shapes and text from the map PERMANENTLY. \n\nAre you sure you want to proceed?")) return;
+        setSaving(true);
+        const result = await deleteAllMapZones();
+        if (result.success) {
+            if (drawnItems) drawnItems.clearLayers();
+        } else {
+            alert("Failed to delete all zones.");
+        }
+        setSaving(false);
     };
 
     // Catch Deletion
@@ -638,7 +642,7 @@ const CanvasTools = () => {
                     title="Delete Mode (Click shapes to remove)"
                     style={{ color: '#EF4444' }}
                 >
-                    <Trash2 size={20} />
+                    <Eraser size={20} />
                 </button>
                 <button
                     className="canvas-btn"
@@ -647,6 +651,14 @@ const CanvasTools = () => {
                     style={{ color: '#F59E0B' }}
                 >
                     <RefreshCw size={20} />
+                </button>
+                <button
+                    className="canvas-btn"
+                    onClick={handleDeleteAll}
+                    title="DELETE ALL (Permanent Global Reset)"
+                    style={{ color: 'red', borderLeft: '1px solid #eee' }}
+                >
+                    <Trash2 size={20} />
                 </button>
             </div>
         </div>

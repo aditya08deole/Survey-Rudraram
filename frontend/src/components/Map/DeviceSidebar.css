@@ -5,7 +5,9 @@
     right: 0;
     width: 350px;
     height: 100vh;
-    background: white;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     box-shadow: -5px 0 30px rgba(0, 0, 0, 0.1);
     z-index: 3100;
     display: flex;
@@ -372,4 +374,64 @@
     .device-sidebar {
         width: 100%;
     }
+}
+
+/* Glassy & Notes Styles */
+.glassy-card {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(4px);
+}
+
+.notes-editor {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.875rem;
+    resize: vertical;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.notes-editor:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.edit-notes-btn {
+    background: none;
+    border: none;
+    color: #6366f1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.save-notes-btn {
+    background: #6366f1;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.cancel-notes-btn {
+    background: transparent;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.save-notes-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }

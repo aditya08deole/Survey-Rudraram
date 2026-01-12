@@ -460,6 +460,33 @@ export const updateMapZone = async (zoneId, zone) => {
   }
 };
 
+export const deleteAllMapZones = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/zones/all/delete`, {
+      method: "DELETE",
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting all zones:", error);
+    return { success: false };
+  }
+};
+
+export const updateDeviceNotes = async (surveyCode, deviceType, notes) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/db/devices/${encodeURIComponent(surveyCode)}/notes`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes, device_type: deviceType })
+    });
+    if (!response.ok) throw new Error("Failed to update notes");
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating notes:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Export API base URL for debugging
 export { API_BASE_URL };
 
@@ -479,6 +506,8 @@ const apiService = {
   fetchDeviceByCodeDB,
   fetchZonesFromDB,
   checkDatabaseHealth,
+  updateDeviceNotes,
+  deleteAllMapZones,
 
   API_BASE_URL
 };
