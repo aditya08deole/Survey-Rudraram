@@ -1,161 +1,179 @@
-/* Glassy Canvas Styles */
-.canvas-glass-panel {
+/* Futuristic Canvas CSS */
+.canvas-float-panel {
     position: absolute;
-    top: 80px;
+    top: 100px;
     right: 20px;
-    width: 200px;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    padding: 16px;
+    width: 60px;
+    /* Slim vertical bar initially, expands if needed? No grid is 2x2 */
+    width: 160px;
+    background: rgba(15, 15, 25, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 12px;
     z-index: 2000;
-    /* Above map */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     display: flex;
     flex-direction: column;
     gap: 12px;
-    transition: all 0.3s ease;
 }
 
-.glass-title {
-    font-size: 14px;
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
     font-weight: 700;
-    color: white;
-    text-transform: uppercase;
     letter-spacing: 1px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 8px;
     margin-bottom: 4px;
+    cursor: grab;
 }
 
-/* Tool Grid */
+.panel-header:active {
+    cursor: grabbing;
+}
+
+.panel-header button {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.panel-header button:hover {
+    color: white;
+}
+
 .tool-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
 }
 
 .tool-grid button {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 8px;
-    padding: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
+    height: 32px;
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .tool-grid button:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .tool-grid button.active {
     background: #00F0FF;
     color: black;
-    box-shadow: 0 0 10px #00F0FF;
-    border-color: #00F0FF;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+    border: none;
 }
 
-/* Color Grid */
-.color-grid {
+.color-strip {
     display: flex;
-    justify-content: space-between;
+    gap: 6px;
+    justify-content: center;
     padding: 4px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .color-dot {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s;
-}
-
-.color-dot:hover {
-    transform: scale(1.2);
+    border: 2px solid transparent;
 }
 
 .color-dot.selected {
     border-color: white;
-    box-shadow: 0 0 8px currentColor;
     transform: scale(1.2);
 }
 
-/* Action Rows */
-.action-row {
+.action-strip {
     display: flex;
     gap: 8px;
-    justify-content: center;
 }
 
-.action-row button {
-    background: transparent;
+.btn-save {
+    flex: 1;
+    background: #39FF14;
+    color: black;
     border: none;
-    color: rgba(255, 255, 255, 0.7);
-    cursor: pointer;
-    padding: 4px;
-}
-
-.action-row button:hover {
-    color: white;
-}
-
-/* System Actions */
-.system-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 12px;
-}
-
-.system-actions button {
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 8px;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.btn-clear {
+    width: 28px;
+    background: rgba(255, 50, 50, 0.2);
+    color: #FF4444;
+    border: 1px solid rgba(255, 50, 50, 0.3);
     border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.btn-clear:hover {
+    background: rgba(255, 0, 0, 0.4);
+    color: white;
+}
+
+/* Floating Toggle Button */
+.canvas-toggle-btn {
+    position: absolute;
+    top: 100px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    background: rgba(15, 15, 25, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    z-index: 2000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Dynamic Text Marker Styling */
+.dynamic-text-label {
+    background: transparent;
+    border: none;
+}
+
+.dynamic-text-label div {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
     font-size: 12px;
     font-weight: 600;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s;
-}
-
-.save-btn {
-    background: #39FF14;
-    color: black;
-}
-
-.save-btn:hover {
-    background: #32D911;
-    box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
-}
-
-.delete-btn {
-    background: rgba(255, 7, 58, 0.2);
-    color: #FF073A;
-    border: 1px solid rgba(255, 7, 58, 0.4) !important;
-}
-
-.delete-btn:hover {
-    background: rgba(255, 7, 58, 0.4);
-    box-shadow: 0 0 10px rgba(255, 7, 58, 0.3);
-}
-
-/* Leaflet Draw Overrides */
-.leaflet-draw-tooltip {
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
+    border: 1px solid;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    display: inline-block;
+    /* Dynamic width */
 }

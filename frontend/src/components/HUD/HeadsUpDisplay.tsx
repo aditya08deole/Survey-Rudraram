@@ -71,21 +71,29 @@ const HeadsUpDisplay = ({ visible = true }: HUDProps) => {
                         initialPos={{ x: 20, y: 20 }}
                     >
                         <div className="stat-grid">
-                            <div className="stat-item neon-green">
-                                <span className="stat-val">{stats?.totalDevices || 0}</span>
-                                <span className="stat-label">DEVICES</span>
+                            <div className="stat-item neon-purple">
+                                <span className="stat-val">
+                                    {((stats?.byType?.BOREWELL || 0) + (stats?.byType?.Borewell || 0))}
+                                </span>
+                                <span className="stat-label">BORES</span>
                             </div>
                             <div className="stat-item neon-orange">
-                                <span className="stat-val">{stats?.byType?.OHSR || 0}</span>
+                                <span className="stat-val">
+                                    {((stats?.byType?.OHSR || 0) + (stats?.byType?.Ohsr || 0))}
+                                </span>
                                 <span className="stat-label">OHSR</span>
                             </div>
                             <div className="stat-item neon-blue">
-                                <span className="stat-val">{stats?.byType?.SUMP || 0}</span>
+                                <span className="stat-val">
+                                    {((stats?.byType?.SUMP || 0) + (stats?.byType?.Sump || 0))}
+                                </span>
                                 <span className="stat-label">SUMPS</span>
                             </div>
                             <div className="stat-item neon-red">
-                                <span className="stat-val">{stats?.byStatus?.NOT_WORKING || 0}</span>
-                                <span className="stat-label">ALERTS</span>
+                                <span className="stat-val">
+                                    {((stats?.byStatus?.NOT_WORKING || 0) + (stats?.byStatus?.FAILED || 0))}
+                                </span>
+                                <span className="stat-label">FAULTS</span>
                             </div>
                         </div>
                     </HUDWidget>
