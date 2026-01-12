@@ -1,11 +1,14 @@
 /**
- * Map Component (TypeScript - Simplified)
+ * Map Component (TypeScript - Fixed)
  * 
- * Clean map rendering - NO internal filtering
- * Receives filtered devices as props
+ * Clean map rendering with all fixes applied:
+ * - HTTPS tiles
+ * - maxNativeZoom for ultra zoom (30+)
+ * - MapRefresher for layout stability
+ * - Performance optimizations
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, LayersControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -16,8 +19,8 @@ import './MapComponent.css';
 import CanvasTools from './tools/CanvasTools';
 import MapLegend from './MapLegend';
 
-// Fix Leaflet default marker icon issue (TypeScript workaround)
-// @ts-ignore - Leaflet types don't include _getIconUrl but it exists at runtime
+// Fix Leaflet default marker icon issue
+// @ts-ignore
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -34,91 +37,147 @@ interface MapComponentProps {
 }
 
 /**
- * Map controller to handle map instance and interactions
+ * MapRefresher - Fixes grey/black map by forcing size recalculation
  */
-function MapController({ selectedDevice }: { selectedDevice?: Device | null }) {
+function MapRefresher() {
     const map = useMap();
 
     useEffect(() => {
-        if (selectedDevice && selectedDevice.lat && selectedDevice.lng) {
-            map.flyTo([selectedDevice.lat, selectedDevice.lng], 17, {
-                duration: 1
-            });
-        }
-    }, [selectedDevice, map]);
-
-    // Auto-fit bounds when devices change
-    useEffect(() => {
-        const markers = document.querySelectorAll('.leaflet-marker-icon');
-        if (markers.length > 0) {
-            try {
-                const bounds = L.latLngBounds(
-                    Array.from(markers).map((marker: any) => {
-                        const lat = parseFloat(marker.getAttribute('data-lat') || '0');
-                        const lng = parseFloat(marker.getAttribute('data-lng') || '0');
-                        return [lat, lng] as [number, number];
-                    }).filter(([lat, lng]) => lat && lng)
-                );
-
-                if (bounds.isValid()) {
-                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-                }
-            } catch (e) {
-                console.warn('Could not fit bounds:', e);
+        const resizeMap = () => {
+            if (map) {
+                map.invalidateSize();
             }
-        }
+        };
+
+        // Run immediately and after delays to catch animations/transitions
+        resizeMap();
+        const t1 = setTimeout(resizeMap, 100);
+        const t2 = setTimeout(resizeMap, 300);
+        const t3 = setTimeout(resizeMap, 1000);
+
+        // Listen for window resize
+        window.addEventListener('resize', resizeMap);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+            window.removeEventListener('resize', resizeMap);
+        };
     }, [map]);
 
     return null;
 }
 
 /**
- * Main Map Component
- * CLEAN VERSION - No internal filtering, just renders what it receives
+ * MapController - Handles flying to selected device
  */
+function MapController({ selectedDevice }: { selectedDevice?: Device | null }) {
+    const map = useMap();
 
+    useEffect(() => {
+        if (selectedDevice && selectedDevice.lat && selectedDevice.lng) {
+            map.flyTo([selectedDevice.lat, selectedDevice.lng], 18, {
+                duration: 1.5
+            });
+        }
+    }, [selectedDevice, map]);
 
+    return null;
+}
+
+/**
+ * BoundsController - Fit map to device bounds using props (not DOM)
+ */
+function BoundsController({ devices }: { devices: Device[] }) {
+    const map = useMap();
+
+    useEffect(() => {
+        const validDevices = devices.filter(d => d.lat && d.lng);
+        if (validDevices.length > 0) {
+            try {
+                const bounds = L.latLngBounds(
+                    validDevices.map(d => [d.lat!, d.lng!] as [number, number])
+                );
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+                }
+            } catch (e) {
+                console.warn('Could not fit bounds:', e);
+            }
+        }
+    }, [devices, map]);
+
+    return null;
+}
+
+/**
+ * Main Map Component - All fixes applied
+ */
 export function MapComponent({
     devices,
     selectedDevice,
     onDeviceClick
 }: MapComponentProps) {
 
+    // Memoize center to prevent unnecessary re-renders
+    const center = useMemo(() => MAP_CONFIG.center as [number, number], []);
+
     return (
         <div className="map-component-clean">
-            {/* Map Legend - Placed outside to avoid Leaflet context issues */}
+            {/* Map Legend */}
             {/* @ts-ignore */}
             <MapLegend />
 
             <MapContainer
-                center={MAP_CONFIG.center as [number, number]}
+                center={center}
                 zoom={MAP_CONFIG.defaultZoom}
                 style={{ width: '100%', height: '100%' }}
                 zoomControl={true}
                 scrollWheelZoom={true}
+                maxZoom={MAP_CONFIG.maxZoom}
+                minZoom={MAP_CONFIG.minZoom}
             >
+                {/* Critical: MapRefresher fixes black/grey map */}
+                <MapRefresher />
                 <MapController selectedDevice={selectedDevice} />
+                <BoundsController devices={devices} />
 
-                {/* Advanced Canvas Tools (Drawing, Text, Measure) */}
+                {/* Advanced Canvas Tools */}
                 <CanvasTools />
 
                 <LayersControl position="topright">
-
-                    {/* Google Hybrid (Satellite + Labels) */}
-                    <BaseLayer checked name="Satellite (Hybrid)">
+                    {/* Google Hybrid (Satellite + Labels) - HTTPS with maxNativeZoom */}
+                    <BaseLayer checked name="Satellite Hybrid">
                         <TileLayer
-                            attribution='&copy; Google Maps'
-                            url="http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}"
-                            maxZoom={22}
+                            attribution={MAP_CONFIG.tileProviders.satellite.attribution}
+                            url={MAP_CONFIG.tileProviders.satellite.url}
+                            maxNativeZoom={MAP_CONFIG.tileProviders.satellite.maxNativeZoom}
+                            maxZoom={MAP_CONFIG.maxZoom}
+                            keepBuffer={8}
+                            updateWhenIdle={false}
+                            updateWhenZooming={false}
                         />
                     </BaseLayer>
 
-                    {/* OpenStreetMap - Street View */}
+                    {/* OpenStreetMap */}
                     <BaseLayer name="OpenStreetMap">
                         <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            maxZoom={22}
+                            attribution={MAP_CONFIG.tileProviders.standard.attribution}
+                            url={MAP_CONFIG.tileProviders.standard.url}
+                            maxNativeZoom={MAP_CONFIG.tileProviders.standard.maxNativeZoom}
+                            maxZoom={MAP_CONFIG.maxZoom}
+                            keepBuffer={4}
+                        />
+                    </BaseLayer>
+
+                    {/* Terrain */}
+                    <BaseLayer name="Terrain">
+                        <TileLayer
+                            attribution={MAP_CONFIG.tileProviders.terrain.attribution}
+                            url={MAP_CONFIG.tileProviders.terrain.url}
+                            maxNativeZoom={MAP_CONFIG.tileProviders.terrain.maxNativeZoom}
+                            maxZoom={MAP_CONFIG.maxZoom}
                         />
                     </BaseLayer>
                 </LayersControl>
@@ -143,8 +202,6 @@ export function MapComponent({
                                     }
                                 }
                             }}
-                            // Store lat/lng for bounds calculation
-                            {...({ 'data-lat': device.lat, 'data-lng': device.lng } as any)}
                         />
                     );
                 })}

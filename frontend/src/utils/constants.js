@@ -86,7 +86,7 @@ export const MAP_CONFIG = {
   defaultZoom: 15,
   // Min/Max zoom
   minZoom: 10,
-  maxZoom: 22,
+  maxZoom: 30,
   // OpenStreetMap tile providers
   tileProviders: {
     standard: {
