@@ -18,11 +18,15 @@ export interface Device {
 
     // Device information
     device_type: DeviceType | null;
+    deviceType?: DeviceType | null; // Alternate naming from frontend
     status: DeviceStatus | null;
 
     // GPS coordinates
     lat: number | null;
     lng: number | null;
+    latitude?: number | null;  // Alternate naming from DB
+    longitude?: number | null; // Alternate naming from DB
+    long?: number | null;      // Legacy naming
 
     // Operational data
     houses: number | null;
