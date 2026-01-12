@@ -1,220 +1,161 @@
-/* CanvasToolbar.css - Glassy Vertical Right-Side Style */
-
-.canvas-toolbar {
+/* Glassy Canvas Styles */
+.canvas-glass-panel {
     position: absolute;
     top: 80px;
-    /* Below zoom controls if they are top-left, but user wants right side. */
-    right: 10px;
+    right: 20px;
+    width: 200px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 16px;
     z-index: 2000;
-    /* Above Leaflet controls */
+    /* Above map */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 12px;
-    background: rgba(25, 25, 35, 0.65);
-    /* Dark glassy */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    max-height: calc(100% - 100px);
-    overflow-y: auto;
-    scrollbar-width: none;
-    /* Hide scrollbar Firefox */
+    transition: all 0.3s ease;
 }
 
-/* Hide scrollbar Chrome/Safari */
-.canvas-toolbar::-webkit-scrollbar {
-    display: none;
-}
-
-.canvas-toolbar.collapsed {
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    cursor: pointer;
-    background: rgba(30, 41, 59, 0.8);
-}
-
-.canvas-toolbar.collapsed:hover {
-    transform: scale(1.05);
-    background: rgba(59, 130, 246, 0.8);
-}
-
-.tool-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tool-group:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.canvas-btn {
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    color: #e2e8f0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.canvas-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.canvas-btn.active {
-    background: #3B82F6;
+.glass-title {
+    font-size: 14px;
+    font-weight: 700;
     color: white;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
-}
-
-.collapse-btn {
-    width: 100%;
-    height: 24px;
-    background: transparent;
-    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
     margin-bottom: 4px;
 }
 
-.collapse-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+/* Tool Grid */
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
 }
 
-/* Color Picker - Vertical Grid */
-.color-picker {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-    padding: 4px;
+.tool-grid button {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-grid button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.tool-grid button.active {
+    background: #00F0FF;
+    color: black;
+    box-shadow: 0 0 10px #00F0FF;
+    border-color: #00F0FF;
+}
+
+/* Color Grid */
+.color-grid {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
 }
 
 .color-dot {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 2px solid rgba(0, 0, 0, 0.2);
     transition: transform 0.2s;
-    justify-self: center;
 }
 
 .color-dot:hover {
     transform: scale(1.2);
 }
 
-.color-dot.active {
+.color-dot.selected {
     border-color: white;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-    transform: scale(1.1);
+    box-shadow: 0 0 8px currentColor;
+    transform: scale(1.2);
 }
 
-/* Size Control */
-.size-control {
+/* Action Rows */
+.action-row {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    color: #94a3b8;
-    font-size: 10px;
+    gap: 8px;
+    justify-content: center;
 }
 
-.size-label {
-    font-weight: 600;
-}
-
-.size-slider {
-    width: 100%;
-    height: 4px;
-    -webkit-appearance: none;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-    outline: none;
-}
-
-.size-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #3B82F6;
-    cursor: pointer;
-    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
-}
-
-/* Text Marker */
-.canvas-text-marker {
+.action-row button {
     background: transparent;
     border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 4px;
 }
 
-.text-annotation {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: all 0.2s;
-    line-height: 1.2;
+.action-row button:hover {
+    color: white;
 }
 
-.text-annotation:hover {
-    background: rgba(0, 0, 0, 0.2);
-    cursor: grab;
+/* System Actions */
+.system-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 12px;
 }
 
-/* Measure Tooltip */
-.measure-tooltip {
-    background: none;
+.system-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
     border: none;
+    transition: all 0.2s;
 }
 
-.measure-tag {
-    background: white;
-    color: #1e293b;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    white-space: nowrap;
+.save-btn {
+    background: #39FF14;
+    color: black;
 }
 
-/* Crosshair cursor */
-.crosshair-cursor {
-    cursor: crosshair !important;
+.save-btn:hover {
+    background: #32D911;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
 }
 
-/* Zone Glow Effect */
-.zone-glow path {
-    transition: all 0.3s ease;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+.delete-btn {
+    background: rgba(255, 7, 58, 0.2);
+    color: #FF073A;
+    border: 1px solid rgba(255, 7, 58, 0.4) !important;
 }
 
-.spin {
-    animation: spin 1s linear infinite;
+.delete-btn:hover {
+    background: rgba(255, 7, 58, 0.4);
+    box-shadow: 0 0 10px rgba(255, 7, 58, 0.3);
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
+/* Leaflet Draw Overrides */
+.leaflet-draw-tooltip {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }

@@ -1,16 +1,13 @@
 /**
  * WORLD-CLASS MAP COMPONENT
  * 
- * Built with enterprise-grade patterns:
- * - Dynamic tile loading with fallback chains
- * - Smooth unlimited zoom (tiles upscale gracefully)
- * - Zero grey/black screens guaranteed
- * - Performance-optimized rendering
- * - Comprehensive error handling
- * - Integrated Canvas Drawing Tools
+ * Features:
+ * - 5 Tile Providers (Sat: 22x, Street: 28x)
+ * - Canvas Tools Integration
+ * - Stability Controller
+ * - Smooth Animations
  * 
- * @author Top 1% Developer
- * @version 4.1.0 - Neon & Tools Integrated
+ * @version 5.0.0
  */
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
@@ -18,66 +15,67 @@ import { MapContainer, TileLayer, Marker, LayersControl, useMap, ZoomControl } f
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDeviceIcon } from './CustomMarkerIcons';
-import CanvasTools from './tools/CanvasTools'; // Integrated tools
+import CanvasTools from './tools/CanvasTools';
 import type { Device } from '../../types/device';
 import './ProfessionalMap.css';
 
-// ============================================================
-// CONFIGURATION - Enterprise Grade
-// ============================================================
-
+// ===================================
+// CONFIGURATION
+// ===================================
 const CONFIG = {
-    // Rudraram Village Center
     center: [17.558599, 78.166078] as [number, number],
-
-    // Zoom settings
     defaultZoom: 15,
     minZoom: 3,
-    maxZoom: 22, // Allow up to 22 - tiles will gracefully upscale
+    maxZoomGlobal: 28, // Allow up to 28 for vector maps
+    maxZoomSatellite: 22, // Cap satellite to avoid blur
+};
 
-    // Performance
-    updateWhenZooming: false,
-    updateWhenIdle: true,
-    keepBuffer: 4,
-} as const;
-
-// ============================================================
-// TILE PROVIDERS - Production Tested, Reliable
-// ============================================================
-
+// ===================================
+// TILE PROVIDERS
+// ===================================
 const TILE_PROVIDERS = {
-    // ESRI World Imagery - High quality satellite (Free, reliable)
     satellite: {
         name: '🛰️ Satellite',
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attribution: '© Esri, DigitalGlobe, GeoEye',
+        attribution: '© Esri',
         maxNativeZoom: 19,
-        errorTileUrl: '', // Hide broken tiles
+        maxZoom: 22 // Cap here
     },
-
-    // OpenStreetMap - Most reliable street map
     street: {
         name: '🗺️ Street Map',
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         subdomains: ['a', 'b', 'c'],
         attribution: '© OpenStreetMap',
         maxNativeZoom: 19,
+        maxZoom: 28
     },
-
-    // CartoDB Voyager - Beautiful, clean design
     carto: {
         name: '✨ Modern',
         url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
         subdomains: ['a', 'b', 'c', 'd'],
         attribution: '© CartoDB',
-        maxNativeZoom: 19,
+        maxNativeZoom: 20,
+        maxZoom: 28
     },
-} as const;
+    dark: {
+        name: '🌑 Dark Mode',
+        url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        subdomains: ['a', 'b', 'c', 'd'],
+        attribution: '© CartoDB',
+        maxNativeZoom: 20,
+        maxZoom: 28
+    },
+    terrain: {
+        name: '⛰️ Terrain',
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+        subdomains: ['a', 'b', 'c'],
+        attribution: '© OpenTopoMap',
+        maxNativeZoom: 17,
+        maxZoom: 24
+    }
+};
 
-// ============================================================
-// FIX LEAFLET ICONS
-// ============================================================
-
+// Fix Leaflet Icons
 // @ts-ignore
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -88,145 +86,48 @@ L.Icon.Default.mergeOptions({
 
 const { BaseLayer } = LayersControl;
 
-// ============================================================
-// INTERFACES
-// ============================================================
-
 interface MapProps {
     devices: Device[];
     selectedDevice?: Device | null;
     onDeviceClick?: (device: Device) => void;
 }
 
-// ============================================================
-// MAP STABILITY CONTROLLER
-// Ensures map never shows grey/black screens
-// ============================================================
-
-function MapStabilityController() {
+// Stability & Auto-Refresh
+function MapStability() {
     const map = useMap();
-
     useEffect(() => {
         if (!map) return;
+        const refresh = () => map.invalidateSize({ animate: false });
 
-        // Comprehensive invalidation strategy
-        const forceRefresh = () => {
-            if (map && map.getContainer()) {
-                map.invalidateSize({ animate: false, pan: false });
-            }
-        };
+        refresh();
+        const t1 = setTimeout(refresh, 200);
+        const t2 = setTimeout(refresh, 1000);
 
-        // Initial invalidation sequence (catches all layout scenarios)
-        forceRefresh();
-        const timers = [
-            setTimeout(forceRefresh, 50),
-            setTimeout(forceRefresh, 150),
-            setTimeout(forceRefresh, 300),
-            setTimeout(forceRefresh, 500),
-            setTimeout(forceRefresh, 1000),
-        ];
-
-        // Layer change handler - CRITICAL for preventing grey screens
-        const onLayerChange = () => {
-            // Multiple invalidations to ensure tiles load
-            setTimeout(forceRefresh, 50);
-            setTimeout(forceRefresh, 200);
-            setTimeout(forceRefresh, 500);
-        };
-
-        // Zoom handler - ensure smooth transitions
-        const onZoomEnd = () => {
-            setTimeout(forceRefresh, 100);
-        };
-
-        // Resize handler
-        const onResize = () => {
-            setTimeout(forceRefresh, 100);
-        };
-
-        // Visibility change (tab switch)
-        const onVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                setTimeout(forceRefresh, 100);
-            }
-        };
-
-        // Subscribe to events
-        map.on('baselayerchange', onLayerChange);
-        map.on('zoomend', onZoomEnd);
-        window.addEventListener('resize', onResize);
-        document.addEventListener('visibilitychange', onVisibilityChange);
-
-        return () => {
-            timers.forEach(t => clearTimeout(t));
-            map.off('baselayerchange', onLayerChange);
-            map.off('zoomend', onZoomEnd);
-            window.removeEventListener('resize', onResize);
-            document.removeEventListener('visibilitychange', onVisibilityChange);
-        };
+        map.on('baselayerchange', () => setTimeout(refresh, 100));
+        return () => { clearTimeout(t1); clearTimeout(t2); };
     }, [map]);
-
     return null;
 }
 
-// ============================================================
-// FLY TO DEVICE CONTROLLER
-// ============================================================
-
+// Fly To Device
 function FlyToController({ device }: { device?: Device | null }) {
     const map = useMap();
-
     useEffect(() => {
         if (!device) return;
-
-        const lat = device.lat ?? device.latitude;
-        const lng = device.lng ?? device.longitude ?? device.long;
-
-        if (lat && lng && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
-            map.flyTo([Number(lat), Number(lng)], 18, {
-                duration: 1.2,
-                easeLinearity: 0.25
-            });
-        }
+        const lat = Number(device.lat || device.latitude);
+        const lng = Number(device.lng || device.longitude);
+        if (lat && lng) map.flyTo([lat, lng], 18, { duration: 1.5 });
     }, [device, map]);
-
     return null;
 }
 
-// ============================================================
-// ZOOM DISPLAY (Debug/User Info)
-// ============================================================
+// Main Component
+export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapProps) {
+    const [activeLayer, setActiveLayer] = useState('satellite');
 
-function ZoomDisplay() {
-    const map = useMap();
-    const [zoom, setZoom] = useState<number>(CONFIG.defaultZoom);
-
-    useEffect(() => {
-        if (!map) return;
-
-        const updateZoom = () => setZoom(Math.round(map.getZoom()));
-        map.on('zoomend', updateZoom);
-        return () => { map.off('zoomend', updateZoom); };
-    }, [map]);
-
-    return (
-        <div className="zoom-indicator">
-            Zoom: {zoom}
-        </div>
-    );
-}
-
-// ============================================================
-// MAIN MAP COMPONENT
-// ============================================================
-
-export function ProfessionalMap({
-    devices,
-    selectedDevice,
-    onDeviceClick
-}: MapProps) {
-
-    const handleMarkerClick = useCallback((device: Device) => {
+    // Prevent propagation when clicking markers
+    const handleMarkerClick = useCallback((e: any, device: Device) => {
+        L.DomEvent.stopPropagation(e);
         onDeviceClick?.(device);
     }, [onDeviceClick]);
 
@@ -236,47 +137,31 @@ export function ProfessionalMap({
                 center={CONFIG.center}
                 zoom={CONFIG.defaultZoom}
                 minZoom={CONFIG.minZoom}
-                maxZoom={CONFIG.maxZoom}
-                className="map-container-main"
+                maxZoom={CONFIG.maxZoomGlobal} // Global Max, individual layers restricted below
+                className="map-main"
                 zoomControl={false}
-                scrollWheelZoom={true}
-                doubleClickZoom={true}
-                dragging={true}
             >
-                {/* Stability Controller - Prevents grey/black screens */}
-                <MapStabilityController />
+                <MapStability />
+                <FlyToController device={selectedDevice} />
+                <ZoomControl position="bottomright" />
 
-                {/* Canvas Drawing Tools (Integrated) */}
+                {/* Canvas Tools Overlay */}
                 <CanvasTools />
 
-                {/* Fly to selected device */}
-                <FlyToController device={selectedDevice} />
+                <LayersControl position="bottomright">
 
-                {/* Zoom Display */}
-                <ZoomDisplay />
-
-                {/* Zoom Control on left */}
-                <ZoomControl position="topleft" />
-
-                {/* Tile Layers with fallback */}
-                <LayersControl position="topright">
-
-                    {/* Satellite - Default */}
+                    {/* Satellite (Restricted Zoom) */}
                     <BaseLayer checked name={TILE_PROVIDERS.satellite.name}>
                         <TileLayer
                             url={TILE_PROVIDERS.satellite.url}
                             attribution={TILE_PROVIDERS.satellite.attribution}
                             maxNativeZoom={TILE_PROVIDERS.satellite.maxNativeZoom}
-                            maxZoom={CONFIG.maxZoom}
-                            keepBuffer={CONFIG.keepBuffer}
-                            updateWhenZooming={CONFIG.updateWhenZooming}
-                            updateWhenIdle={CONFIG.updateWhenIdle}
-                            errorTileUrl=""
-                            tileSize={256}
+                            maxZoom={TILE_PROVIDERS.satellite.maxZoom} // 22
+                            eventHandlers={{ add: () => setActiveLayer('satellite') }}
                         />
                     </BaseLayer>
 
-                    {/* Street Map */}
+                    {/* Street (High Zoom) */}
                     <BaseLayer name={TILE_PROVIDERS.street.name}>
                         <TileLayer
                             url={TILE_PROVIDERS.street.url}
@@ -284,12 +169,12 @@ export function ProfessionalMap({
                             subdomains={TILE_PROVIDERS.street.subdomains}
                             attribution={TILE_PROVIDERS.street.attribution}
                             maxNativeZoom={TILE_PROVIDERS.street.maxNativeZoom}
-                            maxZoom={CONFIG.maxZoom}
-                            keepBuffer={CONFIG.keepBuffer}
+                            maxZoom={TILE_PROVIDERS.street.maxZoom} // 28
+                            eventHandlers={{ add: () => setActiveLayer('street') }}
                         />
                     </BaseLayer>
 
-                    {/* Modern/Carto */}
+                    {/* Modern */}
                     <BaseLayer name={TILE_PROVIDERS.carto.name}>
                         <TileLayer
                             url={TILE_PROVIDERS.carto.url}
@@ -297,7 +182,31 @@ export function ProfessionalMap({
                             subdomains={TILE_PROVIDERS.carto.subdomains}
                             attribution={TILE_PROVIDERS.carto.attribution}
                             maxNativeZoom={TILE_PROVIDERS.carto.maxNativeZoom}
-                            maxZoom={CONFIG.maxZoom}
+                            maxZoom={TILE_PROVIDERS.carto.maxZoom} // 28
+                        />
+                    </BaseLayer>
+
+                    {/* Dark */}
+                    <BaseLayer name={TILE_PROVIDERS.dark.name}>
+                        <TileLayer
+                            url={TILE_PROVIDERS.dark.url}
+                            // @ts-ignore
+                            subdomains={TILE_PROVIDERS.dark.subdomains}
+                            attribution={TILE_PROVIDERS.dark.attribution}
+                            maxNativeZoom={TILE_PROVIDERS.dark.maxNativeZoom}
+                            maxZoom={TILE_PROVIDERS.dark.maxZoom} // 28
+                        />
+                    </BaseLayer>
+
+                    {/* Terrain */}
+                    <BaseLayer name={TILE_PROVIDERS.terrain.name}>
+                        <TileLayer
+                            url={TILE_PROVIDERS.terrain.url}
+                            // @ts-ignore
+                            subdomains={TILE_PROVIDERS.terrain.subdomains}
+                            attribution={TILE_PROVIDERS.terrain.attribution}
+                            maxNativeZoom={TILE_PROVIDERS.terrain.maxNativeZoom}
+                            maxZoom={TILE_PROVIDERS.terrain.maxZoom}
                         />
                     </BaseLayer>
 
@@ -305,29 +214,23 @@ export function ProfessionalMap({
 
                 {/* Device Markers */}
                 {devices.map((device, idx) => {
-                    const lat = device.lat ?? device.latitude;
-                    const lng = device.lng ?? device.longitude ?? device.long;
-
+                    const lat = Number(device.lat || device.latitude);
+                    const lng = Number(device.lng || device.longitude);
                     if (!lat || !lng) return null;
 
-                    const numLat = Number(lat);
-                    const numLng = Number(lng);
-
-                    if (isNaN(numLat) || isNaN(numLng)) return null;
-
                     const isSelected = selectedDevice?.survey_id === device.survey_id;
-                    const deviceType = device.device_type || device.deviceType || 'Unknown';
-                    const label = device.original_name || device.survey_id || `Device-${idx}`;
+                    const type = device.device_type || 'BOREWELL';
+                    const label = device.original_name || device.survey_id;
 
                     return (
                         <Marker
-                            key={device.survey_id || `marker-${idx}`}
-                            position={[numLat, numLng]}
-                            icon={getDeviceIcon(deviceType, device.status || '', label)}
-                            opacity={isSelected ? 1 : 0.9}
+                            key={device.survey_id || idx}
+                            position={[lat, lng]}
+                            icon={getDeviceIcon(type, device.status || '', label)}
+                            opacity={isSelected ? 1 : 0.8}
                             zIndexOffset={isSelected ? 1000 : 0}
                             eventHandlers={{
-                                click: () => handleMarkerClick(device)
+                                click: (e) => handleMarkerClick(e, device)
                             }}
                         />
                     );
