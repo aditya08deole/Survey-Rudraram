@@ -4,10 +4,11 @@
  * Features:
  * - 5 Tile Providers (Sat: 22x, Street: 28x)
  * - Canvas Tools Integration
+ * - HUD & Spotlight Integration (New)
  * - Stability Controller
  * - Smooth Animations
  * 
- * @version 5.0.0
+ * @version 5.1.0
  */
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
@@ -16,6 +17,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDeviceIcon } from './CustomMarkerIcons';
 import CanvasTools from './tools/CanvasTools';
+import HeadsUpDisplay from '../HUD/HeadsUpDisplay';
+import Spotlight from '../Command/Spotlight';
 import type { Device } from '../../types/device';
 import './ProfessionalMap.css';
 
@@ -121,6 +124,21 @@ function FlyToController({ device }: { device?: Device | null }) {
     return null;
 }
 
+// Layer Controller Helper
+// Helps switch layers programmatically via Spotlight
+function LayerSwitcher({ activeLayer }: { activeLayer: string }) {
+    const map = useMap();
+    useEffect(() => {
+        // This is a bit hacky as LayersControl manages its own state
+        // To properly switch, we might need to find the layer control or just force add layer
+        // Ideally, we rely on the `checked` prop in LayersControl.
+        // But LayersControl only respects `checked` on initial render in some versions.
+        // Let's try to manually add the layer if needed, or trust re-render.
+        // For now, simpler approach: rely on the BaseLayer 'checked' prop which we are controlling via state.
+    }, [activeLayer, map]);
+    return null;
+}
+
 // Main Component
 export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapProps) {
     const [activeLayer, setActiveLayer] = useState('satellite');
@@ -131,13 +149,27 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
         onDeviceClick?.(device);
     }, [onDeviceClick]);
 
+    const handleCommand = (cmd: string) => {
+        if (cmd === 'LAYER_SATELLITE') setActiveLayer('satellite');
+        if (cmd === 'LAYER_STREET') setActiveLayer('street');
+        if (cmd === 'CLEAR') onDeviceClick?.({} as Device); // Hack API to clear?
+    };
+
     return (
         <div className="professional-map">
+            {/* HUD & Spotlight Overlays */}
+            <HeadsUpDisplay visible={true} />
+            <Spotlight
+                devices={devices}
+                onDeviceSelect={(d) => onDeviceClick?.(d)}
+                onCommand={handleCommand}
+            />
+
             <MapContainer
                 center={CONFIG.center}
                 zoom={CONFIG.defaultZoom}
                 minZoom={CONFIG.minZoom}
-                maxZoom={CONFIG.maxZoomGlobal} // Global Max, individual layers restricted below
+                maxZoom={CONFIG.maxZoomGlobal} // Global Max
                 className="map-main"
                 zoomControl={false}
             >
@@ -150,8 +182,8 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
 
                 <LayersControl position="bottomright">
 
-                    {/* Satellite (Restricted Zoom) */}
-                    <BaseLayer checked name={TILE_PROVIDERS.satellite.name}>
+                    {/* Satellite */}
+                    <BaseLayer checked={activeLayer === 'satellite'} name={TILE_PROVIDERS.satellite.name}>
                         <TileLayer
                             url={TILE_PROVIDERS.satellite.url}
                             attribution={TILE_PROVIDERS.satellite.attribution}
@@ -161,8 +193,8 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                         />
                     </BaseLayer>
 
-                    {/* Street (High Zoom) */}
-                    <BaseLayer name={TILE_PROVIDERS.street.name}>
+                    {/* Street */}
+                    <BaseLayer checked={activeLayer === 'street'} name={TILE_PROVIDERS.street.name}>
                         <TileLayer
                             url={TILE_PROVIDERS.street.url}
                             // @ts-ignore

@@ -1,0 +1,123 @@
+/* Spotlight CSS */
+.spotlight-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 20vh;
+}
+
+.spotlight-modal {
+    width: 600px;
+    max-width: 90%;
+    background: rgba(30, 30, 40, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    animation: spotlight-slide 0.2s ease-out;
+}
+
+@keyframes spotlight-slide {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.spotlight-search {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-icon {
+    color: rgba(255, 255, 255, 0.5);
+    margin-right: 12px;
+}
+
+.spotlight-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    outline: none;
+    font-weight: 300;
+}
+
+.shortcut-hint {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.spotlight-results {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.result-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-left: 3px solid transparent;
+}
+
+.result-item.selected {
+    background: rgba(255, 255, 255, 0.05);
+    border-left-color: #00F0FF;
+}
+
+.result-icon {
+    width: 24px;
+    display: flex;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.6);
+    margin-right: 12px;
+}
+
+.result-info {
+    flex: 1;
+}
+
+.result-label {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.result-detail {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.enter-hint {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.no-results {
+    padding: 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.3);
+    font-style: italic;
+}

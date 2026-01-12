@@ -111,3 +111,32 @@
 .professional-map .leaflet-popup-pane {
     z-index: 700;
 }
+
+/* Living Map - Pulse Animation */
+@keyframes neonPulse {
+    0% {
+        box-shadow: 0 0 8px rgba(34, 197, 94, 0.6), 0 0 4px white;
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.9), 0 0 8px white;
+    }
+
+    100% {
+        box-shadow: 0 0 8px rgba(34, 197, 94, 0.6), 0 0 4px white;
+    }
+}
+
+.pulse-animation {
+    animation: neonPulse 2s infinite ease-in-out;
+}
+
+/* Ensure HUD is on top */
+.hud-overlay {
+    z-index: 5000;
+    pointer-events: none;
+}
+
+.spotlight-overlay {
+    z-index: 9999;
+}
