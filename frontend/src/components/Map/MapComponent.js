@@ -428,20 +428,36 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
         <DrawingTools />
         <MeasurementTool />
         <LayersControl position="topright">
-          {/* Satellite Imagery - Default View */}
-          <BaseLayer checked name="Satellite View">
+          {/* Satellite Hybrid - Default View */}
+          <BaseLayer checked name="Satellite Hybrid">
             <TileLayer
-              attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution={MAP_CONFIG.tileProviders.satellite.attribution}
+              url={MAP_CONFIG.tileProviders.satellite.url}
+              maxNativeZoom={MAP_CONFIG.tileProviders.satellite.maxNativeZoom}
               maxZoom={22}
+              keepBuffer={8} // Preload more tiles for speed
+              updateWhenIdle={false} // Load while panning
+              updateWhenZooming={false} // Prevent flickering
             />
           </BaseLayer>
 
           {/* OpenStreetMap - Street View */}
           <BaseLayer name="OpenStreetMap">
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution={MAP_CONFIG.tileProviders.standard.attribution}
+              url={MAP_CONFIG.tileProviders.standard.url}
+              maxNativeZoom={MAP_CONFIG.tileProviders.standard.maxNativeZoom}
+              maxZoom={22}
+              keepBuffer={4}
+            />
+          </BaseLayer>
+
+          {/* Terrain View */}
+          <BaseLayer name="Terrain">
+            <TileLayer
+              attribution={MAP_CONFIG.tileProviders.terrain.attribution}
+              url={MAP_CONFIG.tileProviders.terrain.url}
+              maxNativeZoom={MAP_CONFIG.tileProviders.terrain.maxNativeZoom}
               maxZoom={22}
             />
           </BaseLayer>
