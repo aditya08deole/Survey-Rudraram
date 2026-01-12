@@ -177,7 +177,7 @@ export function AppProvider({ children }) {
       const devices = devicesResult.devices;
 
       // Transform database schema to match frontend expectations
-      const typeMap = { borewell: 'Borewell', sump: 'Sump', overhead_tank: 'OHT' };
+      const typeMap = { borewell: 'Borewell', sump: 'Sump', overhead_tank: 'OHSR', ohsr: 'OHSR' };
       const transformedDevices = devices.map(device => ({
         // Standardized fields
         surveyCode: device.survey_code || device.sr_no,

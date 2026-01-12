@@ -49,10 +49,10 @@ async def upload_device_image(
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
         
-        # Validate file size (5MB limit)
+        # Validate file size (15MB limit)
         contents = await file.read()
-        if len(contents) > 5 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+        if len(contents) > 15 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size must be less than 15MB")
         
         # Generate unique filename
         file_ext = file.filename.split('.')[-1]

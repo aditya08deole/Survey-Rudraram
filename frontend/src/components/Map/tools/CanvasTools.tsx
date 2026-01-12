@@ -98,6 +98,15 @@ const CanvasTools = () => {
                 if (layer) {
                     // @ts-ignore
                     layer.zoneId = z.id;
+                    // @ts-ignore
+                    layer.zoneData = z;
+
+                    // Attach Double Click Event
+                    layer.on('dblclick', (e: any) => {
+                        L.DomEvent.stopPropagation(e);
+                        openEditPopup(layer);
+                    });
+
                     group.addLayer(layer);
                 }
             } catch (e) {
@@ -183,6 +192,100 @@ const CanvasTools = () => {
             drawnItems.clearLayers();
             loadZones(drawnItems);
         }
+    };
+
+    // Advanced Edit Popup
+    const openEditPopup = (layer: any) => {
+        const anyLayer = layer as any;
+        const isText = layer instanceof L.Marker && layer.options.icon?.options?.className === 'canvas-text-marker';
+        const currentColor = anyLayer.zoneData?.color || layer.options.color || (isText ? (layer.getElement()?.innerText ? 'black' : selectedColor) : selectedColor);
+        const currentSize = anyLayer.zoneData?.fontSize || 16;
+
+        const popupContent = document.createElement('div');
+        popupContent.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:8px; min-width:180px;">
+                <h4 style="margin:0; font-size:14px; color:#333;">Edit ${isText ? 'Text' : 'Shape'}</h4>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                    Color: <input type="color" id="popup-color" value="${currentColor}">
+                </label>
+                ${isText ? `
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                    Size: <input type="number" id="popup-size" value="${currentSize}" style="width:50px"> px
+                </label>
+                <div style="font-size:10px; color:#666;">* Edit text safely by clicking the text itself</div>
+                ` : ''}
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button id="popup-delete" style="flex:1; background:#EF4444; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer;">Delete</button>
+                    ${!isText ? `<button id="popup-edit" style="flex:1; background:#3B82F6; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer;">${anyLayer.editing?.enabled() ? 'Save' : 'Edit Shape'}</button>` : ''}
+                </div>
+            </div>
+        `;
+
+        const popup = L.popup()
+            .setLatLng(layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng())
+            .setContent(popupContent)
+            .openOn(map);
+
+        // Attach handlers after popup opens
+        setTimeout(() => {
+            const deleteBtn = document.getElementById('popup-delete');
+            if (deleteBtn) {
+                deleteBtn.onclick = () => {
+                    if (window.confirm('Delete this item?')) {
+                        if (anyLayer.zoneId) deleteMapZone(anyLayer.zoneId);
+                        drawnItems?.removeLayer(layer);
+                        map.closePopup();
+                    }
+                };
+            }
+
+            const colorInput = document.getElementById('popup-color');
+            if (colorInput) {
+                colorInput.onchange = (e: any) => {
+                    const newColor = e.target.value;
+                    if (layer.setStyle) layer.setStyle({ color: newColor });
+                    if (isText) {
+                        const el = layer.getElement()?.querySelector('.text-annotation');
+                        if (el) (el as HTMLElement).style.color = newColor;
+                        anyLayer.zoneData = { ...anyLayer.zoneData, color: newColor };
+                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, anyLayer.zoneData);
+                    } else {
+                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, { ...anyLayer.zoneData, color: newColor });
+                    }
+                };
+            }
+
+            if (isText) {
+                const sizeInput = document.getElementById('popup-size');
+                if (sizeInput) {
+                    sizeInput.onchange = (e: any) => {
+                        const newSize = parseInt(e.target.value);
+                        const el = layer.getElement()?.querySelector('.text-annotation');
+                        if (el) (el as HTMLElement).style.fontSize = `${newSize}px`;
+                        anyLayer.zoneData = { ...anyLayer.zoneData, fontSize: newSize };
+                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, anyLayer.zoneData);
+                    };
+                }
+            } else {
+                const editBtn = document.getElementById('popup-edit');
+                if (editBtn) {
+                    editBtn.onclick = () => {
+                        if (anyLayer.editing?.enabled()) {
+                            anyLayer.editing.disable();
+                            map.closePopup();
+                            // Save geometry
+                            if (anyLayer.zoneId) {
+                                let geo = layer.getLatLngs ? layer.getLatLngs() : layer.getLatLng();
+                                updateMapZone(anyLayer.zoneId, { ...anyLayer.zoneData, geometry: geo });
+                            }
+                        } else {
+                            anyLayer.editing.enable();
+                            map.closePopup();
+                        }
+                    };
+                }
+            }
+        }, 100);
     };
 
     // Handle standard Drawing Tools
@@ -365,9 +468,18 @@ const CanvasTools = () => {
             if (!drawnItems) return;
             const icon = L.divIcon({
                 className: 'canvas-text-marker',
-                html: `<div class="text-annotation-wrapper"><div class="text-annotation" contenteditable="true" style="color:${selectedColor};font-size:${fontSize}px;font-weight:bold">Click Edit</div></div>`
+                // Use style to ensure dynamic width (fit-content) and nowrap
+                html: `<div class="text-annotation-wrapper" style="width: max-content; pointer-events: auto;"><div class="text-annotation" contenteditable="true" style="color:${selectedColor};font-size:${fontSize}px;font-weight:bold; border: 1px dashed #ccc; padding: 4px; min-width: 50px;">Click Edit</div></div>`,
+                iconSize: [null as any, null as any] // Allow dynamic size
             });
-            L.marker(e.latlng, { icon, draggable: true }).addTo(drawnItems);
+            const marker = L.marker(e.latlng, { icon, draggable: true });
+
+            marker.on('dblclick', (ev: any) => {
+                L.DomEvent.stopPropagation(ev);
+                openEditPopup(marker);
+            });
+
+            marker.addTo(drawnItems);
             setActiveTool(null);
         };
 
@@ -390,7 +502,15 @@ const CanvasTools = () => {
         if (!L.Draw) return;
 
         const handleCreated = (e: any) => {
-            if (drawnItems) drawnItems.addLayer(e.layer);
+            const layer = e.layer;
+
+            // Attach dblclick for new items
+            layer.on('dblclick', (ev: any) => {
+                L.DomEvent.stopPropagation(ev);
+                openEditPopup(layer);
+            });
+
+            if (drawnItems) drawnItems.addLayer(layer);
             setActiveTool(null);
         };
         // @ts-ignore

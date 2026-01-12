@@ -20,9 +20,9 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
                 return;
             }
 
-            // Validate file size (5MB)
-            if (selectedFile.size > 5 * 1024 * 1024) {
-                setError('File size must be less than 5MB');
+            // Validate file size (15MB)
+            if (selectedFile.size > 15 * 1024 * 1024) {
+                setError('File size must be less than 15MB');
                 return;
             }
 
