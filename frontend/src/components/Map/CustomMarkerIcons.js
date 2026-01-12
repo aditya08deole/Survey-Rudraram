@@ -1,13 +1,13 @@
 /**
- * REFINED MARKER ICONS (Javascript Version)
+ * REFINED MARKER ICONS (Strict User Request)
  * 
  * Logic:
- * - WORKING -> Mild Neon Glow + Pulse Animation
- * - NOT WORKING / REPAIR -> Normal Flat Color (No Glow)
- * - Labels: Black Text / White Background
- * - Size: Slightly Reduced
+ * - BOREWELL: Circle + 'B'. Color depends on status (Green=Working, Red=Failed).
+ * - SUMP: Square + 'S'. Always Blue. Neon if Working.
+ * - OHSR: Triangle + 'O'. Always Orange. Neon if Working.
+ * - NO STATUS DOTS (Removed as per feedback).
  * 
- * @version 4.1.0
+ * @version 5.0.0
  */
 
 import L from 'leaflet';
@@ -17,26 +17,23 @@ import L from 'leaflet';
 // ===================================
 
 const COLORS = {
-  GREEN: '#22C55E',  // Working
-  RED: '#EF4444',    // Not Working
-  BLUE: '#3B82F6',   // Sump Base
-  ORANGE: '#F97316', // OHSR Base
-  GREY: '#6B7280'    // Other
+  GREEN: '#22C55E',  // Working Borewell
+  RED: '#EF4444',    // Failed Borewell/Device
+  BLUE: '#00F0FF',   // Sump (Cyan/Blue)
+  ORANGE: '#FF9E00', // OHSR
+  GREY: '#6B7280'    // Unknown
 };
 
-// Reduced Glow - Only for Working status
-const GLOW_EFFECT = `0 0 8px rgba(34, 197, 94, 0.6), 0 0 4px white`;
+// Glow Strings
+const GLOW = {
+  GREEN: `0 0 10px ${COLORS.GREEN}, 0 0 5px white`,
+  BLUE: `0 0 10px ${COLORS.BLUE}, 0 0 5px white`,
+  ORANGE: `drop-shadow(0 0 6px ${COLORS.ORANGE}) drop-shadow(0 0 3px white)`
+};
 
 // ===================================
 // HELPERS
 // ===================================
-
-const getStatusColor = (status) => {
-  const s = (status || '').toLowerCase();
-  if (s.includes('working') && !s.includes('not')) return COLORS.GREEN;
-  if (s.includes('not') || s.includes('non') || s.includes('failed')) return COLORS.RED;
-  return COLORS.GREY;
-};
 
 const isWorking = (status) => {
   const s = (status || '').toLowerCase();
@@ -54,10 +51,11 @@ const getDeviceType = (type) => {
 // ICON FACTORY
 // ===================================
 
-const createBorewellIcon = (color, glow) => {
-  // Circle with "B" - smaller size (22px)
-  const boxShadow = glow ? GLOW_EFFECT : '0 1px 3px rgba(0,0,0,0.3)';
-  const pulseClass = glow ? 'pulse-animation' : '';
+const createBorewellIcon = (status, label) => {
+  const working = isWorking(status);
+  const color = working ? COLORS.GREEN : COLORS.RED;
+  const boxShadow = working ? GLOW.GREEN : '0 1px 3px rgba(0,0,0,0.5)';
+  const pulseClass = working ? 'pulse-animation' : '';
 
   return `
         <div class="${pulseClass}" style="
@@ -67,89 +65,73 @@ const createBorewellIcon = (color, glow) => {
             border: 2px solid white;
             box-shadow: ${boxShadow};
             display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: 700; font-family: sans-serif; font-size: 11px;
+            color: white; font-weight: 800; font-family: sans-serif; font-size: 11px;
+            letter-spacing: -0.5px;
         ">B</div>
     `;
 };
 
-const createSumpIcon = (statusColor, glow) => {
-  // Square with "S" - Blue Base (20px)
-  const boxShadow = glow ? `0 0 8px ${COLORS.BLUE}` : '0 1px 3px rgba(0,0,0,0.3)';
-  // Note: Sump glow is usually on the status dot or main body? 
-  // Plan said "Devices breathe". Let's breathe the main body if working?
-  // User logic: "sumps and ohsr will be neon but decrese...".
-  // I will apply pulse to the main body if glow is active.
-  const pulseClass = glow ? 'pulse-animation' : '';
+const createSumpIcon = (status, label) => {
+  const working = isWorking(status);
+  const color = COLORS.BLUE; // Always Blue as requested
+  const boxShadow = working ? GLOW.BLUE : '0 1px 3px rgba(0,0,0,0.5)';
+  const pulseClass = working ? 'pulse-animation' : '';
 
+  // Square shape
   return `
         <div class="${pulseClass}" style="
             width: 20px; height: 20px;
-            background: ${COLORS.BLUE};
-            border-radius: 4px;
+            background: ${color};
+            border-radius: 3px; /* Slightly rounded square */
             border: 2px solid white;
             box-shadow: ${boxShadow};
             display: flex; align-items: center; justify-content: center;
-            position: relative;
-            color: white; font-weight: 700; font-family: sans-serif; font-size: 11px;
-        ">
-            S
-            <div style="
-                position: absolute; bottom: -3px; right: -3px;
-                width: 8px; height: 8px;
-                background: ${statusColor};
-                border-radius: 50%; border: 1.5px solid white;
-            "></div>
-        </div>
+            color: black; /* Black text on Cyan pops better, or white? User asked for neon blue. */
+            font-weight: 800; font-family: sans-serif; font-size: 11px;
+        ">S</div>
     `;
 };
 
-const createOhsrIcon = (statusColor, glow) => {
-  // Triangle with "O" - Orange Base
-  const filter = glow ? `drop-shadow(0 0 4px ${COLORS.ORANGE})` : 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))';
-  // Triangle pulse is tricky with drop-shadow. 
-  // I'll skip class for triangle or try to animate filter?
-  // ProfessionalMap.css defines @keyframes for filter? Yes neonPulseOrange.
-  // I'll add class if glow.
-  const pulseClass = glow ? 'pulse-animation-orange' : '';
+const createOhsrIcon = (status, label) => {
+  const working = isWorking(status);
+  const color = COLORS.ORANGE;
+  const filter = working ? GLOW.ORANGE : 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))';
+  const pulseClass = working ? 'pulse-animation-orange' : '';
 
+  // Triangle shape constructed via borders
   return `
-        <div class="${pulseClass}" style="position: relative; width: 24px; height: 22px; display:flex; justify-content:center;">
+        <div class="${pulseClass}" style="position: relative; width: 26px; height: 24px; display:flex; justify-content:center;">
              <div style="
                 width: 0; height: 0;
-                border-left: 12px solid transparent;
-                border-right: 12px solid transparent;
-                border-bottom: 22px solid ${COLORS.ORANGE};
+                border-left: 13px solid transparent;
+                border-right: 13px solid transparent;
+                border-bottom: 24px solid ${color};
                 filter: ${filter};
              "></div>
              <div style="
-                position: absolute; top: 10px;
-                color: white; font-weight: 700; font-size: 9px; font-family: sans-serif;
+                position: absolute; top: 11px;
+                color: white; font-weight: 800; font-size: 10px; font-family: sans-serif;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
              ">O</div>
-             <div style="
-                position: absolute; bottom: -2px; right: -2px;
-                width: 8px; height: 8px;
-                background: ${statusColor};
-                border-radius: 50%; border: 1.5px solid white;
-            "></div>
         </div>
     `;
 };
 
-// UPDATED LABEL: White Background, Black Text
+// Label: White bg, Black text
 const createLabel = (label) => {
   if (!label) return '';
   return `
         <div style="
-            position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
+            position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
             color: black; 
-            padding: 1px 4px; 
-            border-radius: 3px;
+            padding: 1px 5px; 
+            border-radius: 4px;
             font-size: 10px; 
-            font-weight: 600;
+            font-weight: 700;
             white-space: nowrap; 
             pointer-events: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
             border: 1px solid rgba(0,0,0,0.1);
             z-index: 1000;
         ">${label}</div>
@@ -162,32 +144,30 @@ const createLabel = (label) => {
 
 export const getDeviceIcon = (type, status, label) => {
   const deviceType = getDeviceType(type);
-  const statusColor = getStatusColor(status);
-  const glow = isWorking(status); // Only working devices glow
 
   let html = '';
 
   switch (deviceType) {
     case 'SUMP':
-      html = createSumpIcon(statusColor, glow);
+      html = createSumpIcon(status, label);
       break;
     case 'OHSR':
-      html = createOhsrIcon(statusColor, glow);
+      html = createOhsrIcon(status, label);
       break;
     case 'BOREWELL':
     default:
-      html = createBorewellIcon(statusColor, glow);
+      html = createBorewellIcon(status, label);
       break;
   }
 
   return L.divIcon({
     className: 'custom-marker',
-    html: `<div style="position:relative; width:24px; height:24px; display:flex; justify-content:center; align-items:center;">
+    html: `<div style="position:relative; width:26px; height:26px; display:flex; justify-content:center; align-items:center;">
                 ${html}
                 ${createLabel(label)}
                </div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12]
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -13]
   });
 };
