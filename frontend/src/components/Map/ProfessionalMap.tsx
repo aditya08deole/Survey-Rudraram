@@ -19,6 +19,7 @@ import 'leaflet/dist/leaflet.css';
 import { getDeviceIcon } from './CustomMarkerIcons';
 import type { Device } from '../../types/device';
 import './ProfessionalMap.css';
+import CanvasTools from './tools/CanvasTools';
 
 // ============================================================
 // CONFIGURATION - Enterprise Grade
@@ -262,6 +263,9 @@ export function ProfessionalMap({
 
                 {/* Zoom Control on left */}
                 <ZoomControl position="topleft" />
+
+                {/* Canvas Drawing Tools - World Class Drawing */}
+                <CanvasTools />
 
                 {/* Tile Layers with fallback */}
                 <LayersControl position="topright">
