@@ -1,29 +1,31 @@
 /**
- * ULTRA NEON MARKER ICONS
+ * REFINED MARKER ICONS
  * 
- * High-intensity neon glow effects for maximum visibility
- * Shapes: Cylinder (Borewell), Cube (Sump), Pyramid (OHSR) represented 2D
+ * Logic:
+ * - WORKING -> Mild Neon Glow
+ * - NOT WORKING / REPAIR -> Normal Flat Color (No Glow)
+ * - Labels: Black Text / White Background
+ * - Size: Slightly Reduced
  * 
- * @version 3.0.0
+ * @version 4.0.0
  */
 
 import L from 'leaflet';
 
 // ===================================
-// NEON PALETTE
+// CONFIGURATION
 // ===================================
-const NEON = {
-  GREEN: '#39FF14',
-  RED: '#FF073A',
-  BLUE: '#00F0FF',
-  ORANGE: '#FF9E00',
-  GREY: '#A0A0A0'
+
+const COLORS = {
+  GREEN: '#22C55E',  // Working
+  RED: '#EF4444',    // Not Working
+  BLUE: '#3B82F6',   // Sump Base
+  ORANGE: '#F97316', // OHSR Base
+  GREY: '#6B7280'    // Other
 };
 
-const GLOW = {
-  STRONG: (color: string) => `0 0 10px ${color}, 0 0 20px ${color}, inset 0 0 5px rgba(255,255,255,0.8)`,
-  SOFT: (color: string) => `0 0 8px ${color}, 0 0 12px ${color}`
-};
+// Reduced Glow - Only for Working status
+const GLOW_EFFECT = `0 0 8px rgba(34, 197, 94, 0.6), 0 0 4px white`;
 
 // ===================================
 // HELPERS
@@ -31,9 +33,14 @@ const GLOW = {
 
 const getStatusColor = (status: string) => {
   const s = (status || '').toLowerCase();
-  if (s.includes('working') && !s.includes('not')) return NEON.GREEN;
-  if (s.includes('not') || s.includes('non') || s.includes('failed')) return NEON.RED;
-  return NEON.GREY;
+  if (s.includes('working') && !s.includes('not')) return COLORS.GREEN;
+  if (s.includes('not') || s.includes('non') || s.includes('failed')) return COLORS.RED;
+  return COLORS.GREY;
+};
+
+const isWorking = (status: string) => {
+  const s = (status || '').toLowerCase();
+  return s.includes('working') && !s.includes('not');
 };
 
 const getDeviceType = (type: string) => {
@@ -47,86 +54,93 @@ const getDeviceType = (type: string) => {
 // ICON FACTORY
 // ===================================
 
-const createBorewellIcon = (color: string, label: string) => {
-  // Circle with "B"
+const createBorewellIcon = (color: string, glow: boolean) => {
+  // Circle with "B" - smaller size (22px)
+  const boxShadow = glow ? GLOW_EFFECT : '0 1px 3px rgba(0,0,0,0.3)';
+
   return `
         <div style="
-            width: 26px; height: 26px;
+            width: 22px; height: 22px;
             background: ${color};
             border-radius: 50%;
             border: 2px solid white;
-            box-shadow: ${GLOW.STRONG(color)};
+            box-shadow: ${boxShadow};
             display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: 800; font-family: monospace; font-size: 14px;
-            text-shadow: 0 1px 2px black;
+            color: white; font-weight: 700; font-family: sans-serif; font-size: 11px;
         ">B</div>
     `;
 };
 
-const createSumpIcon = (label: string, statusColor: string) => {
-  // Square with "S" - Blue Base
-  const base = NEON.BLUE;
+const createSumpIcon = (statusColor: string, glow: boolean) => {
+  // Square with "S" - Blue Base (20px)
+  const boxShadow = glow ? `0 0 8px ${COLORS.BLUE}` : '0 1px 3px rgba(0,0,0,0.3)';
+
   return `
         <div style="
-            width: 24px; height: 24px;
-            background: ${base};
+            width: 20px; height: 20px;
+            background: ${COLORS.BLUE};
             border-radius: 4px;
             border: 2px solid white;
-            box-shadow: ${GLOW.STRONG(base)};
+            box-shadow: ${boxShadow};
             display: flex; align-items: center; justify-content: center;
             position: relative;
-            color: white; font-weight: 800; font-family: monospace; font-size: 14px;
-            text-shadow: 0 1px 2px black;
+            color: white; font-weight: 700; font-family: sans-serif; font-size: 11px;
         ">
             S
             <div style="
-                position: absolute; bottom: -4px; right: -4px;
-                width: 10px; height: 10px;
+                position: absolute; bottom: -3px; right: -3px;
+                width: 8px; height: 8px;
                 background: ${statusColor};
-                border-radius: 50%; border: 1px solid white;
-                box-shadow: ${GLOW.SOFT(statusColor)};
+                border-radius: 50%; border: 1.5px solid white;
             "></div>
         </div>
     `;
 };
 
-const createOhsrIcon = (label: string, statusColor: string) => {
+const createOhsrIcon = (statusColor: string, glow: boolean) => {
   // Triangle with "O" - Orange Base
-  const base = NEON.ORANGE;
+  const filter = glow ? `drop-shadow(0 0 4px ${COLORS.ORANGE})` : 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))';
+
   return `
-        <div style="position: relative; width: 30px; height: 28px; display:flex; justify-content:center;">
+        <div style="position: relative; width: 24px; height: 22px; display:flex; justify-content:center;">
              <div style="
                 width: 0; height: 0;
-                border-left: 15px solid transparent;
-                border-right: 15px solid transparent;
-                border-bottom: 26px solid ${base};
-                filter: drop-shadow(0 0 8px ${base});
+                border-left: 12px solid transparent;
+                border-right: 12px solid transparent;
+                border-bottom: 22px solid ${COLORS.ORANGE};
+                filter: ${filter};
              "></div>
              <div style="
-                position: absolute; top: 12px;
-                color: white; font-weight: 800; font-size: 11px;
-                text-shadow: 0 1px 2px black;
+                position: absolute; top: 10px;
+                color: white; font-weight: 700; font-size: 9px; font-family: sans-serif;
              ">O</div>
              <div style="
-                position: absolute; bottom: -2px; right: 0;
-                width: 10px; height: 10px;
+                position: absolute; bottom: -2px; right: -2px;
+                width: 8px; height: 8px;
                 background: ${statusColor};
-                border-radius: 50%; border: 1px solid white;
-                box-shadow: ${GLOW.SOFT(statusColor)};
+                border-radius: 50%; border: 1.5px solid white;
             "></div>
         </div>
     `;
 };
 
+// UPDATED LABEL: White Background, Black Text
 const createLabel = (label: string) => {
   if (!label) return '';
   return `
         <div style="
-            position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            color: white; padding: 2px 6px; border-radius: 4px;
-            font-size: 10px; white-space: nowrap; pointer-events: none;
-            backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2);
+            position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            color: black; 
+            padding: 1px 4px; 
+            border-radius: 3px;
+            font-size: 10px; 
+            font-weight: 600;
+            white-space: nowrap; 
+            pointer-events: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            border: 1px solid rgba(0,0,0,0.1);
+            z-index: 1000;
         ">${label}</div>
     `;
 };
@@ -138,29 +152,31 @@ const createLabel = (label: string) => {
 export const getDeviceIcon = (type: string, status: string, label: string) => {
   const deviceType = getDeviceType(type);
   const statusColor = getStatusColor(status);
+  const glow = isWorking(status); // Only working devices glow
+
   let html = '';
 
   switch (deviceType) {
     case 'SUMP':
-      html = createSumpIcon(label, statusColor);
+      html = createSumpIcon(statusColor, glow);
       break;
     case 'OHSR':
-      html = createOhsrIcon(label, statusColor);
+      html = createOhsrIcon(statusColor, glow);
       break;
     case 'BOREWELL':
     default:
-      html = createBorewellIcon(statusColor, label);
+      html = createBorewellIcon(statusColor, glow);
       break;
   }
 
   return L.divIcon({
-    className: 'neon-marker',
-    html: `<div style="position:relative; width:30px; height:30px; display:flex; justify-content:center; align-items:center;">
+    className: 'custom-marker',
+    html: `<div style="position:relative; width:24px; height:24px; display:flex; justify-content:center; align-items:center;">
                 ${html}
                 ${createLabel(label)}
                </div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -15]
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12]
   });
 };
