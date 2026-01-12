@@ -12,7 +12,8 @@
     background: linear-gradient(135deg, #6366F1, #8B5CF6);
     color: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 3000;
 }
 

@@ -18,23 +18,29 @@ import L from 'leaflet';
 // Status colors (subtle neon)
 const STATUS_NEON = {
   WORKING: {
-    color: '#22C55E',      // Bright green
-    glow: '0 0 8px rgba(34, 197, 94, 0.6)',  // Subtle green glow
+    color: '#39FF14',      // Neon Green (Brighter)
+    glow: '0 0 4px #39FF14, 0 0 10px #39FF14, 0 0 15px rgba(57, 255, 20, 0.5)',
   },
   NOT_WORKING: {
-    color: '#EF4444',      // Bright red
-    glow: '0 0 8px rgba(239, 68, 68, 0.6)',  // Subtle red glow
+    color: '#FF073A',      // Neon Red (Brighter)
+    glow: '0 0 4px #FF073A, 0 0 10px #FF073A, 0 0 15px rgba(255, 7, 58, 0.5)',
   },
   OTHER: {
-    color: '#6B7280',      // Grey
-    glow: 'none',          // No glow
+    color: '#9CA3AF',      // Light Grey
+    glow: 'none',
   },
 };
 
-// Device type base colors
+// Device type base colors WITH GLOW
 const TYPE_COLORS = {
-  SUMP: '#3B82F6',    // Blue
-  OHSR: '#F97316',    // Orange
+  SUMP: {
+    color: '#00D4FF',     // Neon Cyan
+    glow: '0 0 8px rgba(0, 212, 255, 0.6)',
+  },
+  OHSR: {
+    color: '#FF6B00',     // Neon Orange
+    glow: '0 0 8px rgba(255, 107, 0, 0.6)',
+  }
 };
 
 // ============================================================
@@ -110,17 +116,17 @@ const createBorewellIcon = (status, label) => {
  */
 const createSumpIcon = (status, label) => {
   const config = getStatusConfig(status);
-  const baseColor = TYPE_COLORS.SUMP;
+  const base = TYPE_COLORS.SUMP; // New object structure
 
   // Blue base with status indicator
   const iconHtml = `
         <div style="
             width: 24px;
             height: 24px;
-            background: ${baseColor};
+            background: ${base.color};
             border-radius: 4px;
             border: 2.5px solid white;
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.5), 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: ${base.glow}, 0 2px 4px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -154,7 +160,7 @@ const createSumpIcon = (status, label) => {
  */
 const createOhsrIcon = (status, label) => {
   const config = getStatusConfig(status);
-  const baseColor = TYPE_COLORS.OHSR;
+  const base = TYPE_COLORS.OHSR; // New object structure
 
   // SVG Triangle with "O" in center
   const iconHtml = `
@@ -162,12 +168,12 @@ const createOhsrIcon = (status, label) => {
             <svg width="28" height="26" viewBox="0 0 28 26">
                 <defs>
                     <filter id="neon-orange" x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${baseColor}" flood-opacity="0.5"/>
+                        <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${base.color}" flood-opacity="0.5"/>
                     </filter>
                 </defs>
                 <polygon 
                     points="14,2 26,24 2,24" 
-                    fill="${baseColor}" 
+                    fill="${base.color}" 
                     stroke="white" 
                     stroke-width="2.5"
                     filter="url(#neon-orange)"

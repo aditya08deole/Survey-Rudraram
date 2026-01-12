@@ -31,7 +31,7 @@ const CONFIG = {
     // Zoom settings
     defaultZoom: 15,
     minZoom: 3,
-    maxZoom: 22, // Allow up to 22 - tiles will gracefully upscale
+    maxZoom: 30, // Allow extreme zoom (upscaling)
 
     // Performance
     updateWhenZooming: false,
@@ -53,20 +53,21 @@ const TILE_PROVIDERS = {
         errorTileUrl: '', // Hide broken tiles
     },
 
+    // Google Hybrid - High zoom satellite + labels
+    googleHybrid: {
+        name: '🌍 Google Hybrid',
+        url: 'http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '© Google',
+        maxNativeZoom: 20,
+    },
+
     // OpenStreetMap - Most reliable street map
     street: {
         name: '🗺️ Street Map',
         url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         subdomains: ['a', 'b', 'c'],
         attribution: '© OpenStreetMap',
-        maxNativeZoom: 19,
-    },
-
-    // ESRI World Street Map - Alternative street view
-    esriStreet: {
-        name: '📍 ESRI Street',
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-        attribution: '© Esri',
         maxNativeZoom: 19,
     },
 
@@ -77,15 +78,6 @@ const TILE_PROVIDERS = {
         subdomains: ['a', 'b', 'c', 'd'],
         attribution: '© CartoDB',
         maxNativeZoom: 19,
-    },
-
-    // OpenTopoMap - Terrain/topographic
-    terrain: {
-        name: '⛰️ Terrain',
-        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-        subdomains: ['a', 'b', 'c'],
-        attribution: '© OpenTopoMap',
-        maxNativeZoom: 17,
     },
 } as const;
 
@@ -289,6 +281,19 @@ export function ProfessionalMap({
                         />
                     </BaseLayer>
 
+                    {/* Google Hybrid */}
+                    <BaseLayer name={TILE_PROVIDERS.googleHybrid.name}>
+                        <TileLayer
+                            url={TILE_PROVIDERS.googleHybrid.url}
+                            // @ts-ignore
+                            subdomains={TILE_PROVIDERS.googleHybrid.subdomains}
+                            attribution={TILE_PROVIDERS.googleHybrid.attribution}
+                            maxNativeZoom={TILE_PROVIDERS.googleHybrid.maxNativeZoom}
+                            maxZoom={CONFIG.maxZoom}
+                            keepBuffer={CONFIG.keepBuffer}
+                        />
+                    </BaseLayer>
+
                     {/* Street Map */}
                     <BaseLayer name={TILE_PROVIDERS.street.name}>
                         <TileLayer
@@ -310,28 +315,6 @@ export function ProfessionalMap({
                             subdomains={TILE_PROVIDERS.carto.subdomains}
                             attribution={TILE_PROVIDERS.carto.attribution}
                             maxNativeZoom={TILE_PROVIDERS.carto.maxNativeZoom}
-                            maxZoom={CONFIG.maxZoom}
-                        />
-                    </BaseLayer>
-
-                    {/* ESRI Street */}
-                    <BaseLayer name={TILE_PROVIDERS.esriStreet.name}>
-                        <TileLayer
-                            url={TILE_PROVIDERS.esriStreet.url}
-                            attribution={TILE_PROVIDERS.esriStreet.attribution}
-                            maxNativeZoom={TILE_PROVIDERS.esriStreet.maxNativeZoom}
-                            maxZoom={CONFIG.maxZoom}
-                        />
-                    </BaseLayer>
-
-                    {/* Terrain */}
-                    <BaseLayer name={TILE_PROVIDERS.terrain.name}>
-                        <TileLayer
-                            url={TILE_PROVIDERS.terrain.url}
-                            // @ts-ignore
-                            subdomains={TILE_PROVIDERS.terrain.subdomains}
-                            attribution={TILE_PROVIDERS.terrain.attribution}
-                            maxNativeZoom={TILE_PROVIDERS.terrain.maxNativeZoom}
                             maxZoom={CONFIG.maxZoom}
                         />
                     </BaseLayer>
