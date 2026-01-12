@@ -1,5 +1,5 @@
 /* eslint-disable import/first */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 // @ts-ignore
@@ -46,24 +46,101 @@ const CanvasTools = () => {
     const measureLineRef = useRef<L.Polyline | null>(null);
     const measureTooltipRef = useRef<L.Marker | null>(null);
 
-    // Initialize FeatureGroup and Load Zones
-    useEffect(() => {
-        if (!map) return;
+    // Advanced Edit Popup
+    const openEditPopup = useCallback((layer: any) => {
+        const anyLayer = layer as any;
+        const isText = layer instanceof L.Marker && layer.options.icon?.options?.className === 'canvas-text-marker';
+        const currentColor = anyLayer.zoneData?.color || layer.options?.color || selectedColor;
+        const currentSize = anyLayer.zoneData?.fontSize || 16;
 
-        const items = new L.FeatureGroup();
-        // @ts-ignore
-        map.addLayer(items);
-        setDrawnItems(items);
+        const popupContent = document.createElement('div');
+        popupContent.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:8px; min-width:180px;">
+                <h4 style="margin:0; font-size:14px; color:#333;">Edit ${isText ? 'Text' : 'Shape'}</h4>
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                    Color: <input type="color" id="popup-color" value="${currentColor}">
+                </label>
+                ${isText ? `
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px;">
+                    Size: <input type="number" id="popup-size" value="${currentSize}" style="width:50px"> px
+                </label>
+                <div style="font-size:10px; color:#666;">* Edit text safely by clicking the text itself</div>
+                ` : ''}
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button id="popup-delete" style="flex:1; background:#EF4444; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer;">Delete</button>
+                    ${!isText ? `<button id="popup-edit" style="flex:1; background:#3B82F6; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer;">${anyLayer.editing?.enabled() ? 'Save' : 'Edit Shape'}</button>` : ''}
+                </div>
+            </div>
+        `;
 
-        loadZones(items);
+        L.popup()
+            .setLatLng(layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng())
+            .setContent(popupContent)
+            .openOn(map);
 
-        return () => {
-            // @ts-ignore
-            map.removeLayer(items);
-        };
-    }, [map]);
+        // Attach handlers after popup opens
+        setTimeout(() => {
+            const deleteBtn = document.getElementById('popup-delete');
+            if (deleteBtn) {
+                deleteBtn.onclick = () => {
+                    if (window.confirm('Delete this item?')) {
+                        if (anyLayer.zoneId) deleteMapZone(anyLayer.zoneId);
+                        drawnItems?.removeLayer(layer);
+                        map.closePopup();
+                    }
+                };
+            }
 
-    const loadZones = async (group: L.FeatureGroup) => {
+            const colorInput = document.getElementById('popup-color');
+            if (colorInput) {
+                colorInput.onchange = (e: any) => {
+                    const newColor = e.target.value;
+                    if (layer.setStyle) layer.setStyle({ color: newColor });
+                    if (isText) {
+                        const el = layer.getElement()?.querySelector('.text-annotation');
+                        if (el) (el as HTMLElement).style.color = newColor;
+                        anyLayer.zoneData = { ...anyLayer.zoneData, color: newColor };
+                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, anyLayer.zoneData);
+                    } else {
+                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, { ...anyLayer.zoneData, color: newColor });
+                    }
+                };
+            }
+
+            if (isText) {
+                const sizeInput = document.getElementById('popup-size');
+                if (sizeInput) {
+                    sizeInput.onchange = (e: any) => {
+                        const newSize = parseInt(e.target.value);
+                        const el = layer.getElement()?.querySelector('.text-annotation');
+                        if (el) (el as HTMLElement).style.fontSize = `${newSize}px`;
+                        anyLayer.zoneData = { ...anyLayer.zoneData, fontSize: newSize };
+                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, anyLayer.zoneData);
+                    };
+                }
+            } else {
+                const editBtn = document.getElementById('popup-edit');
+                if (editBtn) {
+                    editBtn.onclick = () => {
+                        if (anyLayer.editing?.enabled()) {
+                            anyLayer.editing.disable();
+                            map.closePopup();
+                            // Save geometry
+                            if (anyLayer.zoneId) {
+                                let geo = layer.getLatLngs ? layer.getLatLngs() : layer.getLatLng();
+                                updateMapZone(anyLayer.zoneId, { ...anyLayer.zoneData, geometry: geo });
+                            }
+                        } else {
+                            anyLayer.editing.enable();
+                            map.closePopup();
+                        }
+                    };
+                }
+            }
+        }, 100);
+    }, [map, drawnItems, selectedColor, fontSize]); // Added fontSize to dependencies
+
+    const loadZones = useCallback(async (group: L.FeatureGroup) => {
         const zones = await getMapZones();
         zones.forEach((z: any) => {
             try {
@@ -113,7 +190,24 @@ const CanvasTools = () => {
                 console.error("Failed to render zone", z, e);
             }
         });
-    };
+    }, [openEditPopup]);
+
+    // Initialize FeatureGroup and Load Zones
+    useEffect(() => {
+        if (!map) return;
+
+        const items = new L.FeatureGroup();
+        // @ts-ignore
+        map.addLayer(items);
+        setDrawnItems(items);
+
+        loadZones(items);
+
+        return () => {
+            // @ts-ignore
+            map.removeLayer(items);
+        };
+    }, [map, loadZones]);
 
     const handleSave = async () => {
         if (!drawnItems) return;
@@ -194,134 +288,6 @@ const CanvasTools = () => {
         }
     };
 
-    // Advanced Edit Popup
-    const openEditPopup = (layer: any) => {
-        const anyLayer = layer as any;
-        const isText = layer instanceof L.Marker && layer.options.icon?.options?.className === 'canvas-text-marker';
-        const currentColor = anyLayer.zoneData?.color || layer.options.color || (isText ? (layer.getElement()?.innerText ? 'black' : selectedColor) : selectedColor);
-        const currentSize = anyLayer.zoneData?.fontSize || 16;
-
-        const popupContent = document.createElement('div');
-        popupContent.innerHTML = `
-            <div style="display:flex; flex-direction:column; gap:8px; min-width:180px;">
-                <h4 style="margin:0; font-size:14px; color:#333;">Edit ${isText ? 'Text' : 'Shape'}</h4>
-                <label style="display:flex; align-items:center; gap:8px; font-size:12px;">
-                    Color: <input type="color" id="popup-color" value="${currentColor}">
-                </label>
-                ${isText ? `
-                <label style="display:flex; align-items:center; gap:8px; font-size:12px;">
-                    Size: <input type="number" id="popup-size" value="${currentSize}" style="width:50px"> px
-                </label>
-                <div style="font-size:10px; color:#666;">* Edit text safely by clicking the text itself</div>
-                ` : ''}
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <button id="popup-delete" style="flex:1; background:#EF4444; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer;">Delete</button>
-                    ${!isText ? `<button id="popup-edit" style="flex:1; background:#3B82F6; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer;">${anyLayer.editing?.enabled() ? 'Save' : 'Edit Shape'}</button>` : ''}
-                </div>
-            </div>
-        `;
-
-        const popup = L.popup()
-            .setLatLng(layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng())
-            .setContent(popupContent)
-            .openOn(map);
-
-        // Attach handlers after popup opens
-        setTimeout(() => {
-            const deleteBtn = document.getElementById('popup-delete');
-            if (deleteBtn) {
-                deleteBtn.onclick = () => {
-                    if (window.confirm('Delete this item?')) {
-                        if (anyLayer.zoneId) deleteMapZone(anyLayer.zoneId);
-                        drawnItems?.removeLayer(layer);
-                        map.closePopup();
-                    }
-                };
-            }
-
-            const colorInput = document.getElementById('popup-color');
-            if (colorInput) {
-                colorInput.onchange = (e: any) => {
-                    const newColor = e.target.value;
-                    if (layer.setStyle) layer.setStyle({ color: newColor });
-                    if (isText) {
-                        const el = layer.getElement()?.querySelector('.text-annotation');
-                        if (el) (el as HTMLElement).style.color = newColor;
-                        anyLayer.zoneData = { ...anyLayer.zoneData, color: newColor };
-                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, anyLayer.zoneData);
-                    } else {
-                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, { ...anyLayer.zoneData, color: newColor });
-                    }
-                };
-            }
-
-            if (isText) {
-                const sizeInput = document.getElementById('popup-size');
-                if (sizeInput) {
-                    sizeInput.onchange = (e: any) => {
-                        const newSize = parseInt(e.target.value);
-                        const el = layer.getElement()?.querySelector('.text-annotation');
-                        if (el) (el as HTMLElement).style.fontSize = `${newSize}px`;
-                        anyLayer.zoneData = { ...anyLayer.zoneData, fontSize: newSize };
-                        if (anyLayer.zoneId) updateMapZone(anyLayer.zoneId, anyLayer.zoneData);
-                    };
-                }
-            } else {
-                const editBtn = document.getElementById('popup-edit');
-                if (editBtn) {
-                    editBtn.onclick = () => {
-                        if (anyLayer.editing?.enabled()) {
-                            anyLayer.editing.disable();
-                            map.closePopup();
-                            // Save geometry
-                            if (anyLayer.zoneId) {
-                                let geo = layer.getLatLngs ? layer.getLatLngs() : layer.getLatLng();
-                                updateMapZone(anyLayer.zoneId, { ...anyLayer.zoneData, geometry: geo });
-                            }
-                        } else {
-                            anyLayer.editing.enable();
-                            map.closePopup();
-                        }
-                    };
-                }
-            }
-        }, 100);
-    };
-
-    // Handle standard Drawing Tools
-    const startDrawing = (type: string) => {
-        if (drawHandlerRef.current) drawHandlerRef.current.disable();
-        resetMeasure();
-        setActiveTool(type);
-
-        if (type === 'measure') {
-            L.DomUtil.addClass(map.getContainer(), 'crosshair-cursor');
-            map.on('click', handleMeasureClick);
-            map.on('dblclick', finishMeasure);
-            return;
-        }
-
-        const options = {
-            shapeOptions: {
-                color: selectedColor,
-                weight: 4,
-                opacity: 0.7,
-                fillOpacity: 0.05,
-            }
-        };
-
-        // @ts-ignore
-        const LeafletDraw = L.Draw;
-        if (!LeafletDraw) return;
-
-        if (type === 'polygon') drawHandlerRef.current = new LeafletDraw.Polygon(map, options);
-        else if (type === 'polyline') drawHandlerRef.current = new LeafletDraw.Polyline(map, options);
-        else if (type === 'rectangle') drawHandlerRef.current = new LeafletDraw.Rectangle(map, options);
-        else if (type === 'circle') drawHandlerRef.current = new LeafletDraw.Circle(map, options);
-
-        if (drawHandlerRef.current) drawHandlerRef.current.enable();
-    };
-
     // MANUAL MEASURE (Kept same as before)
     const handleMeasureClick = (e: any) => {
         const latlng = e.latlng;
@@ -362,6 +328,40 @@ const CanvasTools = () => {
         measurePointsRef.current = [];
         measureLineRef.current = null;
         measureTooltipRef.current = null;
+    };
+
+    // Handle standard Drawing Tools
+    const startDrawing = (type: string) => {
+        if (drawHandlerRef.current) drawHandlerRef.current.disable();
+        resetMeasure();
+        setActiveTool(type);
+
+        if (type === 'measure') {
+            L.DomUtil.addClass(map.getContainer(), 'crosshair-cursor');
+            map.on('click', handleMeasureClick);
+            map.on('dblclick', finishMeasure);
+            return;
+        }
+
+        const options = {
+            shapeOptions: {
+                color: selectedColor,
+                weight: 4,
+                opacity: 0.7,
+                fillOpacity: 0.05,
+            }
+        };
+
+        // @ts-ignore
+        const LeafletDraw = L.Draw;
+        if (!LeafletDraw) return;
+
+        if (type === 'polygon') drawHandlerRef.current = new LeafletDraw.Polygon(map, options);
+        else if (type === 'polyline') drawHandlerRef.current = new LeafletDraw.Polyline(map, options);
+        else if (type === 'rectangle') drawHandlerRef.current = new LeafletDraw.Rectangle(map, options);
+        else if (type === 'circle') drawHandlerRef.current = new LeafletDraw.Circle(map, options);
+
+        if (drawHandlerRef.current) drawHandlerRef.current.enable();
     };
 
     const toggleEditMode = () => {
@@ -494,7 +494,7 @@ const CanvasTools = () => {
             map.off('click', handleMapClickForText);
             L.DomUtil.removeClass(map.getContainer(), 'crosshair-cursor');
         };
-    }, [activeTool, selectedColor, fontSize, drawnItems, map]);
+    }, [activeTool, selectedColor, fontSize, drawnItems, map, openEditPopup]);
 
     // Created Event
     useEffect(() => {
@@ -517,7 +517,7 @@ const CanvasTools = () => {
         map.on(L.Draw.Event.CREATED, handleCreated);
         // @ts-ignore
         return () => { map.off(L.Draw.Event.CREATED, handleCreated); };
-    }, [map, drawnItems]);
+    }, [map, drawnItems, openEditPopup]);
 
     // Update Font Size of existing selection (basic implementation)
     useEffect(() => {

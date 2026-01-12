@@ -177,26 +177,41 @@ export function AppProvider({ children }) {
       const devices = devicesResult.devices;
 
       // Transform database schema to match frontend expectations
-      const typeMap = { borewell: 'Borewell', sump: 'Sump', overhead_tank: 'OHSR', ohsr: 'OHSR' };
-      const transformedDevices = devices.map(device => ({
-        // Standardized fields
-        surveyCode: device.survey_code || device.sr_no,
-        deviceType: typeMap[device.device_type] || device.device_type || 'Unknown',
-        zone: device.zone,
-        location: device.location,
-        status: device.status || 'Unknown',
+      // Transform database schema to match frontend expectations
+      const typeMap = { borewell: 'Borewell', sump: 'Sump', overhead_tank: 'OHSR', ohsr: 'OHSR', oht: 'OHSR' }; // Added lowercase variants
 
-        // Coordinates
-        lat: parseFloat(device.latitude),
-        long: parseFloat(device.longitude),
-        lng: parseFloat(device.longitude),
+      const transformedDevices = devices.map(device => {
+        let dType = typeMap[device.device_type?.toLowerCase()] || device.device_type;
 
-        // Device-specific fields
-        ...device,
+        // Robust Fallback: Infer from Survey Code or Name if type is missing/unknown
+        if (!dType || dType === 'Unknown') {
+          const code = (device.survey_code || device.original_name || '').toUpperCase();
+          if (code.includes('BW') || code.includes('BORE')) dType = 'Borewell';
+          else if (code.includes('SM') || code.includes('SUMP')) dType = 'Sump';
+          else if (code.includes('OH') || code.includes('OHSR') || code.includes('OHT')) dType = 'OHSR';
+          else dType = 'Unknown';
+        }
 
-        // Street name from location
-        streetName: device.location || device.original_name
-      }));
+        return {
+          // Standardized fields
+          surveyCode: device.survey_code || device.sr_no,
+          deviceType: dType,
+          zone: device.zone,
+          location: device.location,
+          status: device.status || 'Unknown',
+
+          // Coordinates
+          lat: parseFloat(device.latitude),
+          long: parseFloat(device.longitude),
+          lng: parseFloat(device.longitude),
+
+          // Device-specific fields
+          ...device,
+
+          // Street name from location
+          streetName: device.location || device.original_name
+        }
+      });
 
       // Fetch statistics
       const statsResult = await fetchStatsFromDB();

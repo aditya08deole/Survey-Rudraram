@@ -149,17 +149,27 @@ function MapComponent({ devices, selectedDevice, onMarkerClick }) {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const mapRef = useRef(null);
 
-  // Helper function to detect device type from survey code
+  // Helper function to detect device type from survey code or properties
   const getDeviceTypeFromCode = (device) => {
+    // 1. Explicit Property Check (Prioritize backend fields)
+    const rawType = device.device_type || device.deviceType || device.type;
+    if (rawType) {
+      const t = rawType.toUpperCase();
+      if (t === 'BOREWELL' || t.includes('BORE')) return 'Borewell';
+      if (t === 'SUMP' || t.includes('SUMP')) return 'Sump';
+      if (t === 'OHSR' || t === 'OHT' || t.includes('OVERHEAD') || t.includes('TANK')) return 'OHSR';
+    }
+
+    // 2. Fallback to tableName if available
+    if (device.tableName === 'borewells') return 'Borewell';
+    if (device.tableName === 'sumps') return 'Sump';
+    if (device.tableName === 'overhead_tanks') return 'OHSR';
+
+    // 3. Fallback to Survey Code / Name Parsing
     const code = (device.surveyCode || device.originalName || '').toUpperCase();
     if (code.includes('BW') || code.includes('BORE')) return 'Borewell';
     if (code.includes('SM') || code.includes('SUMP')) return 'Sump';
     if (code.includes('OH') || code.includes('OHSR') || code.includes('OHT')) return 'OHSR';
-
-    // Fallback to tableName if available
-    if (device.tableName === 'borewells') return 'Borewell';
-    if (device.tableName === 'sumps') return 'Sump';
-    if (device.tableName === 'overhead_tanks') return 'OHSR';
 
     return 'Unknown';
   };

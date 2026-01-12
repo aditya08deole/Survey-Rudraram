@@ -85,6 +85,44 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
         return <p className="text-gray-500 italic p-4">No specific technical details available for this device type.</p>;
     };
 
+    const renderAdditionalInfo = () => {
+        // Core system fields to always hide (internal or already shown prominently)
+        const systemFields = ['id', 'geometry', 'geom', 'lat', 'lng', 'latitude', 'longitude', 'images', 'notes', 'device_type', 'deviceType', 'survey_id', 'surveyCode', 'original_name', 'originalName', 'done', 'status', 'zone', 'street', 'location', 'sr_no', 'is_primary', 'created_at', 'updated_at', 'sheet_name', 'row_index'];
+
+        // Fields already rendered in 'renderDetails' (Technical Specs)
+        let renderedSpecs = [];
+        if (deviceType === 'Borewell') renderedSpecs = ['motor_hp', 'depth_ft', 'pipe_size_inch', 'power_type', 'houses_connected', 'daily_usage_hrs'];
+        if (deviceType === 'Sump') renderedSpecs = ['capacity', 'tank_height_m', 'tank_circumference', 'power_distance_m', 'people_connected'];
+        if (deviceType === 'OHSR' || deviceType === 'OHT') renderedSpecs = ['capacity', 'tank_height_m', 'material', 'type', 'lid_access', 'houses_connected'];
+
+        const excluded = new Set([...systemFields, ...renderedSpecs]);
+
+        const extraFields = Object.entries(device).filter(([key, val]) => {
+            if (excluded.has(key)) return false;
+            if (val === null || val === undefined || val === '') return false;
+            if (typeof val === 'object') return false;
+            return true;
+        });
+
+        if (extraFields.length === 0) return null;
+
+        return (
+            <div className="sidebar-section">
+                <h3 className="section-title">Additional Information</h3>
+                <div className="sidebar-details-grid">
+                    {extraFields.map(([key, val]) => (
+                        <DetailRow
+                            key={key}
+                            icon={<Info size={16} />}
+                            label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            value={String(val)}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="device-sidebar">
             {coverImage && (
@@ -152,6 +190,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                         <div className="sidebar-section">
                             <h3 className="section-title">Technical Specs</h3>
                             {renderDetails()}
+                            {renderAdditionalInfo()}
                         </div>
 
                         <div className="sidebar-section">

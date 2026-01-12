@@ -6,10 +6,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { 
-  Filter, 
-  X, 
-  Search, 
+import {
+  Filter,
+  X,
+  Search,
   RotateCcw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -21,7 +21,7 @@ import { ZONE_NAMES, DEVICE_TYPES, STATUS_LIST } from '../utils/constants';
 import './MapView.css';
 
 function MapView() {
-  const { 
+  const {
     getFilteredDevices,
     filters,
     setFilters,
@@ -39,7 +39,7 @@ function MapView() {
 
   // Get filtered and mapped devices
   const filteredDevices = getFilteredDevices();
-  const mappedDevices = filteredDevices.filter(d => 
+  const mappedDevices = filteredDevices.filter(d =>
     d.lat && d.long && !isNaN(d.lat) && !isNaN(d.long)
   );
 
@@ -102,7 +102,7 @@ function MapView() {
               <span className="filter-badge">{activeFilterCount}</span>
             )}
           </h3>
-          <button 
+          <button
             className="filter-close-btn"
             onClick={() => setShowFilterPanel(false)}
           >
@@ -173,7 +173,7 @@ function MapView() {
 
           {/* Clear Filters */}
           {activeFilterCount > 0 && (
-            <button 
+            <button
               className="btn btn-secondary btn-sm clear-filters-btn"
               onClick={handleClearFilters}
             >
@@ -198,7 +198,7 @@ function MapView() {
 
       {/* Filter Toggle Button (when panel is closed) */}
       {!showFilterPanel && (
-        <button 
+        <button
           className="filter-toggle-btn"
           onClick={() => setShowFilterPanel(true)}
         >
@@ -232,7 +232,7 @@ function MapView() {
             </div>
             <div className="legend-item">
               <span className="legend-marker marker-triangle"></span>
-              OHT
+              OHSR
             </div>
           </div>
           <div className="legend-section">

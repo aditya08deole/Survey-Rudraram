@@ -33,7 +33,7 @@ export const ZONE_LIST = Object.values(ZONES);
 export const ZONE_NAMES = Object.keys(ZONES);
 
 // Device types
-export const DEVICE_TYPES = ['Borewell', 'Sump', 'OHT'];
+export const DEVICE_TYPES = ['Borewell', 'Sump', 'OHSR'];
 
 // Device type marker configuration
 export const DEVICE_MARKERS = {
@@ -45,7 +45,7 @@ export const DEVICE_MARKERS = {
     shape: 'square',
     icon: '⬛'
   },
-  'OHT': {
+  'OHSR': {
     shape: 'triangle',
     icon: '🔺'
   }
