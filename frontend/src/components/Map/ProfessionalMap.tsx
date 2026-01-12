@@ -7,9 +7,10 @@
  * - Zero grey/black screens guaranteed
  * - Performance-optimized rendering
  * - Comprehensive error handling
+ * - Integrated Canvas Drawing Tools
  * 
  * @author Top 1% Developer
- * @version 4.0.0 - Production Ready
+ * @version 4.1.0 - Neon & Tools Integrated
  */
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
@@ -17,9 +18,9 @@ import { MapContainer, TileLayer, Marker, LayersControl, useMap, ZoomControl } f
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDeviceIcon } from './CustomMarkerIcons';
+import CanvasTools from './tools/CanvasTools'; // Integrated tools
 import type { Device } from '../../types/device';
 import './ProfessionalMap.css';
-import CanvasTools from './tools/CanvasTools';
 
 // ============================================================
 // CONFIGURATION - Enterprise Grade
@@ -32,7 +33,7 @@ const CONFIG = {
     // Zoom settings
     defaultZoom: 15,
     minZoom: 3,
-    maxZoom: 22, // High zoom without pixelation errors
+    maxZoom: 22, // Allow up to 22 - tiles will gracefully upscale
 
     // Performance
     updateWhenZooming: false,
@@ -104,7 +105,6 @@ interface MapProps {
 
 function MapStabilityController() {
     const map = useMap();
-    const invalidateCountRef = useRef(0);
 
     useEffect(() => {
         if (!map) return;
@@ -246,6 +246,9 @@ export function ProfessionalMap({
                 {/* Stability Controller - Prevents grey/black screens */}
                 <MapStabilityController />
 
+                {/* Canvas Drawing Tools (Integrated) */}
+                <CanvasTools />
+
                 {/* Fly to selected device */}
                 <FlyToController device={selectedDevice} />
 
@@ -254,9 +257,6 @@ export function ProfessionalMap({
 
                 {/* Zoom Control on left */}
                 <ZoomControl position="topleft" />
-
-                {/* Canvas Drawing Tools - World Class Drawing */}
-                <CanvasTools />
 
                 {/* Tile Layers with fallback */}
                 <LayersControl position="topright">
@@ -275,8 +275,6 @@ export function ProfessionalMap({
                             tileSize={256}
                         />
                     </BaseLayer>
-
-
 
                     {/* Street Map */}
                     <BaseLayer name={TILE_PROVIDERS.street.name}>

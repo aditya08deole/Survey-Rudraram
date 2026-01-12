@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-// NOTE: leaflet.css is already imported in MapComponentClean.tsx - do NOT import again
+// NOTE: leaflet.css is already imported in main map - do NOT import again
 // NOTE: window.L assignment removed - caused tile loading conflicts
+
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import {
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import './CanvasTools.css';
 import { getMapZones, saveMapZone, deleteMapZone, updateMapZone, deleteAllMapZones } from '../../../services/apiService';
+
 // Colors for the palette
 const COLORS = [
     '#EF4444', // Red
@@ -22,6 +24,7 @@ const COLORS = [
     '#000000', // Black
     '#FFFFFF'  // White
 ];
+
 const CanvasTools = () => {
     const map = useMap();
     const [activeTool, setActiveTool] = useState<string | null>(null);
@@ -32,18 +35,22 @@ const CanvasTools = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
+
     const drawHandlerRef = useRef<any>(null);
     const editHandlerRef = useRef<any>(null);
     const deleteHandlerRef = useRef<any>(null);
+
     const measurePointsRef = useRef<L.LatLng[]>([]);
     const measureLineRef = useRef<L.Polyline | null>(null);
     const measureTooltipRef = useRef<L.Marker | null>(null);
+
     // Advanced Edit Popup
     const openEditPopup = useCallback((layer: any) => {
         const anyLayer = layer as any;
         const isText = layer instanceof L.Marker && layer.options.icon?.options?.className === 'canvas-text-marker';
         const currentColor = anyLayer.zoneData?.color || layer.options?.color || selectedColor;
         const currentSize = anyLayer.zoneData?.fontSize || 16;
+
         const popupContent = document.createElement('div');
         popupContent.innerHTML = `
             <div style="display:flex; flex-direction:column; gap:8px; min-width:180px;">
@@ -63,10 +70,12 @@ const CanvasTools = () => {
                 </div>
             </div>
         `;
+
         L.popup()
             .setLatLng(layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng())
             .setContent(popupContent)
             .openOn(map);
+
         // Attach handlers after popup opens
         setTimeout(() => {
             const deleteBtn = document.getElementById('popup-delete');
@@ -79,11 +88,13 @@ const CanvasTools = () => {
                     }
                 };
             }
+
             const colorInput = document.getElementById('popup-color');
             if (colorInput) {
                 colorInput.onchange = (e: any) => {
                     const newColor = e.target.value;
                     if (layer.setStyle) layer.setStyle({ color: newColor });
+
                     if (isText) {
                         const el = layer.getElement()?.querySelector('.text-annotation');
                         if (el) (el as HTMLElement).style.color = newColor;
@@ -94,6 +105,7 @@ const CanvasTools = () => {
                     }
                 };
             }
+
             if (isText) {
                 const sizeInput = document.getElementById('popup-size');
                 if (sizeInput) {
@@ -125,9 +137,12 @@ const CanvasTools = () => {
                 }
             }
         }, 100);
-    }, [map, drawnItems, selectedColor, fontSize]); // Added fontSize to dependencies
+    }, [map, drawnItems, selectedColor]);
+
     const loadZones = useCallback(async (group: L.FeatureGroup) => {
         const zones = await getMapZones();
+        if (!zones || !Array.isArray(zones)) return;
+
         zones.forEach((z: any) => {
             try {
                 // Convert stored LatLngs to Leaflet Layer
@@ -140,6 +155,7 @@ const CanvasTools = () => {
                     className: 'zone-glow', // Glow effect
                     interactive: false // Default non-interactive (click-through)
                 };
+
                 if (z.type === 'polygon') layer = L.polygon(latlngs, options);
                 else if (z.type === 'rectangle') layer = L.rectangle(latlngs, options);
                 else if (z.type === 'circle') layer = L.circle(latlngs, { ...options, radius: z.radius }); // Radius for circle
@@ -155,16 +171,19 @@ const CanvasTools = () => {
                     // @ts-ignore
                     layer.zoneData = z;
                 }
+
                 if (layer) {
                     // @ts-ignore
                     layer.zoneId = z.id;
                     // @ts-ignore
                     layer.zoneData = z;
+
                     // Attach Double Click Event
                     layer.on('dblclick', (e: any) => {
                         L.DomEvent.stopPropagation(e);
                         openEditPopup(layer);
                     });
+
                     group.addLayer(layer);
                 }
             } catch (e) {
@@ -172,6 +191,7 @@ const CanvasTools = () => {
             }
         });
     }, [openEditPopup]);
+
     // Initialize FeatureGroup and Load Zones
     useEffect(() => {
         if (!map) return;
@@ -180,23 +200,28 @@ const CanvasTools = () => {
         map.addLayer(items);
         setDrawnItems(items);
         loadZones(items);
+
         return () => {
             // @ts-ignore
             map.removeLayer(items);
         };
     }, [map, loadZones]);
+
     const handleSave = async () => {
         if (!drawnItems) return;
         setSaving(true);
         const layers = drawnItems.getLayers();
+
         for (const layer of layers) {
             // @ts-ignore
             if (layer.zoneId) continue; // Already saved
+
             const zoneId = crypto.randomUUID();
             let geometry: any;
             let type = 'unknown';
             let radius = 0;
             let textLabel = "";
+
             // @ts-ignore
             if (layer instanceof L.Polygon) {
                 // @ts-ignore
@@ -228,6 +253,7 @@ const CanvasTools = () => {
                 geometry = layer.getLatLng();
                 type = 'text';
             }
+
             if (type !== 'unknown') {
                 const zone = {
                     id: zoneId,
@@ -238,7 +264,9 @@ const CanvasTools = () => {
                     color: selectedColor,
                     fontSize: fontSize
                 };
+
                 await saveMapZone(zone);
+
                 // @ts-ignore
                 layer.zoneId = zoneId;
                 // Apply 'saved' styling
@@ -256,20 +284,25 @@ const CanvasTools = () => {
             loadZones(drawnItems);
         }
     };
+
     // MANUAL MEASURE (Kept same as before)
     const handleMeasureClick = (e: any) => {
         const latlng = e.latlng;
         measurePointsRef.current.push(latlng);
+
         if (!measureLineRef.current) {
             measureLineRef.current = L.polyline(measurePointsRef.current, { color: selectedColor, dashArray: '5, 5' }).addTo(map);
         } else {
             measureLineRef.current.setLatLngs(measurePointsRef.current);
         }
+
         let totalDistance = 0;
         for (let i = 0; i < measurePointsRef.current.length - 1; i++) {
             totalDistance += measurePointsRef.current[i].distanceTo(measurePointsRef.current[i + 1]);
         }
+
         const text = totalDistance > 1000 ? `${(totalDistance / 1000).toFixed(2)} km` : `${totalDistance.toFixed(1)} m`;
+
         if (measureTooltipRef.current) {
             measureTooltipRef.current.setLatLng(latlng);
             measureTooltipRef.current.setIcon(L.divIcon({ className: 'measure-tooltip', html: `<div class="measure-tag">${text}</div>` }));
@@ -277,6 +310,7 @@ const CanvasTools = () => {
             measureTooltipRef.current = L.marker(latlng, { icon: L.divIcon({ className: 'measure-tooltip', html: `<div class="measure-tag">${text}</div>` }) }).addTo(map);
         }
     };
+
     const finishMeasure = () => {
         if (measurePointsRef.current.length > 1 && drawnItems) {
             L.polyline(measurePointsRef.current, { color: selectedColor, weight: 3 }).addTo(drawnItems);
@@ -286,27 +320,33 @@ const CanvasTools = () => {
         }
         resetMeasure();
     };
+
     const resetMeasure = () => {
         map.off('click', handleMeasureClick);
         map.off('dblclick', finishMeasure);
         L.DomUtil.removeClass(map.getContainer(), 'crosshair-cursor');
+
         if (measureLineRef.current) map.removeLayer(measureLineRef.current);
         if (measureTooltipRef.current) map.removeLayer(measureTooltipRef.current);
+
         measurePointsRef.current = [];
         measureLineRef.current = null;
         measureTooltipRef.current = null;
     };
+
     // Handle standard Drawing Tools
     const startDrawing = (type: string) => {
         if (drawHandlerRef.current) drawHandlerRef.current.disable();
         resetMeasure();
         setActiveTool(type);
+
         if (type === 'measure') {
             L.DomUtil.addClass(map.getContainer(), 'crosshair-cursor');
             map.on('click', handleMeasureClick);
             map.on('dblclick', finishMeasure);
             return;
         }
+
         const options = {
             shapeOptions: {
                 color: selectedColor,
@@ -315,23 +355,29 @@ const CanvasTools = () => {
                 fillOpacity: 0.05,
             }
         };
+
         // @ts-ignore
         const LeafletDraw = L.Draw;
         if (!LeafletDraw) return;
+
         if (type === 'polygon') drawHandlerRef.current = new LeafletDraw.Polygon(map, options);
         else if (type === 'polyline') drawHandlerRef.current = new LeafletDraw.Polyline(map, options);
         else if (type === 'rectangle') drawHandlerRef.current = new LeafletDraw.Rectangle(map, options);
         else if (type === 'circle') drawHandlerRef.current = new LeafletDraw.Circle(map, options);
+
         if (drawHandlerRef.current) drawHandlerRef.current.enable();
     };
+
     const toggleEditMode = () => {
         if (!map || !drawnItems) return;
+
         if (isEditMode) {
             // Save Changes from Edit
             if (editHandlerRef.current) {
                 editHandlerRef.current.save();
                 editHandlerRef.current.disable();
             }
+
             // Auto-save edited zones
             drawnItems.eachLayer((layer: any) => {
                 if (layer.zoneId) {
@@ -340,6 +386,7 @@ const CanvasTools = () => {
                     if (layer.getLatLngs) geometry = layer.getLatLngs();
                     // @ts-ignore
                     else if (layer.getLatLng) geometry = layer.getLatLng();
+
                     if (geometry) {
                         // We only update geometry for now, preserving other props is harder without full state
                         // But we attached 'zoneData' to layer in loadZones!
@@ -354,22 +401,26 @@ const CanvasTools = () => {
                     }
                 }
             });
+
             // Re-disable interaction
             drawnItems.eachLayer((layer: any) => {
                 if (layer.setStyle) layer.setStyle({ interactive: false }); // Click-through
                 if (layer.dragging) layer.dragging.disable();
             });
+
             setIsEditMode(false);
         } else {
             if (drawHandlerRef.current) drawHandlerRef.current.disable();
             resetMeasure();
             setActiveTool(null);
             if (isDeleteMode) toggleDeleteMode();
+
             // Enable interaction
             drawnItems.eachLayer((layer: any) => {
                 if (layer.setStyle) layer.setStyle({ interactive: true });
                 if (layer.dragging) layer.dragging.enable();
             });
+
             // @ts-ignore
             if (!editHandlerRef.current && L.EditToolbar) {
                 // @ts-ignore
@@ -384,12 +435,15 @@ const CanvasTools = () => {
                     }
                 });
             }
+
             if (editHandlerRef.current) editHandlerRef.current.enable();
             setIsEditMode(true);
         }
     };
+
     const toggleDeleteMode = () => {
         if (!map || !drawnItems) return;
+
         if (isDeleteMode) {
             if (deleteHandlerRef.current) {
                 deleteHandlerRef.current.save();
@@ -401,6 +455,7 @@ const CanvasTools = () => {
             resetMeasure();
             setActiveTool(null);
             if (isEditMode) toggleEditMode(); // Switch off edit mode
+
             // @ts-ignore
             if (!deleteHandlerRef.current && L.EditToolbar) {
                 // @ts-ignore
@@ -408,65 +463,82 @@ const CanvasTools = () => {
                     featureGroup: drawnItems
                 });
             }
+
             if (deleteHandlerRef.current) deleteHandlerRef.current.enable();
             setIsDeleteMode(true);
         }
     };
+
     // Handle Text
     useEffect(() => {
         const handleMapClickForText = (e: any) => {
             if (!drawnItems) return;
+
             const icon = L.divIcon({
                 className: 'canvas-text-marker',
                 // Use style to ensure dynamic width (fit-content) and nowrap
                 html: `<div class="text-annotation-wrapper" style="width: max-content; pointer-events: auto;"><div class="text-annotation" contenteditable="true" style="color:${selectedColor};font-size:${fontSize}px;font-weight:bold; border: 1px dashed #ccc; padding: 4px; min-width: 50px;">Click Edit</div></div>`,
                 iconSize: [null as any, null as any] // Allow dynamic size
             });
+
             const marker = L.marker(e.latlng, { icon, draggable: true });
+
             marker.on('dblclick', (ev: any) => {
                 L.DomEvent.stopPropagation(ev);
                 openEditPopup(marker);
             });
+
             marker.addTo(drawnItems);
             setActiveTool(null);
         };
+
         if (activeTool !== 'text') {
             map.off('click', handleMapClickForText);
             L.DomUtil.removeClass(map.getContainer(), 'crosshair-cursor');
             return;
         }
+
         L.DomUtil.addClass(map.getContainer(), 'crosshair-cursor');
         map.on('click', handleMapClickForText);
+
         return () => {
             map.off('click', handleMapClickForText);
             L.DomUtil.removeClass(map.getContainer(), 'crosshair-cursor');
         };
     }, [activeTool, selectedColor, fontSize, drawnItems, map, openEditPopup]);
+
     // Created Event
     useEffect(() => {
         // @ts-ignore
         if (!L.Draw) return;
+
         const handleCreated = (e: any) => {
             const layer = e.layer;
+
             // Attach dblclick for new items
             layer.on('dblclick', (ev: any) => {
                 L.DomEvent.stopPropagation(ev);
                 openEditPopup(layer);
             });
+
             if (drawnItems) drawnItems.addLayer(layer);
             setActiveTool(null);
         };
+
         // @ts-ignore
         map.on(L.Draw.Event.CREATED, handleCreated);
+
         // @ts-ignore
         return () => { map.off(L.Draw.Event.CREATED, handleCreated); };
     }, [map, drawnItems, openEditPopup]);
+
     // Update Font Size of existing selection (basic implementation)
     useEffect(() => {
         // This is tricky without 'selection' concept. 
         // We will just assume this setting applies to NEXT text.
         // Or if in edit mode, maybe update all text? No that's bad.
     }, [fontSize]);
+
     const clearCanvas = async () => {
         if (!drawnItems) return;
         // Only clear UNSAVED items
@@ -478,13 +550,14 @@ const CanvasTools = () => {
         });
         resetMeasure();
     };
-    // Explicit Delete Saved Zone
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     // Explicit Delete Saved Zone
     const handleDeleteAll = async () => {
         if (!window.confirm("⚠️ WARNING: This will delete ALL shapes and text from the map PERMANENTLY. \n\nAre you sure you want to proceed?")) return;
+
         setSaving(true);
         const result = await deleteAllMapZones();
+
         if (result.success) {
             if (drawnItems) drawnItems.clearLayers();
         } else {
@@ -492,10 +565,12 @@ const CanvasTools = () => {
         }
         setSaving(false);
     };
+
     // Catch Deletion
     useEffect(() => {
         // @ts-ignore
         if (!L.Draw) return;
+
         const handleDeleted = (e: any) => {
             const layers = e.layers;
             layers.eachLayer((layer: any) => {
@@ -504,11 +579,14 @@ const CanvasTools = () => {
                 }
             });
         };
+
         // @ts-ignore
         map.on(L.Draw.Event.DELETED, handleDeleted);
         // @ts-ignore
         return () => { map.off(L.Draw.Event.DELETED, handleDeleted); };
     }, [map]);
+
+
     if (isCollapsed) {
         return (
             <div className="canvas-toolbar collapsed" onClick={() => setIsCollapsed(false)}>
@@ -516,6 +594,7 @@ const CanvasTools = () => {
             </div>
         );
     }
+
     return (
         <div className="canvas-toolbar">
             <div className="tool-group collapse-group">
@@ -523,6 +602,7 @@ const CanvasTools = () => {
                     <ChevronRight size={20} />
                 </button>
             </div>
+
             <div className="tool-group">
                 <button className={`canvas-btn ${activeTool === 'pointer' ? 'active' : ''}`} onClick={() => setActiveTool('pointer')} title="Pointer">
                     <MousePointer2 size={20} />
@@ -543,11 +623,13 @@ const CanvasTools = () => {
                     <Maximize size={20} />
                 </button>
             </div>
+
             <div className="tool-group">
                 <button className={`canvas-btn ${activeTool === 'measure' ? 'active' : ''}`} onClick={() => startDrawing('measure')} title="Measure">
                     <Ruler size={20} />
                 </button>
             </div>
+
             <div className="tool-group">
                 <div className="color-picker">
                     {COLORS.map(c => (
@@ -555,16 +637,19 @@ const CanvasTools = () => {
                     ))}
                 </div>
             </div>
+
             <div className="tool-group">
                 <div className="size-control">
                     <span className="size-label">Size: {fontSize}px</span>
                     <input type="range" min="10" max="60" className="size-slider" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} />
                 </div>
             </div>
+
             <div className="tool-group">
                 <button className="canvas-btn" onClick={handleSave} title="Save Zones Globally" style={{ color: '#10B981' }}>
                     {saving ? <RefreshCw className="spin" size={20} /> : <Save size={20} />}
                 </button>
+
                 <button
                     className={`canvas-btn ${isDeleteMode ? 'active' : ''}`}
                     onClick={toggleDeleteMode}
@@ -573,6 +658,7 @@ const CanvasTools = () => {
                 >
                     <Eraser size={20} />
                 </button>
+
                 <button
                     className="canvas-btn"
                     onClick={clearCanvas}
@@ -581,6 +667,7 @@ const CanvasTools = () => {
                 >
                     <RefreshCw size={20} />
                 </button>
+
                 <button
                     className="canvas-btn"
                     onClick={handleDeleteAll}
@@ -590,7 +677,9 @@ const CanvasTools = () => {
                     <Trash2 size={20} />
                 </button>
             </div>
+
         </div>
     );
 };
+
 export default CanvasTools;
