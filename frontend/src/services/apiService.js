@@ -1,18 +1,10 @@
-/**
- * API Service - Unified Backend Communication
- * 
- * Handles all API requests to the FastAPI backend.
- * Works in both development and production environments.
- */
+import { supabase } from '../supabaseClient';
 
-// Determine API base URL based on environment
 const getApiBaseUrl = () => {
-  // In production (Render), API is served from same domain
-  // In development, use localhost:8000
   if (process.env.NODE_ENV === 'production') {
-    return window.location.origin; // Same domain as frontend
+    return window.location.origin;
   }
-  return 'http://localhost:8000'; // Development
+  return 'http://localhost:8000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -235,10 +227,17 @@ export const fetchDevicesFromDB = async (filters = {}) => {
     }
 
     const data = await response.json();
+    const normalizedDevices = (data.data || []).map(d => ({
+      ...d,
+      survey_id: d.survey_id || d.survey_code || d.SurveyID,
+      lat: d.lat || d.latitude,
+      lng: d.lng || d.longitude || d.long
+    }));
+
     return {
       success: true,
-      devices: data.data || [],
-      count: data.count || 0,
+      devices: normalizedDevices,
+      count: data.count || normalizedDevices.length,
       filters: data.filters || {},
       errors: []
     };
@@ -307,9 +306,15 @@ export const fetchDeviceByCodeDB = async (surveyCode) => {
     }
 
     const data = await response.json();
+    const device = data.data;
+    if (device) {
+      device.survey_id = device.survey_id || device.survey_code;
+      device.lat = device.lat || device.latitude;
+      device.lng = device.lng || device.longitude || device.long;
+    }
     return {
       success: true,
-      device: data.data || null,
+      device: device || null,
       errors: []
     };
   } catch (error) {
@@ -555,33 +560,81 @@ export const inviteUser = async (userData) => {
 // I'll add them here properly.
 
 export const uploadDeviceImage = async (surveyCode, deviceType, file) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('device_type', deviceType);
-  const response = await fetch(`${API_BASE_URL}/api/device-images/upload/${surveyCode}`, {
-    method: 'POST',
-    body: formData
-  });
-  return await response.json();
+  if (!surveyCode || surveyCode === 'undefined') {
+    return { success: false, error: "Invalid survey identifier. Please refresh the page and try again." };
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    if (!token) {
+      return { success: false, error: "Authentication session expired. Please log in again." };
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('device_type', deviceType);
+
+    const response = await fetch(`${API_BASE_URL}/api/device-images/upload/${encodeURIComponent(surveyCode)}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || data.message || "Upload failed");
+    return { success: true, data };
+  } catch (error) {
+    console.error("Upload error:", error);
+    return { success: false, error: error.message };
+  }
 };
 
 export const fetchDeviceImages = async (surveyCode) => {
-  const response = await fetch(`${API_BASE_URL}/api/device-images/${surveyCode}`);
-  return await response.json();
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/device-images/${surveyCode}`);
+    const data = await response.json();
+    return { success: response.ok, data: data.data || [] };
+  } catch (error) {
+    return { success: false, data: [] };
+  }
 };
 
 export const deleteDeviceImage = async (imageId) => {
-  const response = await fetch(`${API_BASE_URL}/api/device-images/${imageId}`, {
-    method: 'DELETE'
-  });
-  return await response.json();
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const response = await fetch(`${API_BASE_URL}/api/device-images/${imageId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 };
 
 export const setPrimaryImage = async (surveyCode, imageId) => {
-  const response = await fetch(`${API_BASE_URL}/api/device-images/${imageId}/primary?survey_code=${surveyCode}`, {
-    method: 'PATCH'
-  });
-  return await response.json();
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const response = await fetch(`${API_BASE_URL}/api/device-images/${imageId}/primary?survey_code=${surveyCode}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 };
 
 /**
