@@ -101,6 +101,16 @@ async def health_check():
     }
 
 # Frontend Serving Logic
+# Middleware to force no-cache on root (index.html) to ensure updates are seen immediately
+@app.middleware("http")
+async def add_no_cache_header(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path == "/index.html":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 if FRONTEND_BUILD_DIR.exists():
     logger.info(f"Serving frontend from {FRONTEND_BUILD_DIR}")
     app.mount("/", StaticFiles(directory=str(FRONTEND_BUILD_DIR), html=True), name="static")
