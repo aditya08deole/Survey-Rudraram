@@ -84,7 +84,7 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
             const fileName = `${Date.now()}_optimized.${fileExt}`;
             const filePath = `${surveyCode}/${fileName}`;
 
-            const { data, error: uploadError } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
                 .from('device-images')
                 .upload(filePath, compressedFile, {
                     cacheControl: '3600',

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Map, Zap, Cloud, X, ArrowRight } from 'lucide-react';
+import { Search, Map as MapIcon, Terminal, Settings, X, Zap, ArrowRight } from 'lucide-react';
 import { Device } from '../../types/device';
 import './Spotlight.css';
 
@@ -47,8 +47,8 @@ const Spotlight = ({ devices, onDeviceSelect, onCommand }: SpotlightProps) => {
 
         // Commands
         const commands = [
-            { id: 'cmd_sat', type: 'COMMAND', label: 'Switch to Satellite', icon: <Map size={14} />, action: 'LAYER_SATELLITE' },
-            { id: 'cmd_str', type: 'COMMAND', label: 'Switch to Street Map', icon: <Map size={14} />, action: 'LAYER_STREET' },
+            { id: 'cmd_sat', type: 'COMMAND', label: 'Switch to Satellite', icon: <MapIcon size={14} />, action: 'LAYER_SATELLITE' },
+            { id: 'cmd_str', type: 'COMMAND', label: 'Switch to Street Map', icon: <MapIcon size={14} />, action: 'LAYER_STREET' },
             { id: 'cmd_cli', type: 'COMMAND', label: 'Clear Selection', icon: <X size={14} />, action: 'CLEAR' },
         ].filter(c => c.label.toLowerCase().includes(q));
 

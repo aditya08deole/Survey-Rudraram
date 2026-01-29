@@ -12,7 +12,6 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [isEditingNote, setIsEditingNote] = useState(false);
     const [noteText, setNoteText] = useState('');
-    const [isSavingNote, setIsSavingNote] = useState(false);
 
     useEffect(() => {
         if (device?.survey_id) {
@@ -204,9 +203,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                                     />
                                     <div className="note-actions">
                                         <button className="btn-save" onClick={async () => {
-                                            setIsSavingNote(true);
                                             await updateDeviceNotes(surveyId, deviceType, noteText);
-                                            setIsSavingNote(false);
                                             setIsEditingNote(false);
                                             device.notes = noteText;
                                         }}>Save</button>

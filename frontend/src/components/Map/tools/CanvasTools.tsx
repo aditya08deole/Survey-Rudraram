@@ -15,7 +15,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import {
@@ -81,6 +81,21 @@ const CanvasTools = () => {
         setHistory(prev => [...prev.slice(0, historyIndex + 1), snap]);
         setHistoryIndex(prev => prev + 1);
     }, [historyIndex]);
+
+    // Keyboard shortcut for snapshot
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                if (drawnItems) { // Ensure drawnItems is available before taking snapshot
+                    takeSnapshot(drawnItems);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [takeSnapshot, drawnItems]); // Add drawnItems to dependencies for the snapshot
 
     // Draw Event Handler
     useEffect(() => {
