@@ -208,7 +208,7 @@ async def get_survey_stats(source: str = Query("supabase")):
             
             # Type stats
             dtype = d.get("device_type") or "Unknown"
-            stats["types"][dtype] = stats["types"][dtype, 0] + 1
+            stats["types"][dtype] = stats["types"].get(dtype, 0) + 1
             
             # Status stats
             status = d.get("status") or "Unknown"
