@@ -9,7 +9,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import NavigationHeader from './components/Navigation/NavigationHeader';
-import { LandingPage } from './pages/LandingPage';
+import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 import MapPage from './pages/MapPage';
 import AnalyticsPage from './pages/AnalyticsPage';

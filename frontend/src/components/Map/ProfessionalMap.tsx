@@ -11,13 +11,17 @@
  * @version 5.1.0
  */
 
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, LayersControl, useMap, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDeviceIcon } from './CustomMarkerIcons';
 import CanvasTools from './tools/CanvasTools';
 import HeatmapLayer from './HeatmapLayer';
+import ActivityStream from './ActivityStream';
+import AssetInspector from './AssetInspector';
+import ElevationProfile from './ElevationProfile';
+import TimelineSlider from './TimelineSlider';
 
 import Spotlight from '../Command/Spotlight';
 import type { Device } from '../../types/device';
@@ -93,7 +97,7 @@ const { BaseLayer } = LayersControl;
 interface MapProps {
     devices: Device[];
     selectedDevice?: Device | null;
-    onDeviceClick?: (device: Device) => void;
+    onDeviceClick?: (device: Device | null) => void;
 }
 
 // Stability & Auto-Refresh
@@ -144,15 +148,28 @@ function LayerSwitcher({ activeLayer }: { activeLayer: string }) {
 export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapProps) {
     const [activeLayer, setActiveLayer] = useState('satellite');
     const [showHeatmap, setShowHeatmap] = useState(true);
+    const [timelineDate, setTimelineDate] = useState<Date>(new Date());
+
+    // Filter devices based on timeline
+    const filteredByTime = useMemo(() => {
+        return devices.filter(d => {
+            // If no timestamp, assume it's always visible for now
+            if (!d.done) return true;
+            const itemDate = new Date(Date.now() - (Math.random() * 10000000000)); // Simulating history for demo
+            return itemDate <= timelineDate;
+        });
+    }, [devices, timelineDate]);
 
     // Prepare heatmap points: [lat, lng, intensity]
-    const heatmapPoints = devices
-        .map(d => {
-            const lat = Number(d.lat || d.latitude);
-            const lng = Number(d.lng || d.longitude);
-            return (lat && lng) ? [lat, lng, 1.0] as [number, number, number] : null;
-        })
-        .filter((p): p is [number, number, number] => p !== null);
+    const heatmapPoints = useMemo(() =>
+        filteredByTime
+            .map(d => {
+                const lat = Number(d.lat || d.latitude);
+                const lng = Number(d.lng || d.longitude);
+                return (lat && lng) ? [lat, lng, 1.0] as [number, number, number] : null;
+            })
+            .filter((p): p is [number, number, number] => p !== null)
+        , [filteredByTime]);
 
     // Prevent propagation when clicking markers
     const handleMarkerClick = useCallback((e: any, device: Device) => {
@@ -189,6 +206,30 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
 
                 {/* Canvas Tools Overlay */}
                 <CanvasTools />
+
+                {/* Operational Intelligence Feed */}
+                <ActivityStream
+                    devices={devices}
+                    onActivityClick={(d) => onDeviceClick?.(d)}
+                />
+
+                <AssetInspector
+                    device={selectedDevice || null}
+                    onClose={() => onDeviceClick?.(null)}
+                />
+
+                {/* Terrain Intelligence Panel */}
+                {selectedDevice && (
+                    <ElevationProfile
+                        source={selectedDevice}
+                        destination={devices.find(d => d.survey_id !== selectedDevice.survey_id) || null}
+                    />
+                )}
+
+                {/* Timeline Progress Slider */}
+                <TimelineSlider
+                    onDateChange={(date) => setTimelineDate(date)}
+                />
 
                 {/* Heatmap Layer */}
                 {showHeatmap && (
@@ -276,7 +317,7 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                 </LayersControl>
 
                 {/* Pinpoint Device Markers */}
-                {devices.map((device, idx) => {
+                {filteredByTime.map((device, idx) => {
                     const lat = Number(device.lat || device.latitude);
                     const lng = Number(device.lng || device.longitude);
                     if (!lat || !lng) return null;
@@ -289,7 +330,7 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                         <Marker
                             key={device.survey_id || idx}
                             position={[lat, lng]}
-                            icon={getDeviceIcon(type, device.status || '', label)}
+                            icon={getDeviceIcon(device)}
                             opacity={isSelected ? 1 : 0.85}
                             zIndexOffset={isSelected ? 2000 : 1000} // Higher than heatmap
                             eventHandlers={{

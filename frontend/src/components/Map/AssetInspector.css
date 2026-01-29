@@ -1,0 +1,345 @@
+.oracle-console {
+    position: fixed;
+    top: 120px;
+    right: 40px;
+    width: 850px;
+    height: 520px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.2);
+    z-index: 5000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #e2e8f0;
+}
+
+.oracle-console.minimized {
+    width: 280px;
+    height: 48px;
+    top: auto;
+    bottom: 40px;
+    right: 40px;
+}
+
+.console-header-bar {
+    height: 40px;
+    background: rgba(30, 41, 59, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    cursor: grab;
+}
+
+.console-header-bar:active {
+    cursor: grabbing;
+}
+
+.system-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+}
+
+.pulse-icon {
+    color: #10b981;
+}
+
+.console-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.console-controls button {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.console-controls button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+}
+
+.console-controls button.close-trigger:hover {
+    color: #ef4444;
+}
+
+.console-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.left-technical-panel {
+    flex: 1.2;
+    background: rgba(0, 0, 0, 0.2);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.right-data-grid {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.asset-hero-box {
+    height: 180px;
+    position: relative;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.hero-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, transparent 100%);
+    z-index: 0;
+}
+
+.hero-data {
+    position: relative;
+    z-index: 1;
+}
+
+.type-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.type-tag {
+    background: #334155;
+    color: #38bdf8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.status-pill {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.status-pill.active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.status-pill.alert {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.hero-data h2 {
+    font-size: 26px;
+    font-weight: 900;
+    margin: 0;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.survey-id {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.action-ribbon {
+    display: flex;
+    gap: 8px;
+    padding: 16px 24px;
+}
+
+.ribbon-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ribbon-btn.active {
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.3);
+    color: #3b82f6;
+}
+
+.notes-box-technical {
+    padding: 0 24px;
+    flex: 1;
+}
+
+.notes-box-technical h3 {
+    font-size: 10px;
+    font-weight: 800;
+    color: #475569;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+}
+
+.notes-box-technical p {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.6;
+}
+
+.ingestion-control {
+    padding: 24px;
+}
+
+.upload-console-btn {
+    width: 100%;
+    background: #0ea5e9;
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+}
+
+.upload-console-btn:hover {
+    background: #0284c7;
+    transform: translateY(-2px);
+}
+
+.location-context-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.icon-wrap {
+    width: 44px;
+    height: 44px;
+    background: rgba(14, 165, 233, 0.1);
+    color: #0ea5e9;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loc-text h4 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.05em;
+}
+
+.loc-text p {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+
+.telemetry-group h5 {
+    font-size: 10px;
+    font-weight: 800;
+    color: #475569;
+    margin-bottom: 12px;
+    letter-spacing: 0.1em;
+}
+
+.telemetry-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.tel-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+}
+
+.tel-card.full-span {
+    grid-column: span 2;
+}
+
+.tel-card svg {
+    color: #0ea5e9;
+    margin-top: 2px;
+}
+
+.tel-body label {
+    display: block;
+    font-size: 9px;
+    font-weight: 800;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.tel-body span {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.minimized-console-bar {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.minimized-status {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    margin-left: auto;
+    box-shadow: 0 0 10px #10b981;
+}
