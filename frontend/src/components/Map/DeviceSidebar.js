@@ -125,166 +125,121 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
     return (
         <div className="device-sidebar">
-            {coverImage && (
-                <div className="sidebar-cover-image" style={{ backgroundImage: `url(${coverImage})` }}>
-                    <div className="cover-overlay"></div>
-                </div>
-            )}
-
-            <div className={`sidebar-header ${coverImage ? 'has-cover' : ''}`}>
-                <div>
-                    <h2 className="sidebar-title">{deviceName}</h2>
-                    <span className="sidebar-subtitle">{surveyId || 'No ID'}</span>
-                </div>
-                <button onClick={onClose} className="sidebar-close-btn">
+            {/* 1. Hero Image / Gallery Preview */}
+            <div className="sidebar-cover-image" style={{ backgroundImage: `url(${coverImage || '/placeholder-device.jpg'})` }}>
+                <div className="cover-overlay"></div>
+                <button className="sidebar-close-btn" onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
                     <X size={24} />
                 </button>
             </div>
 
-            <div className="sidebar-status-bar">
-                <span className={`status-badge status-${(device.status || 'Working').toLowerCase().replace(' ', '-')}`}>
-                    {device.status || 'Unknown Status'}
-                </span>
-                <span className="device-type-badge">{deviceType}</span>
+            {/* 2. Header & Title (Floating up into image) */}
+            <div className={`sidebar-header has-cover`}>
+                <div style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2 className="sidebar-title">{deviceName}</h2>
+                        <span className={`status-badge status-${(device.status || 'Working').toLowerCase().replace(' ', '-')}`}>
+                            {device.status || 'Unknown'}
+                        </span>
+                    </div>
+                    <span className="sidebar-subtitle">{surveyId || 'No ID'} • {device.zone || 'No Zone'}</span>
+                </div>
             </div>
 
-            <div className="sidebar-tabs">
-                <button
-                    className={`tab-btn ${activeTab === 'details' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('details')}
-                >
-                    Details
+            {/* 3. Action Bar (Google Maps Style) */}
+            <div className="sidebar-actions-bar">
+                <button className="action-chip primary" onClick={() => setShowUploadModal(true)}>
+                    <Camera size={16} />
+                    <span>Add Photo</span>
                 </button>
-                <button
-                    className={`tab-btn ${activeTab === 'images' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('images')}
-                >
-                    Images
+                <button className={`action-chip ${activeTab === 'images' ? 'active' : ''}`} onClick={() => setActiveTab('images')}>
+                    <FileText size={16} />
+                    <span>Gallery</span>
+                </button>
+                <button className={`action-chip ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>
+                    <Info size={16} />
+                    <span>Details</span>
                 </button>
             </div>
 
+            {/* 4. Scrollable Content Area */}
             <div className="sidebar-content">
                 {activeTab === 'details' && (
                     <div className="details-tab fade-in">
+                        {/* Location Section */}
                         <div className="sidebar-section">
-                            <h3 className="section-title">Location</h3>
-                            <div className="location-card">
+                            <div className="location-card glass-panel">
                                 <div className="loc-row">
-                                    <MapPin size={16} className="text-primary" />
+                                    <MapPin size={18} className="text-primary" />
                                     <div>
-                                        <span className="loc-label">Zone</span>
-                                        <p className="loc-value">{device.zone || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="loc-separator"></div>
-                                <div className="loc-row">
-                                    <MapPin size={16} className="text-primary" />
-                                    <div>
-                                        <span className="loc-label">Address</span>
-                                        <p className="loc-value">{device.street || device.location || 'N/A'}</p>
+                                        <span className="loc-value">{device.street || device.location || 'Location not available'}</span>
+                                        <span className="loc-label">{device.lat?.toFixed(5)}, {device.lng?.toFixed(5)}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Technical Specs - Preserved All Data */}
                         <div className="sidebar-section">
-                            <h3 className="section-title">Technical Specs</h3>
+                            <h3 className="section-title">Technical Specifications</h3>
                             {renderDetails()}
                             {renderAdditionalInfo()}
                         </div>
 
+                        {/* Notes Section */}
                         <div className="sidebar-section">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <h3 className="section-title" style={{ marginBottom: 0 }}>Notes</h3>
-                                {!isEditingNote ? (
-                                    <button
-                                        className="edit-notes-btn"
-                                        onClick={() => setIsEditingNote(true)}
-                                    >
-                                        Edit
-                                    </button>
-                                ) : (
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            className="save-notes-btn"
-                                            disabled={isSavingNote}
-                                            onClick={async () => {
-                                                setIsSavingNote(true);
-                                                const result = await updateDeviceNotes(surveyId, deviceType, noteText);
-                                                setIsSavingNote(false);
-                                                if (result.success) {
-                                                    setIsEditingNote(false);
-                                                    device.notes = noteText; // Optimistic update
-                                                } else {
-                                                    alert('Failed to save notes');
-                                                }
-                                            }}
-                                        >
-                                            {isSavingNote ? 'Saving...' : 'Save'}
-                                        </button>
-                                        <button
-                                            className="cancel-notes-btn"
-                                            onClick={() => {
-                                                setIsEditingNote(false);
-                                                setNoteText(device.notes || '');
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
+                                <h3 className="section-title" style={{ marginBottom: 0 }}>Field Notes</h3>
+                                {!isEditingNote && (
+                                    <button className="edit-notes-link" onClick={() => setIsEditingNote(true)}>Edit</button>
                                 )}
                             </div>
-
                             {isEditingNote ? (
-                                <textarea
-                                    className="notes-editor"
-                                    value={noteText}
-                                    onChange={(e) => setNoteText(e.target.value)}
-                                    rows={4}
-                                />
-                            ) : (
-                                <div className="notes-box glassy-card">
-                                    <p>{noteText || <em className="text-gray-400">No notes available...</em>}</p>
+                                <div className="note-editor-container">
+                                    <textarea
+                                        className="notes-editor"
+                                        value={noteText}
+                                        onChange={(e) => setNoteText(e.target.value)}
+                                        rows={3}
+                                    />
+                                    <div className="note-actions">
+                                        <button className="btn-save" onClick={async () => {
+                                            setIsSavingNote(true);
+                                            await updateDeviceNotes(surveyId, deviceType, noteText);
+                                            setIsSavingNote(false);
+                                            setIsEditingNote(false);
+                                            device.notes = noteText;
+                                        }}>Save</button>
+                                        <button className="btn-cancel" onClick={() => setIsEditingNote(false)}>Cancel</button>
+                                    </div>
                                 </div>
+                            ) : (
+                                <p className="notes-text">{noteText || 'No notes available.'}</p>
                             )}
-                        </div>
-
-                        <div className="metadata-footer">
-                            <p>Coordinates: {device.lat?.toFixed(6) || device.latitude?.toFixed(6)}, {device.lng?.toFixed(6) || device.longitude?.toFixed(6)}</p>
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'images' && (
                     <div className="images-tab fade-in">
-                        <button
-                            className="upload-trigger-btn"
-                            onClick={() => setShowUploadModal(true)}
-                        >
-                            <Camera size={20} /> Upload Images
-                        </button>
-
-                        {showUploadModal && (
-                            <ImageUpload
-                                surveyCode={surveyId}
-                                onUploadSuccess={() => {
-                                    imageService.getDeviceImages(surveyId).then(images => {
-                                        const primary = images.find(img => img.is_primary) || images[0];
-                                        setCoverImage(primary ? primary.url : null);
-                                    });
-                                    setShowUploadModal(false);
-                                }}
-                                onClose={() => setShowUploadModal(false)}
-                            />
-                        )}
-
-                        <div className="mt-6">
-                            <h3 className="section-title mb-2">Gallery</h3>
-                            <ImageGallery surveyCode={surveyId} />
-                        </div>
+                        <ImageGallery surveyCode={surveyId} />
                     </div>
                 )}
             </div>
+
+            {showUploadModal && (
+                <ImageUpload
+                    surveyCode={surveyId}
+                    onUploadSuccess={() => {
+                        imageService.getDeviceImages(surveyId).then(images => {
+                            const primary = images.find(img => img.is_primary) || images[0];
+                            setCoverImage(primary ? primary.url : null);
+                        });
+                        setShowUploadModal(false);
+                    }}
+                    onClose={() => setShowUploadModal(false)}
+                />
+            )}
         </div>
     );
 };

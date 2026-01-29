@@ -7,13 +7,38 @@
     height: 100vh;
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: -5px 0 30px rgba(0, 0, 0, 0.1);
-    z-index: 3100;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    /* Floating on left side like Google Maps details */
+    bottom: 20px;
+    width: 400px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    overflow-y: auto;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex;
     flex-direction: column;
-    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    border-left: 1px solid #e5e7eb;
+    border-radius: 16px;
+    /* Rounded corners */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .device-sidebar {
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 60vh;
+        border-radius: 20px 20px 0 0;
+        animation: slideUp 0.3s ease-out;
+    }
 }
 
 @keyframes slideInRight {
@@ -27,36 +52,38 @@
 }
 
 .sidebar-cover-image {
-    height: 100px;
+    height: 240px;
+    /* Taller cover image */
     background-size: cover;
     background-position: center;
     position: relative;
+    flex-shrink: 0;
 }
 
 .cover-overlay {
     position: absolute;
-    top: 0;
+    bottom: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.6));
+    right: 0;
+    height: 100px;
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.7));
 }
 
 .sidebar-header {
-    padding: 16px;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 20px;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    background: linear-gradient(to right, #ffffff, #fafafa);
+    align-items: flex-end;
+    /* Align bottom to overlap image if needed */
     position: relative;
+    z-index: 2;
 }
 
 .sidebar-header.has-cover {
-    margin-top: -60px;
-    background: transparent;
-    border-bottom: none;
-    padding-top: 0;
+    margin-top: -80px;
+    /* Pull up into the image area */
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .sidebar-header.has-cover .sidebar-title {
@@ -76,9 +103,8 @@
 }
 
 .sidebar-title {
-    font-size: 1.25rem;
+    font-size: 24px;
     font-weight: 700;
-    color: #111827;
     margin: 0;
     line-height: 1.2;
 }
@@ -434,4 +460,59 @@
 .save-notes-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+/* Action Bar - Google Maps Style */
+.sidebar-actions-bar {
+    display: flex;
+    gap: 12px;
+    padding: 0 20px 20px 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.action-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #444;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-chip:hover {
+    background: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-chip.primary {
+    background: #4285F4;
+    /* Google Blue */
+    color: white;
+    border-color: #4285F4;
+}
+
+.action-chip.primary:hover {
+    background: #3367d6;
+    box-shadow: 0 2px 6px rgba(66, 133, 244, 0.3);
+}
+
+.action-chip.active {
+    background: #e8f0fe;
+    color: #1967d2;
+    border-color: #d2e3fc;
+}
+
+/* Glass Panel for Location */
+.glass-panel {
+    background: rgba(245, 245, 245, 0.6);
+    backdrop-filter: blur(4px);
+    border-radius: 12px;
+    padding: 12px;
 }
