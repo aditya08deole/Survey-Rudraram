@@ -156,6 +156,10 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
     const [showHeatmap, setShowHeatmap] = useState(true);
     const [timelineDate, setTimelineDate] = useState<Date>(new Date());
 
+    useEffect(() => {
+        console.log('ProfessionalMap v5.1.1 loaded - Stability Fix Applied');
+    }, []);
+
     // Filter devices based on timeline
     const filteredByTime = useMemo(() => {
         return devices.filter(d => {
