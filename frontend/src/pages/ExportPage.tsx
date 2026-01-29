@@ -4,36 +4,35 @@
  * Multi-sheet Excel workbook export with professional formatting
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { fetchSurveyData } from '../services/apiService';
+import React, { useState, useMemo } from 'react';
+// @ts-ignore
 import { useDeviceFilters } from '../hooks/useDeviceFilters';
 import { FileSpreadsheet, Download, Check, Layers } from 'lucide-react';
 import type { Device, ApiResponse } from '../types/device';
 import * as XLSX from 'xlsx';
 import LoadingAnimation from '../components/LoadingAnimation';
+import SyncLogTab from '../components/Settings/SyncLogTab';
+import TeamTab from '../components/Settings/TeamTab';
+import AnalyticsTab from '../components/Settings/AnalyticsTab';
 import './ExportPage.css';
+
+// @ts-ignore
+import { useApp } from '../context/AppContext';
 
 type SheetType = 'All' | 'Borewell' | 'Sump' | 'OHSR';
 
 export function ExportPage() {
-    const [allDevices, setAllDevices] = useState<Device[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { devices: allDevices, isLoading } = useApp() as any;
+
+    const [activeView, setActiveView] = useState<'export' | 'sync' | 'team' | 'analytics'>('export');
     const [activeSheet, setActiveSheet] = useState<SheetType>('All');
     const [exporting, setExporting] = useState(false);
 
     const { filteredDevices } = useDeviceFilters(allDevices);
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    // No need for local useEffect loading
 
-    const loadData = async () => {
-        const response = await fetchSurveyData() as unknown as ApiResponse;
-        if (response.success) setAllDevices(response.devices);
-        setLoading(false);
-    };
-
-    // Sheet data
+    // Sheet data logic continues...
     const sheetData = useMemo(() => {
         if (activeSheet === 'All') return filteredDevices;
         return filteredDevices.filter(d => d.device_type === activeSheet);
@@ -107,8 +106,8 @@ export function ExportPage() {
         }
     };
 
-    if (loading) {
-        return <LoadingAnimation fullScreen message="Loading export data..." />;
+    if (isLoading) {
+        return <LoadingAnimation fullScreen message="Loading infrastructure data for export..." />;
     }
 
     return (
@@ -117,119 +116,158 @@ export function ExportPage() {
                 <div className="export-title">
                     <FileSpreadsheet size={40} />
                     <div>
-                        <h1>Excel Export</h1>
-                        <p>Multi-sheet workbook with formatted data</p>
+                        <h1>Data Center</h1>
+                        <p>Manage infrastructure records and sync logs</p>
                     </div>
                 </div>
 
-                <button
-                    onClick={handleExport}
-                    className="btn-export-main"
-                    disabled={exporting}
-                >
-                    {exporting ? (
-                        <>
-                            <div className="spinner" />
-                            Exporting...
-                        </>
-                    ) : (
-                        <>
-                            <Download size={20} />
-                            Export to Excel
-                        </>
-                    )}
-                </button>
-            </div>
-
-            {/* Sheet Tabs */}
-            <div className="sheet-tabs">
-                {(['All', 'Borewell', 'Sump', 'OHSR'] as SheetType[]).map(sheet => (
+                <div className="view-switcher">
                     <button
-                        key={sheet}
-                        onClick={() => setActiveSheet(sheet)}
-                        className={`sheet-tab ${activeSheet === sheet ? 'active' : ''}`}
+                        className={`view-btn ${activeView === 'export' ? 'active' : ''}`}
+                        onClick={() => setActiveView('export')}
                     >
-                        <Layers size={16} />
-                        {sheet}
-                        <span className="sheet-count">{sheets[sheet].length}</span>
+                        Excel Export
                     </button>
-                ))}
-            </div>
-
-            {/* Preview Table */}
-            <div className="export-preview">
-                <div className="preview-header">
-                    <h3>Preview: {activeSheet} Sheet</h3>
-                    <span className="preview-count">{sheetData.length} devices</span>
+                    <button
+                        className={`view-btn ${activeView === 'sync' ? 'active' : ''}`}
+                        onClick={() => setActiveView('sync')}
+                    >
+                        Sync Pipeline
+                    </button>
+                    <button
+                        className={`view-btn ${activeView === 'analytics' ? 'active' : ''}`}
+                        onClick={() => setActiveView('analytics')}
+                    >
+                        Insights
+                    </button>
+                    <button
+                        className={`view-btn ${activeView === 'team' ? 'active' : ''}`}
+                        onClick={() => setActiveView('team')}
+                    >
+                        Project Team
+                    </button>
                 </div>
 
-                <div className="preview-table-container">
-                    <table className="preview-table">
-                        <thead>
-                            <tr>
-                                <th>Survey Code</th>
-                                <th>Zone</th>
-                                <th>Street</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Lat</th>
-                                <th>Lng</th>
-                                <th>Houses</th>
-                                <th>Usage</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sheetData.slice(0, 10).map((device, idx) => (
-                                <tr key={idx}>
-                                    <td>{device.survey_id}</td>
-                                    <td>{device.zone}</td>
-                                    <td>{device.street || '—'}</td>
-                                    <td>{device.device_type}</td>
-                                    <td>
-                                        <span className={`status-badge status-${device.status?.toLowerCase().replace(' ', '-')}`}>
-                                            {device.status}
-                                        </span>
-                                    </td>
-                                    <td>{device.lat?.toFixed(6) || '—'}</td>
-                                    <td>{device.lng?.toFixed(6) || '—'}</td>
-                                    <td>{device.houses || 0}</td>
-                                    <td>{device.usage_hours || '—'}</td>
-                                    <td className="notes-cell">{device.notes || '—'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {sheetData.length > 10 && (
-                        <div className="preview-more">
-                            + {sheetData.length - 10} more devices...
+                {activeView === 'export' && (
+                    <button
+                        onClick={handleExport}
+                        className="btn-export-main"
+                        disabled={exporting}
+                    >
+                        {exporting ? (
+                            <>
+                                <div className="spinner" />
+                                Exporting...
+                            </>
+                        ) : (
+                            <>
+                                <Download size={20} />
+                                Export to Excel
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+
+            {activeView === 'team' ? (
+                <TeamTab />
+            ) : activeView === 'analytics' ? (
+                <AnalyticsTab />
+            ) : activeView === 'sync' ? (
+                <SyncLogTab />
+            ) : (
+                <>
+                    {/* Sheet Tabs */}
+                    <div className="sheet-tabs">
+                        {(['All', 'Borewell', 'Sump', 'OHSR'] as SheetType[]).map(sheet => (
+                            <button
+                                key={sheet}
+                                onClick={() => setActiveSheet(sheet)}
+                                className={`sheet-tab ${activeSheet === sheet ? 'active' : ''}`}
+                            >
+                                <Layers size={16} />
+                                {sheet}
+                                <span className="sheet-count">{sheets[sheet].length}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Preview Table */}
+                    <div className="export-preview">
+                        <div className="preview-header">
+                            <h3>Preview: {activeSheet} Sheet</h3>
+                            <span className="preview-count">{sheetData.length} devices</span>
                         </div>
-                    )}
-                </div>
-            </div>
 
-            {/* Export Info */}
-            <div className="export-info">
-                <h3>Export Information</h3>
-                <div className="info-grid">
-                    <div className="info-item">
-                        <Check size={16} />
-                        <span>Multi-sheet workbook (All, Borewell, Sump, OHSR)</span>
+                        <div className="preview-table-container">
+                            <table className="preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>Survey Code</th>
+                                        <th>Zone</th>
+                                        <th>Street</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Lat</th>
+                                        <th>Lng</th>
+                                        <th>Houses</th>
+                                        <th>Usage</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sheetData.slice(0, 10).map((device, idx) => (
+                                        <tr key={idx}>
+                                            <td>{device.survey_id}</td>
+                                            <td>{device.zone}</td>
+                                            <td>{device.street || '—'}</td>
+                                            <td>{device.device_type}</td>
+                                            <td>
+                                                <span className={`status-badge status-${device.status?.toLowerCase().replace(' ', '-')}`}>
+                                                    {device.status}
+                                                </span>
+                                            </td>
+                                            <td>{device.lat?.toFixed(6) || '—'}</td>
+                                            <td>{device.lng?.toFixed(6) || '—'}</td>
+                                            <td>{device.houses || 0}</td>
+                                            <td>{device.usage_hours || '—'}</td>
+                                            <td className="notes-cell">{device.notes || '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {sheetData.length > 10 && (
+                                <div className="preview-more">
+                                    + {sheetData.length - 10} more devices...
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="info-item">
-                        <Check size={16} />
-                        <span>Formatted columns with proper widths</span>
+
+                    {/* Export Info */}
+                    <div className="export-info">
+                        <h3>Export Information</h3>
+                        <div className="info-grid">
+                            <div className="info-item">
+                                <Check size={16} />
+                                <span>Multi-sheet workbook (All, Borewell, Sump, OHSR)</span>
+                            </div>
+                            <div className="info-item">
+                                <Check size={16} />
+                                <span>Formatted columns with proper widths</span>
+                            </div>
+                            <div className="info-item">
+                                <Check size={16} />
+                                <span>Includes all device data and GPS coordinates</span>
+                            </div>
+                            <div className="info-item">
+                                <Check size={16} />
+                                <span>Timestamp in filename for version control</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="info-item">
-                        <Check size={16} />
-                        <span>Includes all device data and GPS coordinates</span>
-                    </div>
-                    <div className="info-item">
-                        <Check size={16} />
-                        <span>Timestamp in filename for version control</span>
-                    </div>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 }

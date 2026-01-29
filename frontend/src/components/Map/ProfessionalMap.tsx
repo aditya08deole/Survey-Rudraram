@@ -31,9 +31,9 @@ import './ProfessionalMap.css';
 const CONFIG = {
     center: [17.558599, 78.166078] as [number, number],
     defaultZoom: 15,
-    minZoom: 3,
-    maxZoomGlobal: 28, // Allow up to 28 for vector maps
-    maxZoomSatellite: 22, // Cap satellite to avoid blur
+    minZoom: 10, // Prevent zooming out to world level (keep focus on Rudraram)
+    maxZoomGlobal: 24, // Optimized max for vector
+    maxZoomSatellite: 22,
 };
 
 // ===================================

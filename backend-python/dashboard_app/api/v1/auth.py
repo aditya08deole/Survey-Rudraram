@@ -102,13 +102,60 @@ async def signup(request: Request, user_data: SignupRequest):
         }
     }
 
-@router.get("/me")
+@router.get("/me", response_model=User)
 @limiter.limit("30/minute")
-async def get_current_user_info(request: Request, current_user: dict = Depends(get_current_user)):
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """
     Get current authenticated user information
     """
     return current_user
+
+class InviteRequest(BaseModel):
+    email: EmailStr
+    username: str
+    password: str
+    role: str = "viewer"
+
+@router.get("/users", response_model=List[User])
+@limiter.limit("10/minute")
+async def list_users(admin: User = Depends(require_role(["admin"]))):
+    """
+    List all users in the project (Admin only)
+    """
+    return [
+        User(
+            id=u["id"], 
+            username=u["username"], 
+            email=u["email"], 
+            role=u["role"]
+        ) for u in users_db.values()
+    ]
+
+@router.post("/invite", response_model=User)
+@limiter.limit("10/minute")
+async def invite_user(invite: InviteRequest, admin: User = Depends(require_role(["admin"]))):
+    """
+    Directly create a new user (Admin only).
+    In a full system, this would send an email. For now, it registers them directly.
+    """
+    if invite.email in users_db:
+        raise HTTPException(status_code=400, detail="User already exists")
+    
+    user_id = str(len(users_db) + 1)
+    users_db[invite.email] = {
+        "id": user_id,
+        "username": invite.username,
+        "email": invite.email,
+        "hashed_password": get_password_hash(invite.password),
+        "role": invite.role
+    }
+    
+    return User(
+        id=user_id,
+        username=invite.username,
+        email=invite.email,
+        role=invite.role
+    )
 
 @router.post("/logout")
 async def logout():

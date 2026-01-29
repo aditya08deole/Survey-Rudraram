@@ -3,12 +3,13 @@ Database-backed API routes for Rudraram Survey
 Uses Supabase PostgreSQL instead of Excel files
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional, Dict, Any
 from supabase import create_client
 import os
 from dotenv import load_dotenv
 import logging
+from dashboard_app.auth.permissions import get_current_user, require_role
 
 # Load environment
 load_dotenv(".env.development")
@@ -36,7 +37,11 @@ class NoteUpdate(BaseModel):
     device_type: str
 
 @router.patch("/devices/{survey_code}/notes")
-async def update_device_notes(survey_code: str, update: NoteUpdate):
+async def update_device_notes(
+    survey_code: str, 
+    update: NoteUpdate, 
+    current_user: dict = Depends(require_role(["admin", "editor"]))
+):
     """Update notes for a specific device"""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not configured")
@@ -52,7 +57,22 @@ async def update_device_notes(survey_code: str, update: NoteUpdate):
          raise HTTPException(status_code=400, detail="Invalid device type")
 
     try:
+        # Fetch old data for audit trail
+        old_record = supabase.table(table).select("notes").eq("survey_code", survey_code).execute()
+        old_notes = old_record.data[0]["notes"] if old_record.data else None
+
         supabase.table(table).update({"notes": update.notes}).eq("survey_code", survey_code).execute()
+        
+        # Log Audit
+        from dashboard_app.services.sync_service import SyncService
+        SyncService.log_audit(
+            operation="UPDATE_NOTES",
+            table_name=table,
+            record_id=survey_code,
+            old_data={"notes": old_notes},
+            new_data={"notes": update.notes}
+        )
+        
         return {"success": True, "message": "Notes updated"}
     except Exception as e:
         logger.error(f"Failed to update notes: {e}")
@@ -171,60 +191,77 @@ async def get_device_by_code(survey_code: str):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@router.get("/stats")
-async def get_statistics():
-    """Get overall statistics from database"""
+@router.get("/stats/trends")
+async def get_stats_trends():
+    """Get 14-day trend of device synchronization"""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not configured")
     
     try:
-        # Count devices by type
-        borewells_count = len(supabase.table("borewells").select("id").execute().data)
-        sumps_count = len(supabase.table("sumps").select("id").execute().data)
-        ohsr_count = len(supabase.table("overhead_tanks").select("id").execute().data)
+        from datetime import datetime, timedelta
+        fourteen_days_ago = (datetime.now() - timedelta(days=14)).isoformat()
         
-        # Get borewell status breakdown
-        borewells_data = supabase.table("borewells").select("status, zone").execute().data
+        # Query sync history for the last 14 days
+        result = supabase.table("sync_history") \
+            .select("started_at, devices_synced, status") \
+            .gte("started_at", fourteen_days_ago) \
+            .order("started_at", desc=False) \
+            .execute()
         
-        status_counts = {}
-        zone_counts = {}
+        # Group by date
+        trends = {}
+        for entry in result.data:
+            if not entry.get("started_at"): continue
+            date_str = entry["started_at"].split('T')[0]
+            if date_str not in trends:
+                trends[date_str] = 0
+            if entry["status"] == "success":
+                trends[date_str] += entry.get("devices_synced") or 0
         
-        for item in borewells_data:
-            status = item.get("status") or "Unknown"
-            zone = item.get("zone") or "Unknown"
-            
-            status_counts[status] = status_counts.get(status, 0) + 1
-            zone_counts[zone] = zone_counts.get(zone, 0) + 1
+        formatted_trends = [{"date": k, "count": v} for k, v in sorted(trends.items())]
         
-        # Get sumps zones
-        sumps_data = supabase.table("sumps").select("zone").execute().data
-        for item in sumps_data:
-            zone = item.get("zone") or "Unknown"
-            zone_counts[zone] = zone_counts.get(zone, 0) + 1
-        
-        # Get OHSR zones
-        ohsr_data = supabase.table("overhead_tanks").select("zone").execute().data
-        for item in ohsr_data:
-            zone = item.get("zone") or "Unknown"
-            zone_counts[zone] = zone_counts.get(zone, 0) + 1
-        
-        return {
-            "success": True,
-            "data": {
-                "total_devices": borewells_count + sumps_count + ohsr_count,
-                "by_type": {
-                    "borewells": borewells_count,
-                    "sumps": sumps_count,
-                    "overhead_tanks": ohsr_count
-                },
-                "by_status": status_counts,
-                "by_zone": zone_counts
-            }
-        }
-        
+        return {"success": True, "data": formatted_trends}
     except Exception as e:
-        logger.error(f"Statistics query failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        logger.error(f"Trends query failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stats/health")
+async def get_stats_health():
+    """Get infrastructure health scores per zone"""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not configured")
+    
+    try:
+        # Fetch borewells (primary indicators of health)
+        borewells = supabase.table("borewells").select("zone, status").execute().data
+        
+        zone_stats = {}
+        for b in borewells:
+            zone = b.get("zone") or "Unknown"
+            if zone not in zone_stats:
+                zone_stats[zone] = {"total": 0, "working": 0}
+            
+            zone_stats[zone]["total"] += 1
+            if b.get("status") == "Working":
+                zone_stats[zone]["working"] += 1
+        
+        health_scores = []
+        for zone, stats in zone_stats.items():
+            score = (stats["working"] / stats["total"] * 100) if stats["total"] > 0 else 0
+            health_scores.append({
+                "zone": zone,
+                "score": round(score, 1),
+                "total": stats["total"],
+                "working": stats["working"]
+            })
+            
+        # Sort by score descending
+        health_scores.sort(key=lambda x: x["score"], reverse=True)
+        
+        return {"success": True, "data": health_scores}
+    except Exception as e:
+        logger.error(f"Health query failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/zones")

@@ -1,0 +1,47 @@
+# Rudraram Survey - Project Architecture & Connectivity
+# Documentation of the EvaraTech Water Infrastructure Monitoring System
+
+project_identity:
+  name: "Rudraram Survey Dashboard"
+  description: "Enterprise-grade geospatial monitoring system for communal water infrastructure."
+  version: "4.0.0 (Phase 20 Optimization)"
+
+file_system_structure:
+  root: "c:/Users/asus/OneDrive/Desktop/StartUp/Rudraram Survey"
+  
+  backend:
+    directory: "backend-python"
+    main_file: "backend-python/main.py"
+    routing: "backend-python/dashboard_app/api/v1"
+    schemas: "backend-python/*.sql"
+    requirements: "backend-python/requirements.txt"
+    environment: "backend-python/.env.production"
+    
+  frontend:
+    directory: "frontend"
+    entry_point: "frontend/src/index.js"
+    build_output: "frontend/build"
+    services: "frontend/src/services"
+    config: "frontend/package.json"
+    manifest: "frontend/public/manifest.json"
+
+architectural_connections:
+  frontend_to_backend:
+    interface: "apiService.js -> FastAPI"
+    base_url_prod: "https://rudraram-survey-dashboard.onrender.com"
+    base_url_dev: "http://localhost:8000"
+    
+  backend_to_frontend:
+    mechanism: "Static file mounting in main.py"
+    mount_point: "FRONTEND_BUILD_DIR = BASE_DIR.parent / 'frontend' / 'build'"
+    
+  database_pipeline:
+    sync_trigger: "POST /api/sync/excel"
+    data_source: "Excel via GitHub Raw"
+    target: "Supabase PostgreSQL Database"
+    storage: "Supabase Buckets (device-photos, device-gallery)"
+
+deployment_specification:
+  provider: "Render.com"
+  blueprint: "render.yaml"
+  monorepo_logic: "Single Web Service running both FastAPI and React Build"

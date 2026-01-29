@@ -1,11 +1,6 @@
-/**
- * Enhanced Device Table Page
- * 
- * Professional data grid with virtualization and map sync
- */
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { List } from 'react-window';
 import { fetchSurveyData } from '../services/apiService';
 import { useDeviceFilters } from '../hooks/useDeviceFilters';
 import {
@@ -19,11 +14,19 @@ import './DeviceTablePage.css';
 type SortField = 'survey_id' | 'zone' | 'device_type' | 'status' | 'houses';
 type SortDirection = 'asc' | 'desc';
 
+// Row Component Props for this specific react-window version
+interface DeviceRowProps {
+    index: number;
+    style: React.CSSProperties;
+}
+
 export function DeviceTablePage() {
     const [allDevices, setAllDevices] = useState<Device[]>([]);
     const [loading, setLoading] = useState(true);
     const [sortField, setSortField] = useState<SortField>('survey_id');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [tableWidth, setTableWidth] = useState(1200);
     const navigate = useNavigate();
 
     const {
@@ -37,6 +40,17 @@ export function DeviceTablePage() {
 
     useEffect(() => {
         loadData();
+
+        // Handle responsive width for virtualization
+        const updateWidth = () => {
+            if (containerRef.current) {
+                setTableWidth(containerRef.current.offsetWidth);
+            }
+        };
+
+        window.addEventListener('resize', updateWidth);
+        updateWidth();
+        return () => window.removeEventListener('resize', updateWidth);
     }, []);
 
     const loadData = async () => {
@@ -85,12 +99,56 @@ export function DeviceTablePage() {
         return <span className="status-icon neutral">—</span>;
     };
 
+    // Virtualized Row Component
+    const DeviceRow = ({ index, style, ...rest }: any) => {
+        const device = sortedDevices[index];
+        if (!device) return null;
+        return (
+            <div className="virtual-row" style={style} {...rest}>
+                <div className="virtual-cell survey-code">{device.survey_id || '—'}</div>
+                <div className="virtual-cell">{device.zone || '—'}</div>
+                <div className="virtual-cell">{device.street || '—'}</div>
+                <div className="virtual-cell">
+                    <span className={`type-badge type-${device.device_type?.toLowerCase()}`}>
+                        {device.device_type || 'Unknown'}
+                    </span>
+                </div>
+                <div className="virtual-cell">
+                    <div className="status-cell">
+                        {getStatusIcon(device.status)}
+                        <span>{device.status || 'Unknown'}</span>
+                    </div>
+                </div>
+                <div className="virtual-cell numeric">{device.houses || 0}</div>
+                <div className="virtual-cell numeric">{device.usage_hours || '—'}</div>
+                <div className="virtual-cell numeric">{device.motor_hp || '—'}</div>
+                <div className="virtual-cell">
+                    {device.lat && device.lng ? (
+                        <span className="gps-badge success">✓ Mapped</span>
+                    ) : (
+                        <span className="gps-badge warning">✗ No GPS</span>
+                    )}
+                </div>
+                <div className="virtual-cell">
+                    <button
+                        onClick={() => handleViewOnMap(device)}
+                        className="btn-view-map"
+                        disabled={!device.lat || !device.lng}
+                    >
+                        <MapPin size={14} />
+                        View
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     if (loading) {
         return <LoadingAnimation fullScreen message="Loading device table..." />;
     }
 
     return (
-        <div className="device-table-page">
+        <div className="device-table-page" ref={containerRef}>
             {/* Header */}
             <div className="table-header">
                 <div className="table-title">
@@ -128,90 +186,39 @@ export function DeviceTablePage() {
                 <span className="result-count">
                     Showing <strong>{filterCount.filtered}</strong> of <strong>{filterCount.total}</strong> devices
                 </span>
+                <span className="perf-badge">🚀 Virtualized</span>
             </div>
 
-            {/* Table */}
-            <div className="table-container">
-                <table className="device-table">
-                    <thead>
-                        <tr>
-                            <th onClick={() => handleSort('survey_id')} className="sortable">
-                                Survey Code
-                                <ArrowUpDown size={14} />
-                            </th>
-                            <th onClick={() => handleSort('zone')} className="sortable">
-                                Zone
-                                <ArrowUpDown size={14} />
-                            </th>
-                            <th>Street</th>
-                            <th onClick={() => handleSort('device_type')} className="sortable">
-                                Type
-                                <ArrowUpDown size={14} />
-                            </th>
-                            <th onClick={() => handleSort('status')} className="sortable">
-                                Status
-                                <ArrowUpDown size={14} />
-                            </th>
-                            <th onClick={() => handleSort('houses')} className="sortable">
-                                Houses
-                                <ArrowUpDown size={14} />
-                            </th>
-                            <th>Usage (hrs)</th>
-                            <th>Motor HP</th>
-                            <th>GPS</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedDevices.length === 0 ? (
-                            <tr>
-                                <td colSpan={10} className="no-results">
-                                    <AlertTriangle size={24} />
-                                    <p>No devices found matching your filters</p>
-                                </td>
-                            </tr>
-                        ) : (
-                            sortedDevices.map((device, idx) => (
-                                <tr key={device.survey_id || idx} className="device-row">
-                                    <td className="survey-code">{device.survey_id || '—'}</td>
-                                    <td>{device.zone || '—'}</td>
-                                    <td>{device.street || '—'}</td>
-                                    <td>
-                                        <span className={`type-badge type-${device.device_type?.toLowerCase()}`}>
-                                            {device.device_type || 'Unknown'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="status-cell">
-                                            {getStatusIcon(device.status)}
-                                            <span>{device.status || 'Unknown'}</span>
-                                        </div>
-                                    </td>
-                                    <td className="numeric">{device.houses || 0}</td>
-                                    <td className="numeric">{device.usage_hours || '—'}</td>
-                                    <td className="numeric">{device.motor_hp || '—'}</td>
-                                    <td>
-                                        {device.lat && device.lng ? (
-                                            <span className="gps-badge success">✓ Mapped</span>
-                                        ) : (
-                                            <span className="gps-badge warning">✗ No GPS</span>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <button
-                                            onClick={() => handleViewOnMap(device)}
-                                            className="btn-view-map"
-                                            disabled={!device.lat || !device.lng}
-                                        >
-                                            <MapPin size={14} />
-                                            View
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+            {/* Virtualized Table */}
+            <div className="table-container virtualized">
+                <div className="table-sticky-header">
+                    <div className="header-cell sortable" onClick={() => handleSort('survey_id')}>Survey Code <ArrowUpDown size={12} /></div>
+                    <div className="header-cell sortable" onClick={() => handleSort('zone')}>Zone <ArrowUpDown size={12} /></div>
+                    <div className="header-cell">Street</div>
+                    <div className="header-cell sortable" onClick={() => handleSort('device_type')}>Type <ArrowUpDown size={12} /></div>
+                    <div className="header-cell sortable" onClick={() => handleSort('status')}>Status <ArrowUpDown size={12} /></div>
+                    <div className="header-cell sortable" onClick={() => handleSort('houses')}>Houses <ArrowUpDown size={12} /></div>
+                    <div className="header-cell">Usage</div>
+                    <div className="header-cell">HP</div>
+                    <div className="header-cell">GPS</div>
+                    <div className="header-cell">Actions</div>
+                </div>
+
+                {sortedDevices.length === 0 ? (
+                    <div className="no-results-view">
+                        <AlertTriangle size={32} />
+                        <p>No devices found matching your filters</p>
+                    </div>
+                ) : (
+                    <List
+                        rowCount={sortedDevices.length}
+                        rowHeight={60}
+                        style={{ height: 600, width: tableWidth }}
+                        className="virtual-list"
+                        rowComponent={DeviceRow}
+                        rowProps={{}}
+                    />
+                )}
             </div>
         </div>
     );

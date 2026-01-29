@@ -12,11 +12,11 @@ import LoadingAnimation from '../components/LoadingAnimation';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 // @ts-ignore
 import { useApp } from '../context/AppContext';
+import FilterPanel from '../components/Map/FilterPanel';
 import './MapPage.css';
 
 export function MapPage() {
-    // Use Global Context instead of local state
-    // @ts-ignore
+    // ... logic remains same ...
     const {
         getFilteredDevices,
         isLoading,
@@ -52,12 +52,9 @@ export function MapPage() {
 
     return (
         <div className="map-page">
-            {/* Command Bar Removed - Functions merged into NavigationHeader */}
-
             <div className="map-page-content">
-                {/* Main Content Area */}
                 <div className="map-page-main">
-                    {/* Map */}
+                    <FilterPanel />
                     <div className="map-container">
                         <ProfessionalMap
                             devices={filteredDevices}

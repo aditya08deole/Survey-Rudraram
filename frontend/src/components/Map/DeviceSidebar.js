@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, Droplet, Zap, Ruler, Clock, Home, FileText, Camera, Info } from 'lucide-react';
-import ImageUpload from '../DeviceImages/ImageUpload';
-import ImageGallery from '../DeviceImages/ImageGallery';
-import { imageService } from '../../services/imageService';
-import { updateDeviceNotes } from '../../services/apiService';
+import { X, MapPin, Droplet, Droplets, Zap, Ruler, Clock, Home, FileText, Camera, Info, ImageIcon, Download } from 'lucide-react';
+import apiService from '../../services/apiService';
+import DeviceImageGallery from './DeviceImageGallery';
+import { generateDeviceReport } from '../../services/ReportGenerator';
+import { useApp } from '../../context/AppContext';
 import './DeviceSidebar.css';
 
 const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
+    const { user } = useApp();
     const [activeTab, setActiveTab] = useState('details');
     const [coverImage, setCoverImage] = useState(null);
-    const [showUploadModal, setShowUploadModal] = useState(false);
     const [isEditingNote, setIsEditingNote] = useState(false);
     const [noteText, setNoteText] = useState('');
+
+    const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
 
     useEffect(() => {
         if (device?.survey_id) {
             setNoteText(device.notes || '');
-            imageService.getDeviceImages(device.survey_id)
-                .then(images => {
-                    if (images && images.length > 0) {
-                        const primary = images.find(img => img.is_primary) || images[0];
-                        setCoverImage(primary.url);
+            // Fetch primary image for cover
+            apiService.fetchDeviceImages(device.survey_id)
+                .then(response => {
+                    if (response.success && response.data && response.data.length > 0) {
+                        const primary = response.data.find(img => img.is_primary) || response.data[0];
+                        setCoverImage(primary.image_url);
                     } else {
                         setCoverImage(null);
                     }
@@ -49,7 +52,6 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                     <DetailRow icon={<Droplet size={16} />} label="Pipe Size" value={device.pipe_size_inch} unit="inch" />
                     <DetailRow icon={<Zap size={16} />} label="Power" value={device.power_type} />
                     <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses_connected} />
-                    <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.daily_usage_hrs} unit="hrs" />
                     <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.daily_usage_hrs} unit="hrs" />
                     {/* sr_no removed as per request */}
                     <DetailRow icon={<Info size={16} />} label="Status" value={device.done !== undefined ? (device.done ? 'Done' : 'Pending') : null} />
@@ -133,11 +135,11 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
             </div>
 
             {/* 2. Header & Title (Floating up into image) */}
-            <div className={`sidebar - header has - cover`}>
+            <div className={`sidebar-header has-cover`}>
                 <div style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h2 className="sidebar-title">{deviceName}</h2>
-                        <span className={`status - badge status - ${(device.status || 'Working').toLowerCase().replace(' ', '-')} `}>
+                        <span className={`status-badge status-${(device.status || 'Working').toLowerCase().replace(' ', '-')}`}>
                             {device.status || 'Unknown'}
                         </span>
                     </div>
@@ -147,15 +149,15 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
             {/* 3. Action Bar (Google Maps Style) */}
             <div className="sidebar-actions-bar">
-                <button className="action-chip primary" onClick={() => setShowUploadModal(true)}>
+                <button className={`action-chip primary ${activeTab === 'images' ? 'active' : ''}`} onClick={() => setActiveTab('images')}>
                     <Camera size={16} />
-                    <span>Add Photo</span>
+                    <span>Photos</span>
                 </button>
-                <button className={`action - chip ${activeTab === 'images' ? 'active' : ''} `} onClick={() => setActiveTab('images')}>
-                    <FileText size={16} />
-                    <span>Gallery</span>
+                <button className="action-chip" onClick={() => generateDeviceReport(device)}>
+                    <Download size={16} />
+                    <span>Report</span>
                 </button>
-                <button className={`action - chip ${activeTab === 'details' ? 'active' : ''} `} onClick={() => setActiveTab('details')}>
+                <button className={`action-chip ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>
                     <Info size={16} />
                     <span>Details</span>
                 </button>
@@ -189,7 +191,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                         <div className="sidebar-section">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                 <h3 className="section-title" style={{ marginBottom: 0 }}>Field Notes</h3>
-                                {!isEditingNote && (
+                                {!isEditingNote && isAdminOrEditor && (
                                     <button className="edit-notes-link" onClick={() => setIsEditingNote(true)}>Edit</button>
                                 )}
                             </div>
@@ -203,7 +205,7 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                                     />
                                     <div className="note-actions">
                                         <button className="btn-save" onClick={async () => {
-                                            await updateDeviceNotes(surveyId, deviceType, noteText);
+                                            await apiService.updateDeviceNotes(surveyId, deviceType, noteText);
                                             setIsEditingNote(false);
                                             device.notes = noteText;
                                         }}>Save</button>
@@ -219,24 +221,10 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 
                 {activeTab === 'images' && (
                     <div className="images-tab fade-in">
-                        <ImageGallery surveyCode={surveyId} />
+                        <DeviceImageGallery surveyCode={surveyId} />
                     </div>
                 )}
             </div>
-
-            {showUploadModal && (
-                <ImageUpload
-                    surveyCode={surveyId}
-                    onUploadSuccess={() => {
-                        imageService.getDeviceImages(surveyId).then(images => {
-                            const primary = images.find(img => img.is_primary) || images[0];
-                            setCoverImage(primary ? primary.url : null);
-                        });
-                        setShowUploadModal(false);
-                    }}
-                    onClose={() => setShowUploadModal(false)}
-                />
-            )}
         </div>
     );
 };
@@ -244,11 +232,11 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 const DetailRow = ({ icon, label, value, unit, highlight }) => {
     if (value === undefined || value === null || value === '') return null;
     return (
-        <div className={`detail - card ${highlight ? 'highlight' : ''} `}>
+        <div className={`detail-card ${highlight ? 'highlight' : ''}`}>
             <div className="detail-icon">{icon}</div>
             <div className="detail-content">
                 <span className="detail-label">{label}</span>
-                <span className="detail-value">{value}{unit ? ` ${unit} ` : ''}</span>
+                <span className="detail-value">{value}{unit ? ` ${unit}` : ''}</span>
             </div>
         </div>
     );

@@ -127,6 +127,10 @@ async def fetch_from_supabase(sheet_filter: str) -> List[Dict[str, Any]]:
 
 from dashboard_app.schemas.survey import SurveyDataResponse, SurveyStatsResponse
 
+# Simple in-memory cache for Supabase data
+_supabase_cache = {}
+CACHE_EXPIRY_SECONDS = 300 # 5 minutes
+
 @router.get("/survey-data", response_model=SurveyDataResponse)
 async def get_all_survey_data(
     sheet: str = "All",
@@ -139,13 +143,9 @@ async def get_all_survey_data(
     - source='excel': Fetches from GitHub Excel file (For Table View comparison)
     """
     try:
-        response_data = {}
-        headers = {}
-        
         if source == "excel":
             # --- EXCEL PATH ---
             result = get_excel_data(sheet, include_invalid=include_invalid)
-            # Result already has {devices, metadata, etc}
             json_safe_content = jsonable_encoder(result)
             metadata = result.get("metadata", {})
             return JSONResponse(
@@ -158,6 +158,23 @@ async def get_all_survey_data(
             )
         else:
             # --- SUPABASE PATH (DEFAULT) ---
+            # Check cache
+            cache_key = f"{sheet}_{include_invalid}"
+            now = datetime.now().timestamp()
+            
+            if cache_key in _supabase_cache:
+                data, timestamp = _supabase_cache[cache_key]
+                if now - timestamp < CACHE_EXPIRY_SECONDS:
+                    logger.info(f"Serving /survey-data from memory cache: {cache_key}")
+                    return JSONResponse(
+                        content=data,
+                        headers={
+                            "X-Total-Devices": str(len(data.get("devices", []))),
+                            "X-Source": "database-cache",
+                            "Cache-Control": f"public, max-age={CACHE_EXPIRY_SECONDS}"
+                        }
+                    )
+
             all_devices = await fetch_from_supabase(sheet)
             
             # Construct response matching Excel format structure
@@ -174,11 +191,16 @@ async def get_all_survey_data(
                 }
             }
             
+            # Update cache
+            json_data = jsonable_encoder(response_data)
+            _supabase_cache[cache_key] = (json_data, now)
+            
             return JSONResponse(
-                content=jsonable_encoder(response_data),
+                content=json_data,
                 headers={
                     "X-Total-Devices": str(total),
-                    "X-Source": "database"
+                    "X-Source": "database",
+                    "Cache-Control": f"public, max-age={CACHE_EXPIRY_SECONDS}"
                 }
             )
             

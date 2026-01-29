@@ -33,9 +33,19 @@ EXCEL_HEADER_MAP: Dict[str, str] = {
     "Houses Conn.": "houses",
     "Daily Usage (Hrs)": "usage_hours",
     
-    # Technical Specifications
+    # Technical Specifications (Extended)
     "Pipe Size (inch)": "pipe_size",
     "Motor HP / Cap": "motor_hp",
+    "Depth (ft)": "depth_ft",
+    "Capacity": "capacity",
+    "Tank Height (m)": "tank_height_m",
+    "Tank Circumference (m)": "tank_circumference",
+    "Power Distance (m)": "power_distance_m",
+    "People Connected": "people_connected",
+    "Material": "material",
+    "Type": "type",
+    "Lid / Access": "lid_access",
+    "Power Type": "power_type",
     
     # Maintenance
     "Notes / Maintenance Issue": "notes",

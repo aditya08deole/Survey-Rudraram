@@ -1,0 +1,65 @@
+# Rudraram Survey - Full Project Manifest
+# Mapping all core components and their inter-dependencies
+
+manifest_version: "1.0.0"
+last_updated: "2026-01-29"
+
+backend:
+  base_path: "./backend-python"
+  core_files:
+    - path: "main.py"
+      role: "Application entry point & Static file server"
+      connects_to: ["dashboard_app", "frontend/build"]
+    - path: "requirements.txt"
+      role: "Python dependency manifest"
+    - path: "dashboard_app/api/v1/database.py"
+      role: "Core DB operations (Stats, Health, Updates)"
+      connects_to: ["Supabase"]
+    - path: "dashboard_app/api/v1/sync.py"
+      role: "Excel-to-Supabase synchronization pipeline"
+      connects_to: ["GitHub Raw", "Supabase"]
+    - path: "dashboard_app/api/v1/device_images.py"
+      role: "Rich media & storage management"
+      connects_to: ["Supabase Storage"]
+    - path: "dashboard_app/auth/permissions.py"
+      role: "RBAC (Role Based Access Control) logic"
+  database:
+    schemas:
+      - "database_schema_images.sql"
+      - "database_schema_integrity.sql"
+      - "database_schema_security.sql"
+      - "database_schema_tracking.sql"
+
+frontend:
+  base_path: "./frontend"
+  core_files:
+    - path: "src/index.js"
+      role: "Frontend entry point & PWA Registration"
+      connects_to: ["serviceWorkerRegistration.js"]
+    - path: "src/services/apiService.js"
+      role: "Unified API communication layer"
+      connects_to: ["FastAPI Backend"]
+    - path: "src/context/AppContext.js"
+      role: "Global state & data orchestration"
+    - path: "src/pages/DeviceTablePage.tsx"
+      role: "Virtualized Device Registry (Performance Optimized)"
+      connects_to: ["react-window"]
+    - path: "src/components/OfflineBanner.tsx"
+      role: "PWA connectivity status indicator"
+    - path: "src/service-worker.js"
+      role: "Offline caching & PWA Logic"
+
+performance_optimizations:
+  api: "GZip Middleware (FastAPI)"
+  table_rendering: "react-window virtualization (600px window)"
+  network: "Service Worker caching (Stale-While-Revalidate/Network-First)"
+  images: "WebP format + Lazy Loading"
+
+deployment_and_ci:
+  render_config: "render.yaml"
+  github_actions: ".github/workflows/deploy.yml"
+
+connectivity_flow:
+  data_ingestion: "Excel (GitHub) -> Sync Pipeline (Backend) -> Supabase (DB)"
+  media_flow: "User (Browser) -> Direct Upload (JS) -> Supabase Storage"
+  client_request: "React UI -> apiService.js -> FastAPI -> PostgreSQL"

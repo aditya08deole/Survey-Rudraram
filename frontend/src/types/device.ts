@@ -34,13 +34,28 @@ export interface Device {
 
     // Technical specifications
     pipe_size: number | null;
+    pipe_size_inch?: number | null;
     motor_hp: number | null;
+    depth_ft?: number | null;
+    capacity?: string | number | null;
+    tank_height_m?: number | null;
+    tank_circumference?: number | null;
+    power_type?: string | null;
+    power_distance_m?: number | null;
+    houses_connected?: number | null;
+    people_connected?: number | null;
+    daily_usage_hrs?: number | null;
+    material?: string | null;
+    type?: string | null;
+    lid_access?: string | null;
+    location?: string | null;
 
     // Maintenance
     notes: string | null;
 
     // Metadata
     row_index?: number;
+    done?: boolean;
 }
 
 export interface Filters {

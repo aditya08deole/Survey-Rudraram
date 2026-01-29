@@ -470,12 +470,142 @@ export const updateDeviceNotes = async (surveyCode, deviceType, notes) => {
   }
 };
 
+/**
+ * Trigger Excel to Supabase synchronization
+ * @returns {Promise<Object>} Sync result
+ */
+export const triggerExcelSync = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/sync/excel`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Sync failed");
+    return await response.json();
+  } catch (error) {
+    console.error("Sync error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch 14-day analytics trends
+ */
+export const fetchAnalyticsTrends = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/db/stats/trends`);
+    if (!response.ok) throw new Error("Failed to fetch trends");
+    return await response.json();
+  } catch (error) {
+    console.error("Trends error:", error);
+    return { success: false, data: [] };
+  }
+};
+
+/**
+ * Fetch zone-level health metrics
+ */
+export const fetchAnalyticsHealth = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/db/stats/health`);
+    if (!response.ok) throw new Error("Failed to fetch health stats");
+    return await response.json();
+  } catch (error) {
+    console.error("Health stats error:", error);
+    return { success: false, data: [] };
+  }
+};
+
+/**
+ * Team Management - Fetching members
+ */
+export const fetchTeamMembers = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/users`);
+    if (!response.ok) throw new Error("Failed to fetch team");
+    return await response.json();
+  } catch (error) {
+    console.error("Team error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Team Management - Inviting members
+ */
+export const inviteUser = async (userData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw { response: { data: errorData } };
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Invite error:", error);
+    throw error;
+  }
+};
+
+// Image management methods should be here too...
+// I noticed some were missing or incorrectly referenced in the default export.
+// I'll add them here properly.
+
+export const uploadDeviceImage = async (surveyCode, file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(`${API_BASE_URL}/api/device-images/upload/${surveyCode}`, {
+    method: 'POST',
+    body: formData
+  });
+  return await response.json();
+};
+
+export const fetchDeviceImages = async (surveyCode) => {
+  const response = await fetch(`${API_BASE_URL}/api/device-images/${surveyCode}`);
+  return await response.json();
+};
+
+export const deleteDeviceImage = async (imageId) => {
+  const response = await fetch(`${API_BASE_URL}/api/device-images/${imageId}`, {
+    method: 'DELETE'
+  });
+  return await response.json();
+};
+
+export const setPrimaryImage = async (surveyCode, imageId) => {
+  const response = await fetch(`${API_BASE_URL}/api/device-images/${imageId}/primary?survey_code=${surveyCode}`, {
+    method: 'PATCH'
+  });
+  return await response.json();
+};
+
+/**
+ * Fetch synchronization history logs
+ * @returns {Promise<Array>} List of sync history objects
+ */
+export const fetchSyncHistory = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/sync/history`, {
+      method: "GET",
+    });
+    if (!response.ok) throw new Error("Failed to fetch sync history");
+    return await response.json();
+  } catch (error) {
+    console.error("Fetch sync history error:", error);
+    return [];
+  }
+};
+
 // Export API base URL for debugging
 export { API_BASE_URL };
 
 // Default export
 const apiService = {
-  // Excel-based API (Legacy)
+  // Excel-based API
   fetchSurveyData,
   fetchAvailableSheets,
 
@@ -483,7 +613,7 @@ const apiService = {
   refreshCache,
   checkApiHealth,
 
-  // Database API (New)
+  // Database API
   fetchDevicesFromDB,
   fetchStatsFromDB,
   fetchDeviceByCodeDB,
@@ -491,6 +621,21 @@ const apiService = {
   checkDatabaseHealth,
   updateDeviceNotes,
   deleteAllMapZones,
+  triggerExcelSync,
+  fetchSyncHistory: async () => {
+    const response = await fetch(`${API_BASE_URL}/api/sync/history`);
+    return await response.json();
+  },
+
+  // New Methods
+  uploadDeviceImage,
+  fetchDeviceImages,
+  deleteDeviceImage,
+  setPrimaryImage,
+  fetchTeamMembers,
+  inviteUser,
+  fetchAnalyticsTrends,
+  fetchAnalyticsHealth,
 
   API_BASE_URL
 };
