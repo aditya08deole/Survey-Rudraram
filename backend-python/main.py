@@ -59,6 +59,14 @@ app.state.limiter = limiter
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return _rate_limit_exceeded_handler(request, exc)
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global server error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": str(exc) if DEBUG else "An unexpected error occurred."}
+    )
+
 # CORS Configuration - Critical for Production
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
 if not allowed_origins or allowed_origins == [""]:

@@ -125,7 +125,9 @@ async def fetch_from_supabase(sheet_filter: str) -> List[Dict[str, Any]]:
             
     return all_devices
 
-@router.get("/survey-data")
+from dashboard_app.schemas.survey import SurveyDataResponse, SurveyStatsResponse
+
+@router.get("/survey-data", response_model=SurveyDataResponse)
 async def get_all_survey_data(
     sheet: str = "All",
     source: str = Query("supabase", description="Data source: 'supabase' or 'excel'"),
@@ -184,7 +186,7 @@ async def get_all_survey_data(
         logger.error(f"Error in /api/survey-data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/survey-data/stats")
+@router.get("/survey-data/stats", response_model=SurveyStatsResponse)
 async def get_survey_stats(source: str = Query("supabase")):
     """Get statistics (Calculated from DB or Excel)"""
     try:
