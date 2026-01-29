@@ -38,7 +38,7 @@ const getDeviceType = (type) => {
   return 'BOREWELL';
 };
 
-// Borewell: Circle with B
+// Borewell: Green/Red Circle + Drill Icon
 const createBorewellIcon = (status) => {
   const working = isWorking(status);
   const color = working ? COLORS.GREEN : COLORS.RED;
@@ -46,71 +46,79 @@ const createBorewellIcon = (status) => {
 
   return `
         <div style="
-            width: 24px; height: 24px;
+            width: 28px; height: 28px;
             background: ${color};
             border-radius: 50%;
             border: 2px solid white;
             box-shadow: ${glow};
             display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: 800; font-size: 12px;
-            font-family: Arial, sans-serif;
-        ">B</div>
+        ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L12 12"></path>
+                <path d="M12 12L4.92893 19.0711C4.53841 19.4616 4.53841 20.0948 4.92893 20.4853L5.63604 21.1924C6.02656 21.5829 6.65973 21.5829 7.05025 21.1924L12 16.2426L16.9497 21.1924C17.3403 21.5829 17.9734 21.5829 18.364 21.1924L19.0711 20.4853C19.4616 20.0948 19.4616 19.4616 19.0711 19.0711L12 12Z"></path>
+                <path d="M7 7H17"></path>
+            </svg>
+        </div>
     `;
 };
 
-// Sump: Square with S
+// Sump: Square with Waves
 const createSumpIcon = (status) => {
   const working = isWorking(status);
   const glow = working ? GLOW.BLUE : 'none';
 
   return `
         <div style="
-            width: 22px; height: 22px;
+            width: 24px; height: 24px;
             background: ${COLORS.BLUE};
-            border-radius: 4px;
+            border-radius: 6px;
             border: 2px solid white;
             box-shadow: ${glow};
             display: flex; align-items: center; justify-content: center;
-            color: #000; font-weight: 800; font-size: 12px;
-            font-family: Arial, sans-serif;
-        ">S</div>
+        ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12C2 12 5 9 8 9C11 9 11 15 14 15C17 15 22 9 22 9"></path>
+                <path d="M2 17C2 17 5 14 8 14C11 14 11 20 14 20C17 20 22 14 22 14"></path>
+            </svg>
+        </div>
     `;
 };
 
-// OHSR: Orange Triangle with O
+// OHSR: Orange Triangle with Tower Icon
 const createOhsrIcon = (status) => {
   const working = isWorking(status);
   const glow = working ? `drop-shadow(0 0 8px ${COLORS.ORANGE})` : 'none';
 
   return `
-        <div style="position: relative; width: 28px; height: 26px;">
+        <div style="position: relative; width: 32px; height: 30px;">
             <div style="
                 width: 0; height: 0;
-                border-left: 14px solid transparent;
-                border-right: 14px solid transparent;
-                border-bottom: 26px solid ${COLORS.ORANGE};
+                border-left: 16px solid transparent;
+                border-right: 16px solid transparent;
+                border-bottom: 28px solid ${COLORS.ORANGE};
                 filter: ${glow};
             "></div>
             <div style="
                 position: absolute; 
-                top: 12px; left: 50%;
+                top: 10px; left: 50%;
                 transform: translateX(-50%);
-                color: white; 
-                font-weight: 800; 
-                font-size: 11px;
-                font-family: Arial, sans-serif;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-            ">O</div>
+                display: flex; align-items: center; justify-content: center;
+            ">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 22H22L12 2Z"></path>
+                    <path d="M12 6L12 18"></path>
+                </svg>
+            </div>
         </div>
     `;
 };
 
-// Label
+// Label (Unchanged)
 const createLabel = (label) => {
   if (!label) return '';
   return `
         <div style="
-            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
             background: white;
             color: black; 
             padding: 2px 6px; 
@@ -145,8 +153,8 @@ export const getDeviceIcon = (type, status, label) => {
                 ${html}
                 ${createLabel(label)}
                </div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14]
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16]
   });
 };

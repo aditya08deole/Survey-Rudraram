@@ -110,7 +110,12 @@ if FRONTEND_BUILD_DIR.exists():
                 status_code=status.HTTP_404_NOT_FOUND,
                 content={"detail": "API endpoint not found"}
             )
-        return FileResponse(FRONTEND_BUILD_DIR / "index.html")
+        # Prevent caching of index.html so updates are instant
+        response = FileResponse(FRONTEND_BUILD_DIR / "index.html")
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 else:
     logger.warning(f"Frontend build directory not found at {FRONTEND_BUILD_DIR}. API only mode.")
     @app.get("/")
