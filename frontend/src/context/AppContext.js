@@ -179,7 +179,7 @@ export function AppProvider({ children }) {
       // Smart Fallback: If database is empty, try Excel
       if (!devices || devices.length === 0) {
         console.warn('⚠️ Database is empty. Falling back to Excel (Legacy Mode)...');
-        loadData('All');
+        loadData('All', 'excel');
         return;
       }
 
@@ -306,12 +306,12 @@ export function AppProvider({ children }) {
   };
 
   // Function to load all data from Excel API backend (legacy)
-  const loadData = async (sheetName = 'All') => {
+  const loadData = async (sheetName = 'All', source = 'supabase') => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
 
     try {
-      // Fetch data from FastAPI backend with sheet parameter
-      const result = await fetchSurveyData(sheetName);
+      // Fetch data from FastAPI backend with sheet and source parameters
+      const result = await fetchSurveyData(sheetName, source);
 
       if (!result.success) {
         throw new Error(result.errors.join(', ') || 'Failed to load data from API');

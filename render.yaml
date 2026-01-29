@@ -26,9 +26,3 @@ services:
     
     # Auto-deploy on push
     autoDeploy: true
-    
-    # Routes configuration for SPA
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
