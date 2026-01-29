@@ -4,7 +4,7 @@
  * Features:
  * - 5 Tile Providers (Sat: 22x, Street: 28x)
  * - Canvas Tools Integration
- * - HUD & Spotlight Integration (New)
+ * - Spotlight Integration (New)
  * - Stability Controller
  * - Smooth Animations
  * 
@@ -17,7 +17,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDeviceIcon } from './CustomMarkerIcons';
 import CanvasTools from './tools/CanvasTools';
-import HeadsUpDisplay from '../HUD/HeadsUpDisplay';
+
 import Spotlight from '../Command/Spotlight';
 import type { Device } from '../../types/device';
 import './ProfessionalMap.css';
@@ -157,8 +157,8 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
 
     return (
         <div className="professional-map">
-            {/* HUD & Spotlight Overlays */}
-            <HeadsUpDisplay visible={true} />
+            {/* Spotlight Overlay */}
+
             <Spotlight
                 devices={devices}
                 onDeviceSelect={(d) => onDeviceClick?.(d)}

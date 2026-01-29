@@ -68,24 +68,7 @@ export const fetchSurveyData = async (sheet = 'All', source = 'supabase') => {
   }
 };
 
-/**
- * Fetch survey statistics from API
- * @returns {Promise<Object>} Statistics object
- */
-export const fetchSurveyStats = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/survey-data/stats`);
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    throw error;
-  }
-};
 
 /**
  * Fetch specific device by survey code
@@ -494,8 +477,8 @@ export { API_BASE_URL };
 const apiService = {
   // Excel-based API (Legacy)
   fetchSurveyData,
-  fetchSurveyStats,
   fetchAvailableSheets,
+
   fetchDeviceByCode,
   refreshCache,
   checkApiHealth,

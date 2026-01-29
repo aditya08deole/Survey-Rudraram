@@ -131,11 +131,7 @@
     animation: neonPulse 2s infinite ease-in-out;
 }
 
-/* Ensure HUD is on top */
-.hud-overlay {
-    z-index: 5000;
-    pointer-events: none;
-}
+
 
 .spotlight-overlay {
     z-index: 9999;
