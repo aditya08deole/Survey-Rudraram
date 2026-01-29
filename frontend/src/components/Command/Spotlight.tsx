@@ -41,7 +41,7 @@ const Spotlight = ({ devices, onDeviceSelect, onCommand }: SpotlightProps) => {
     }, [isOpen]);
 
     // Filtering Logic
-    const getResults = () => {
+    const results = React.useMemo(() => {
         if (!query) return [];
         const q = query.toLowerCase();
 
@@ -69,9 +69,7 @@ const Spotlight = ({ devices, onDeviceSelect, onCommand }: SpotlightProps) => {
             }));
 
         return [...commands, ...deviceRes];
-    };
-
-    const results = getResults();
+    }, [query, devices]);
 
     const execute = (item: any) => {
         if (item.type === 'DEVICE') {

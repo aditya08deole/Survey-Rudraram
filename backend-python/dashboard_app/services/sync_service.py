@@ -57,10 +57,17 @@ class SyncService:
                     "zone": device["zone"],
                     "street": device["street"],
                     "motor_hp": device.get("motor_hp"),
-                    "depth_ft": device.get("depth"),  # Note: normalized key might be depth_ft? Let's check normalizer output
+                    "depth_ft": device.get("depth_ft"),
                     "pipe_size": device.get("pipe_size"),
-                    "capacity": device.get("capacity"), # Need to ensure normalizer extracts this
-                    "tank_height_m": device.get("height"), 
+                    "capacity": device.get("capacity"),
+                    "tank_height_m": device.get("tank_height_m"),
+                    "tank_circumference": device.get("tank_circumference"),
+                    "power_distance_m": device.get("power_distance_m"),
+                    "people_connected": device.get("people_connected"),
+                    "material": device.get("material"),
+                    "type": device.get("type"),
+                    "lid_access": device.get("lid_access"),
+                    "power_type": device.get("power_type"),
                     "notes": device.get("notes"),
                     # "images": device.get("images", []), # Don't overwrite images from Excel if we want to keep DB images? 
                     # Actually, for now, Excel is source of truth for METADATA. DB is source for IMAGES.

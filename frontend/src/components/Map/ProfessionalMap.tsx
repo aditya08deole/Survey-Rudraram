@@ -272,4 +272,5 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
     );
 }
 
-export default ProfessionalMap;
+const ProfessionalMapMemo = React.memo(ProfessionalMap);
+export default ProfessionalMapMemo;

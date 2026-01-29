@@ -133,11 +133,11 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
             </div>
 
             {/* 2. Header & Title (Floating up into image) */}
-            <div className={`sidebar-header has-cover`}>
+            <div className={`sidebar - header has - cover`}>
                 <div style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h2 className="sidebar-title">{deviceName}</h2>
-                        <span className={`status-badge status-${(device.status || 'Working').toLowerCase().replace(' ', '-')}`}>
+                        <span className={`status - badge status - ${(device.status || 'Working').toLowerCase().replace(' ', '-')} `}>
                             {device.status || 'Unknown'}
                         </span>
                     </div>
@@ -151,11 +151,11 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
                     <Camera size={16} />
                     <span>Add Photo</span>
                 </button>
-                <button className={`action-chip ${activeTab === 'images' ? 'active' : ''}`} onClick={() => setActiveTab('images')}>
+                <button className={`action - chip ${activeTab === 'images' ? 'active' : ''} `} onClick={() => setActiveTab('images')}>
                     <FileText size={16} />
                     <span>Gallery</span>
                 </button>
-                <button className={`action-chip ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>
+                <button className={`action - chip ${activeTab === 'details' ? 'active' : ''} `} onClick={() => setActiveTab('details')}>
                     <Info size={16} />
                     <span>Details</span>
                 </button>
@@ -244,14 +244,14 @@ const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
 const DetailRow = ({ icon, label, value, unit, highlight }) => {
     if (value === undefined || value === null || value === '') return null;
     return (
-        <div className={`detail-card ${highlight ? 'highlight' : ''}`}>
+        <div className={`detail - card ${highlight ? 'highlight' : ''} `}>
             <div className="detail-icon">{icon}</div>
             <div className="detail-content">
                 <span className="detail-label">{label}</span>
-                <span className="detail-value">{value}{unit ? ` ${unit}` : ''}</span>
+                <span className="detail-value">{value}{unit ? ` ${unit} ` : ''}</span>
             </div>
         </div>
     );
 };
 
-export default DeviceSidebar;
+export default React.memo(DeviceSidebar);
