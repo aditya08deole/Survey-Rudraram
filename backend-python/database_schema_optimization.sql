@@ -23,4 +23,4 @@ CREATE INDEX IF NOT EXISTS idx_sumps_gps ON sumps (latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_overhead_tanks_gps ON overhead_tanks (latitude, longitude);
 
 -- 5. Sync History optimization
-CREATE INDEX IF NOT EXISTS idx_sync_history_date ON sync_history (sync_date DESC);
+CREATE INDEX IF NOT EXISTS idx_sync_history_date ON sync_history (started_at DESC);

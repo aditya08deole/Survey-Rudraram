@@ -11,7 +11,7 @@ from dashboard_app.auth.jwt_handler import (
     verify_password,
     get_password_hash
 )
-from dashboard_app.auth.permissions import get_current_user
+from dashboard_app.auth.permissions import get_current_user, require_role
 from dashboard_app.schemas.user import User, TokenResponse, LoginRequest, SignupRequest
 
 logger = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ async def signup(request: Request, user_data: SignupRequest):
 
 @router.get("/me", response_model=User)
 @limiter.limit("30/minute")
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
     """
     Get current authenticated user information
     """
@@ -118,7 +118,7 @@ class InviteRequest(BaseModel):
 
 @router.get("/users", response_model=List[User])
 @limiter.limit("10/minute")
-async def list_users(admin: User = Depends(require_role(["admin"]))):
+async def list_users(request: Request, admin: User = Depends(require_role(["admin"]))):
     """
     List all users in the project (Admin only)
     """
@@ -133,7 +133,7 @@ async def list_users(admin: User = Depends(require_role(["admin"]))):
 
 @router.post("/invite", response_model=User)
 @limiter.limit("10/minute")
-async def invite_user(invite: InviteRequest, admin: User = Depends(require_role(["admin"]))):
+async def invite_user(request: Request, invite: InviteRequest, admin: User = Depends(require_role(["admin"]))):
     """
     Directly create a new user (Admin only).
     In a full system, this would send an email. For now, it registers them directly.
