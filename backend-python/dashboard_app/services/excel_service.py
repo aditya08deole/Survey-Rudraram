@@ -163,13 +163,16 @@ def get_survey_data(sheet_name: str = "All", include_invalid: bool = False) -> D
     
     # Process specified sheets or all relevant ones
     sheets_to_process = []
+    # Process all sheets that match our keywords
     if sheet_name == "All":
-        # Process known sheets
-        for name in SHEET_NAMES:
-            if name in all_dfs:
-                sheets_to_process.append((name, all_dfs[name]))
+        for actual_sheet_name in all_dfs.keys():
+            lower_name = actual_sheet_name.lower()
+            # Check if this sheet matches any of our known types
+            if any(key in lower_name for key in ["bore", "sump", "ohsr", "oht", "overhead"]):
+                sheets_to_process.append((actual_sheet_name, all_dfs[actual_sheet_name]))
+                logger.info(f"Auto-detected sheet: {actual_sheet_name}")
     else:
-        # Specific sheet
+        # Specific sheet requested
         if sheet_name in all_dfs:
             sheets_to_process.append((sheet_name, all_dfs[sheet_name]))
             

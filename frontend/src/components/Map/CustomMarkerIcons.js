@@ -38,7 +38,7 @@ const getDeviceType = (type) => {
   return 'BOREWELL';
 };
 
-// Borewell: Green/Red Circle + Drill Icon
+// Borewell: Green/Red Circle + Letter B
 const createBorewellIcon = (status) => {
   const working = isWorking(status);
   const color = working ? COLORS.GREEN : COLORS.RED;
@@ -47,44 +47,42 @@ const createBorewellIcon = (status) => {
   return `
         <div style="
             width: 28px; height: 28px;
-            background: ${color};
+            background: white;
+            border: 2px solid ${color};
             border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: ${glow};
             display: flex; align-items: center; justify-content: center;
+            box-shadow: ${glow}, 0 2px 4px rgba(0,0,0,0.2);
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            font-size: 14px;
+            color: ${color};
         ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2L12 12"></path>
-                <path d="M12 12L4.92893 19.0711C4.53841 19.4616 4.53841 20.0948 4.92893 20.4853L5.63604 21.1924C6.02656 21.5829 6.65973 21.5829 7.05025 21.1924L12 16.2426L16.9497 21.1924C17.3403 21.5829 17.9734 21.5829 18.364 21.1924L19.0711 20.4853C19.4616 20.0948 19.4616 19.4616 19.0711 19.0711L12 12Z"></path>
-                <path d="M7 7H17"></path>
-            </svg>
+            B
         </div>
     `;
 };
 
-// Sump: Square with Waves
+// Sump: Blue Square + Letter S
 const createSumpIcon = (status) => {
-  const working = isWorking(status);
-  const glow = working ? GLOW.BLUE : 'none';
-
   return `
         <div style="
-            width: 24px; height: 24px;
-            background: ${COLORS.BLUE};
-            border-radius: 6px;
-            border: 2px solid white;
-            box-shadow: ${glow};
+            width: 26px; height: 26px;
+            background: white;
+            border: 2px solid ${COLORS.BLUE};
+            border-radius: 4px;
             display: flex; align-items: center; justify-content: center;
+            box-shadow: ${GLOW.BLUE}, 0 2px 4px rgba(0,0,0,0.2);
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            font-size: 14px;
+            color: ${COLORS.BLUE};
         ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 12C2 12 5 9 8 9C11 9 11 15 14 15C17 15 22 9 22 9"></path>
-                <path d="M2 17C2 17 5 14 8 14C11 14 11 20 14 20C17 20 22 14 22 14"></path>
-            </svg>
+            S
         </div>
     `;
 };
 
-// OHSR: Orange Triangle with Tower Icon
+// OHSR: Orange Triangle + Letter O
 const createOhsrIcon = (status) => {
   const working = isWorking(status);
   const glow = working ? `drop-shadow(0 0 8px ${COLORS.ORANGE})` : 'none';
