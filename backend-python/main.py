@@ -8,6 +8,9 @@ import logging
 import json
 from pathlib import Path
 from typing import Dict, Any
+from datetime import datetime
+from supabase import create_client
+from dashboard_app.core.config import get_settings
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -98,15 +101,42 @@ app.include_router(sync_router, prefix="/api/sync")
 BASE_DIR = Path(__file__).parent
 FRONTEND_BUILD_DIR = BASE_DIR.parent / "frontend" / "build"
 
-@app.get("/health", tags=["System"])
+@app.get("/", tags=["Health"])
 async def health_check():
-    """Liveness probe for Render/Docker"""
-    return {
-        "status": "healthy",
-        "env": ENV,
-        "version": "3.1.0",
-        "port": PORT
-    }
+    """
+    Root endpoint for health checks
+    """
+    try:
+        # Deep check: Ping Supabase/DB
+        # We just need to check if we can get a client, or run a simple query
+        
+        settings = get_settings()
+        # Lightweight check
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        # We don't want to create a full client every ping if it's heavy, 
+        # but for now it's the safest "connectivity" check.
+        
+        # Perform a simple query to verify database connectivity
+        # For example, fetching a small, non-sensitive piece of data or just trying to connect
+        # A simple select 1 is often sufficient
+        response = supabase.rpc('select_one', {}).execute()
+        if response.data is None: # or check response.status_code
+            raise Exception("Supabase connectivity check failed: No data returned.")
+        
+        return {
+            "status": "healthy", 
+            "service": "rudraram-backend",
+            "version": "1.0.0",
+            "timestamp": datetime.utcnow().isoformat(),
+            "port": PORT
+        }
+    except Exception as e:
+         return {
+            "status": "degraded", 
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat(),
+            "port": PORT
+        }
 
 # Frontend Serving Logic
 # Middleware to force no-cache on root (index.html) to ensure updates are seen immediately
