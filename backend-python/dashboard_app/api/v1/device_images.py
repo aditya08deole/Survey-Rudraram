@@ -26,6 +26,7 @@ def get_supabase() -> Client:
 class ImageMetadataSchema(BaseModel):
     survey_id: str
     image_url: str
+    thumbnail_url: Optional[str] = None
     caption: Optional[str] = None
     is_primary: bool = False
 
@@ -46,6 +47,7 @@ async def save_image_metadata(
         image_data = {
             "survey_code": meta.survey_id,
             "image_url": meta.image_url,
+            "thumbnail_url": meta.thumbnail_url or meta.image_url, # Fallback to main if no thumb
             "storage_path": storage_path,
             "caption": meta.caption,
             "is_primary": meta.is_primary,

@@ -75,7 +75,7 @@ const ImageGallery = ({ surveyCode }) => {
                             </div>
                         )}
                         <img
-                            src={image.image_url}
+                            src={image.thumbnail_url || image.image_url}
                             alt={image.caption || 'Device image'}
                             loading="lazy"
                             decoding="async"

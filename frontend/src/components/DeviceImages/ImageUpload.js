@@ -63,47 +63,61 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
         setError(null);
 
         try {
-            // STEP 1: THE CODING (Compression)
-            setStatusText('Optimizing Image (WebP)...');
+            // STEP 1: THE CODING (Dual Stream Compression)
+            setStatusText('Optimizing: HD & Thumbnail...');
 
-            const compressionOptions = {
-                maxSizeMB: 1,           // Cap at 1MB
-                maxWidthOrHeight: 1920, // Web Standard HD
+            // A. HD Version
+            const hdOptions = {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1920,
                 useWebWorker: true,
-                fileType: 'image/webp'  // Modern Web Format
+                fileType: 'image/webp'
             };
 
-            const compressedFile = await imageCompression(file, compressionOptions);
-            console.log(`Compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+            // B. Thumbnail Version
+            const thumbOptions = {
+                maxSizeMB: 0.05,        // 50KB max
+                maxWidthOrHeight: 300,  // Small for grid
+                useWebWorker: true,
+                fileType: 'image/webp'
+            };
 
-            // STEP 2: THE TRANSPORT (Direct Upload)
-            setStatusText('Uploading secure blob...');
+            const [compressedFile, thumbnailFile] = await Promise.all([
+                imageCompression(file, hdOptions),
+                imageCompression(file, thumbOptions)
+            ]);
 
-            // Generate unique path: surveyCode/timestamp_filename.webp
+            console.log(`HD: ${(compressedFile.size / 1024).toFixed(0)}KB | Thumb: ${(thumbnailFile.size / 1024).toFixed(0)}KB`);
+
+            // STEP 2: THE TRANSPORT (Dual Direct Upload)
+            setStatusText('Uploading dual streams...');
+
             const fileExt = 'webp';
-            const fileName = `${Date.now()}_optimized.${fileExt}`;
-            const filePath = `${surveyCode}/${fileName}`;
+            const timestamp = Date.now();
+            const hdPath = `${surveyCode}/${timestamp}_hd.${fileExt}`;
+            const thumbPath = `${surveyCode}/${timestamp}_thumb.${fileExt}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('device-images')
-                .upload(filePath, compressedFile, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
+            // Upload in parallel
+            const uploadPromises = [
+                supabase.storage.from('device-images').upload(hdPath, compressedFile, { cacheControl: '31536000', upsert: false }),
+                supabase.storage.from('device-images').upload(thumbPath, thumbnailFile, { cacheControl: '31536000', upsert: false })
+            ];
 
-            if (uploadError) throw uploadError;
+            const results = await Promise.all(uploadPromises);
+            const errors = results.filter(r => r.error);
+            if (errors.length > 0) throw errors[0].error;
+
+            // Get Public URLs
+            const { data: hdPublic } = supabase.storage.from('device-images').getPublicUrl(hdPath);
+            const { data: thumbPublic } = supabase.storage.from('device-images').getPublicUrl(thumbPath);
 
             // STEP 3: THE HANDSHAKE (Metadata Save)
             setStatusText('Finalizing...');
-            const { data: publicData } = supabase.storage
-                .from('device-images')
-                .getPublicUrl(filePath);
 
-            // We still use the backend service to save the metadata (URL, caption) to the MySQL/Postgres DB
-            // But we pass the PUBLIC URL now, not the file
             await imageService.saveImageMetadata({
                 survey_id: surveyCode,
-                image_url: publicData.publicUrl,
+                image_url: hdPublic.publicUrl,
+                thumbnail_url: thumbPublic.publicUrl,
                 caption: caption,
                 is_primary: isPrimary
             });
