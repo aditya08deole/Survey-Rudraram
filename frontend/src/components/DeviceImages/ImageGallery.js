@@ -77,6 +77,8 @@ const ImageGallery = ({ surveyCode }) => {
                         <img
                             src={image.image_url}
                             alt={image.caption || 'Device image'}
+                            loading="lazy"
+                            decoding="async"
                             onClick={() => setSelectedImage(image)}
                             className="gallery-image"
                         />

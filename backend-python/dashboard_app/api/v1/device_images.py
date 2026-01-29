@@ -6,6 +6,7 @@ Handles image upload, retrieval, and deletion for survey devices
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import List, Optional
+from pydantic import BaseModel
 import uuid
 from datetime import datetime
 from supabase import Client
@@ -22,6 +23,48 @@ def get_supabase() -> Client:
     from supabase import create_client
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
+class ImageMetadataSchema(BaseModel):
+    survey_id: str
+    image_url: str
+    caption: Optional[str] = None
+    is_primary: bool = False
+
+@router.post("/meta")
+async def save_image_metadata(
+    meta: ImageMetadataSchema,
+    current_user: User = Depends(get_current_user),
+    supabase: Client = Depends(get_supabase)
+):
+    """
+    Save metadata for a directly uploaded image
+    """
+    try:
+        # Extract storage path from URL
+        # Assumption: URL format ends with /device-images/<path>
+        storage_path = meta.image_url.split('/device-images/')[-1]
+        
+        image_data = {
+            "survey_code": meta.survey_id,
+            "image_url": meta.image_url,
+            "storage_path": storage_path,
+            "caption": meta.caption,
+            "is_primary": meta.is_primary,
+            "uploaded_by": str(current_user.id),
+            "uploaded_at": datetime.utcnow().isoformat()
+        }
+        
+        db_response = supabase.table('device_images').insert(image_data).execute()
+        
+        return JSONResponse(
+            status_code=201,
+            content={
+                "success": True,
+                "message": "Metadata saved successfully",
+                "data": db_response.data[0] if db_response.data else image_data
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Metadata save failed: {str(e)}")
 
 @router.post("/upload/{survey_code}")
 async def upload_device_image(

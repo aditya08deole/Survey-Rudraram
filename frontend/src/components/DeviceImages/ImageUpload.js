@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Upload, X } from 'lucide-react';
-import { imageService } from '../../services/imageService';
+import imageCompression from 'browser-image-compression';
+import { supabase } from '../../supabaseClient';
+import { imageService } from '../../services/imageService'; // Still need for DB metadata
 import './ImageUpload.css';
 
 const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
@@ -9,6 +11,7 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
     const [caption, setCaption] = useState('');
     const [isPrimary, setIsPrimary] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [statusText, setStatusText] = useState(''); // New status text for "Coding" stages
     const [error, setError] = useState(null);
 
     const handleFileSelect = (e) => {
@@ -20,7 +23,7 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
                 return;
             }
 
-            // Validate file size (15MB)
+            // Validate file size (Input check - 15MB)
             if (selectedFile.size > 15 * 1024 * 1024) {
                 setError('File size must be less than 15MB');
                 return;
@@ -60,13 +63,59 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
         setError(null);
 
         try {
-            await imageService.uploadImage(surveyCode, file, caption, isPrimary);
+            // STEP 1: THE CODING (Compression)
+            setStatusText('Optimizing Image (WebP)...');
+
+            const compressionOptions = {
+                maxSizeMB: 1,           // Cap at 1MB
+                maxWidthOrHeight: 1920, // Web Standard HD
+                useWebWorker: true,
+                fileType: 'image/webp'  // Modern Web Format
+            };
+
+            const compressedFile = await imageCompression(file, compressionOptions);
+            console.log(`Compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+
+            // STEP 2: THE TRANSPORT (Direct Upload)
+            setStatusText('Uploading secure blob...');
+
+            // Generate unique path: surveyCode/timestamp_filename.webp
+            const fileExt = 'webp';
+            const fileName = `${Date.now()}_optimized.${fileExt}`;
+            const filePath = `${surveyCode}/${fileName}`;
+
+            const { data, error: uploadError } = await supabase.storage
+                .from('device-images')
+                .upload(filePath, compressedFile, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (uploadError) throw uploadError;
+
+            // STEP 3: THE HANDSHAKE (Metadata Save)
+            setStatusText('Finalizing...');
+            const { data: publicData } = supabase.storage
+                .from('device-images')
+                .getPublicUrl(filePath);
+
+            // We still use the backend service to save the metadata (URL, caption) to the MySQL/Postgres DB
+            // But we pass the PUBLIC URL now, not the file
+            await imageService.saveImageMetadata({
+                survey_id: surveyCode,
+                image_url: publicData.publicUrl,
+                caption: caption,
+                is_primary: isPrimary
+            });
+
             if (onUploadSuccess) onUploadSuccess();
             if (onClose) onClose();
         } catch (err) {
-            setError(err.response?.data?.detail || 'Upload failed');
+            console.error(err);
+            setError(err.message || 'Upload failed');
         } finally {
             setUploading(false);
+            setStatusText('');
         }
     };
 
@@ -147,7 +196,7 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
                         onClick={handleUpload}
                         disabled={!file || uploading}
                     >
-                        {uploading ? 'Uploading...' : 'Upload Image'}
+                        {uploading ? (statusText || 'Processing...') : 'Upload Optimized Image'}
                     </button>
                 </div>
             </div>

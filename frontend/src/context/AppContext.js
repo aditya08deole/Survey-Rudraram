@@ -176,12 +176,12 @@ export function AppProvider({ children }) {
 
       const devices = devicesResult.devices;
 
-      // Smart Fallback: If database is empty, try Excel
+
+      // Strict Supabase Mode: No Fallback to Excel
       if (!devices || devices.length === 0) {
-        console.warn('⚠️ Database is empty. Falling back to Excel (Legacy Mode)...');
-        loadData('All', 'excel');
-        return;
+        console.log('ℹ️ Database returned 0 devices. Please run Sync.');
       }
+
 
       // Transform database schema to match frontend expectations
       // Transform database schema to match frontend expectations

@@ -7,6 +7,8 @@ export const imageService = {
      * Upload an image for a device
      */
     async uploadImage(surveyCode, file, caption = null, isPrimary = false) {
+        // Deprecated: Use Direct Upload in ImageUpload.js
+        console.warn("Using deprecated uploadImage service. Please migrate to Direct Upload.");
         const formData = new FormData();
         formData.append('file', file);
         if (caption) formData.append('caption', caption);
@@ -15,11 +17,19 @@ export const imageService = {
         const response = await axios.post(
             `${API_BASE_URL}/device-images/upload/${surveyCode}`,
             formData,
-            {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            }
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        return response.data;
+    },
+
+    /**
+     * Save metadata for a directly uploaded image
+     */
+    async saveImageMetadata(data) {
+        // data: { survey_id, image_url, caption, is_primary }
+        const response = await axios.post(
+            `${API_BASE_URL}/device-images/meta`,
+            data
         );
         return response.data;
     },

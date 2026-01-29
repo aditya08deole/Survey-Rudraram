@@ -115,6 +115,17 @@ def normalize_survey_data(df: pd.DataFrame, device_type_override: Optional[str] 
                 "pipe_size": normalizer.sanitize_float(row.get("pipe_size"), min_val=0.0, max_val=100.0),
                 "motor_hp": normalizer.sanitize_float(row.get("motor_hp"), min_val=0.0, max_val=1000.0),
                 "notes": normalizer.sanitize_string(row.get("notes")),
+                # Extended Fields for Sump/OHSR
+                "depth_ft": normalizer.sanitize_float(row.get("depth") or row.get("depth_ft")),
+                "capacity": normalizer.sanitize_float(row.get("capacity") or row.get("cap")),
+                "tank_height_m": normalizer.sanitize_float(row.get("height") or row.get("tank_height") or row.get("tank_height_m")),
+                "tank_circumference": normalizer.sanitize_float(row.get("circumference") or row.get("tank_circumference")),
+                "power_distance_m": normalizer.sanitize_float(row.get("power_distance") or row.get("power_distance_m")),
+                "people_connected": normalizer.sanitize_integer(row.get("people") or row.get("people_connected")),
+                "material": normalizer.sanitize_string(row.get("material")),
+                "type": normalizer.sanitize_string(row.get("type")),
+                "lid_access": normalizer.sanitize_string(row.get("lid_access") or row.get("lid")),
+                "power_type": normalizer.sanitize_string(row.get("power_type") or row.get("power")),
                 "row_index": int(idx) + 2
             }
             normalized_rows.append(normalized_row)
