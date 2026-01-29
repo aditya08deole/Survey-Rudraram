@@ -3,6 +3,7 @@ import { Upload, X } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '../../supabaseClient';
 import { imageService } from '../../services/imageService'; // Still need for DB metadata
+import { toast } from 'react-hot-toast';
 import './ImageUpload.css';
 
 const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
@@ -122,11 +123,13 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
                 is_primary: isPrimary
             });
 
+            toast.success('Image uploaded successfully!');
             if (onUploadSuccess) onUploadSuccess();
             if (onClose) onClose();
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Upload failed');
+            const msg = err.message || 'Upload failed';
+            toast.error(msg);
         } finally {
             setUploading(false);
             setStatusText('');

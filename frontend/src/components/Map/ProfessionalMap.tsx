@@ -19,6 +19,9 @@ import { getDeviceIcon } from './CustomMarkerIcons';
 import CanvasTools from './tools/CanvasTools';
 
 import Spotlight from '../Command/Spotlight';
+import MarkerClusterGroup from 'react-leaflet-cluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import type { Device } from '../../types/device';
 import './ProfessionalMap.css';
 
@@ -244,29 +247,36 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
 
                 </LayersControl>
 
-                {/* Device Markers */}
-                {devices.map((device, idx) => {
-                    const lat = Number(device.lat || device.latitude);
-                    const lng = Number(device.lng || device.longitude);
-                    if (!lat || !lng) return null;
+                {/* Device Markers with Clustering */}
+                <MarkerClusterGroup
+                    chunkedLoading
+                    maxClusterRadius={60}
+                    spiderfyOnMaxZoom={true}
+                    showCoverageOnHover={false}
+                >
+                    {devices.map((device, idx) => {
+                        const lat = Number(device.lat || device.latitude);
+                        const lng = Number(device.lng || device.longitude);
+                        if (!lat || !lng) return null;
 
-                    const isSelected = selectedDevice?.survey_id === device.survey_id;
-                    const type = device.device_type || 'BOREWELL';
-                    const label = device.original_name || device.survey_id;
+                        const isSelected = selectedDevice?.survey_id === device.survey_id;
+                        const type = device.device_type || 'BOREWELL';
+                        const label = device.original_name || device.survey_id;
 
-                    return (
-                        <Marker
-                            key={device.survey_id || idx}
-                            position={[lat, lng]}
-                            icon={getDeviceIcon(type, device.status || '', label)}
-                            opacity={isSelected ? 1 : 0.8}
-                            zIndexOffset={isSelected ? 1000 : 0}
-                            eventHandlers={{
-                                click: (e) => handleMarkerClick(e, device)
-                            }}
-                        />
-                    );
-                })}
+                        return (
+                            <Marker
+                                key={device.survey_id || idx}
+                                position={[lat, lng]}
+                                icon={getDeviceIcon(type, device.status || '', label)}
+                                opacity={isSelected ? 1 : 0.8}
+                                zIndexOffset={isSelected ? 1000 : 0}
+                                eventHandlers={{
+                                    click: (e) => handleMarkerClick(e, device)
+                                }}
+                            />
+                        );
+                    })}
+                </MarkerClusterGroup>
             </MapContainer>
         </div>
     );

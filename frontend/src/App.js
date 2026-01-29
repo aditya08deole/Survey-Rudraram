@@ -18,6 +18,8 @@ import DeviceTablePage from './pages/DeviceTablePage';
 import ExportPage from './pages/ExportPage';
 import './App.css';
 
+import { Toaster } from 'react-hot-toast';
+
 function App() {
   return (
     <AppProvider>
@@ -25,6 +27,7 @@ function App() {
         <div className="app-container">
           <NavigationHeader />
           <main className="app-main">
+            <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />

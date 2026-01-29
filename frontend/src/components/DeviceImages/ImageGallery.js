@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Star } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { imageService } from '../../services/imageService';
+import Skeleton from '../Common/Skeleton';
 import './ImageGallery.css';
 
 const ImageGallery = ({ surveyCode }) => {
@@ -33,9 +35,10 @@ const ImageGallery = ({ surveyCode }) => {
         try {
             await imageService.deleteImage(imageId);
             setImages(images.filter(img => img.id !== imageId));
+            toast.success('Image deleted');
         } catch (error) {
             console.error('Failed to delete image:', error);
-            alert('Failed to delete image');
+            toast.error('Failed to delete image');
         }
     };
 
@@ -46,14 +49,23 @@ const ImageGallery = ({ surveyCode }) => {
                 ...img,
                 is_primary: img.id === imageId
             })));
+            toast.success('Primary image updated');
         } catch (error) {
             console.error('Failed to set primary image:', error);
-            alert('Failed to set primary image');
+            toast.error('Failed to set primary image');
         }
     };
 
     if (loading) {
-        return <div className="image-gallery-loading">Loading images...</div>;
+        return (
+            <div className="image-grid">
+                {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="image-card" style={{ height: '150px', padding: 0 }}>
+                        <Skeleton height="100%" />
+                    </div>
+                ))}
+            </div>
+        );
     }
 
     if (images.length === 0) {
