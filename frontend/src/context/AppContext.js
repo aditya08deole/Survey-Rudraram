@@ -176,6 +176,13 @@ export function AppProvider({ children }) {
 
       const devices = devicesResult.devices;
 
+      // Smart Fallback: If database is empty, try Excel
+      if (!devices || devices.length === 0) {
+        console.warn('⚠️ Database is empty. Falling back to Excel (Legacy Mode)...');
+        loadData('All');
+        return;
+      }
+
       // Transform database schema to match frontend expectations
       // Transform database schema to match frontend expectations
       const typeMap = { borewell: 'Borewell', sump: 'Sump', overhead_tank: 'OHSR', ohsr: 'OHSR', oht: 'OHSR' }; // Added lowercase variants
