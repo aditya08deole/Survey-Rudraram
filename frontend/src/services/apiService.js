@@ -470,6 +470,26 @@ export const updateDeviceNotes = async (surveyCode, deviceType, notes) => {
   }
 };
 
+/**
+ * Trigger Excel to Supabase Sync
+ */
+export const syncExcelData = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/sync/excel`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Sync failed: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Sync error:', error);
+    throw error;
+  }
+};
+
 // Export API base URL for debugging
 export { API_BASE_URL };
 
@@ -491,6 +511,7 @@ const apiService = {
   checkDatabaseHealth,
   updateDeviceNotes,
   deleteAllMapZones,
+  syncExcelData,
 
   API_BASE_URL
 };

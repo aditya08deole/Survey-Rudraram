@@ -23,6 +23,7 @@ from dashboard_app.api.v1.auth import router as auth_router
 from dashboard_app.api.v1.survey import router as survey_router
 from dashboard_app.api.v1.database import router as db_router
 from dashboard_app.api.v1.device_images import router as device_images_router
+from dashboard_app.api.v1.sync import router as sync_router
 
 # Environment & Constants
 ENV = os.getenv("ENV", "production")
@@ -83,6 +84,7 @@ app.include_router(db_router) # Already has /api/db
 app.include_router(device_images_router, prefix="/api")
 from dashboard_app.api.v1.zones import router as zones_router
 app.include_router(zones_router, prefix="/api")
+app.include_router(sync_router, prefix="/api")
 
 # Directories
 BASE_DIR = Path(__file__).parent

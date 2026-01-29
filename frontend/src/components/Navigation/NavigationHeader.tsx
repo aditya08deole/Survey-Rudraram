@@ -8,15 +8,32 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
     Map as MapIcon, LayoutDashboard, Table, BarChart3, MapPin, Layers,
-    FileSpreadsheet, Menu, X, Search, Filter, Bell, Download
+    FileSpreadsheet, Menu, X, Search, Filter, Bell, Download, RefreshCw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { syncExcelData } from '../../services/apiService';
 import './NavigationHeader.css';
 
 export function NavigationHeader() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const location = useLocation();
+
+    const handleSync = async () => {
+        if (!window.confirm("This will overwrite database records with data from the Master Excel file. Continue?")) return;
+
+        setIsSyncing(true);
+        try {
+            await syncExcelData();
+            alert("Sync started! Updates will appear shortly.");
+            // Optionally reload page or re-fetch data after a delay
+        } catch (error) {
+            alert("Sync failed. Check console for details.");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     // Context State
     // @ts-ignore
@@ -139,6 +156,15 @@ export function NavigationHeader() {
                 {/* Stats & Export (Map Only) */}
                 {isMapPage && (
                     <div className="header-actions">
+                        <button
+                            className={`header-action-btn sync-btn ${isSyncing ? 'spinning' : ''}`}
+                            title="Sync from Excel"
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                        >
+                            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                            <span>{isSyncing ? 'Syncing...' : 'Sync'}</span>
+                        </button>
                         <button className="header-action-btn export-btn" title="Export">
                             <Download size={14} />
                             <span>Export</span>
