@@ -111,8 +111,14 @@ function MapStability() {
         const t1 = setTimeout(refresh, 200);
         const t2 = setTimeout(refresh, 1000);
 
-        map.on('baselayerchange', () => setTimeout(refresh, 100));
-        return () => { clearTimeout(t1); clearTimeout(t2); };
+        const onBaseLayerChange = () => setTimeout(refresh, 100);
+        map.on('baselayerchange', onBaseLayerChange);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            map.off('baselayerchange', onBaseLayerChange);
+        };
     }, [map]);
     return null;
 }

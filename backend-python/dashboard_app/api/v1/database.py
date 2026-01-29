@@ -191,6 +191,43 @@ async def get_device_by_code(survey_code: str):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
+@router.get("/stats")
+async def get_stats_summary():
+    """Get aggregate statistics for all devices"""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not configured")
+    
+    try:
+        # Get counts for each table
+        b_count = supabase.table("borewells").select("*", count="exact", head=True).execute().count
+        s_count = supabase.table("sumps").select("*", count="exact", head=True).execute().count
+        o_count = supabase.table("overhead_tanks").select("*", count="exact", head=True).execute().count
+        
+        # Get working status counts (only for borewells currently tracked)
+        working_count = supabase.table("borewells").select("*", count="exact", head=True).eq("status", "Working").execute().count
+        
+        total = (b_count or 0) + (s_count or 0) + (o_count or 0)
+        
+        return {
+            "success": True,
+            "data": {
+                "totalDevices": total,
+                "byType": {
+                    "borewell": b_count or 0,
+                    "sump": s_count or 0,
+                    "overhead_tank": o_count or 0
+                },
+                "byStatus": {
+                    "Working": working_count or 0,
+                    "Not Working": (b_count or 0) - (working_count or 0)
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Stats summary failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/stats/trends")
 async def get_stats_trends():
     """Get 14-day trend of device synchronization"""
