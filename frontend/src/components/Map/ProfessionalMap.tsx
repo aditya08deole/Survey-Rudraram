@@ -17,11 +17,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getDeviceIcon } from './CustomMarkerIcons';
 import CanvasTools from './tools/CanvasTools';
+import HeatmapLayer from './HeatmapLayer';
 
 import Spotlight from '../Command/Spotlight';
-import MarkerClusterGroup from 'react-leaflet-cluster';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import type { Device } from '../../types/device';
 import './ProfessionalMap.css';
 
@@ -145,6 +143,16 @@ function LayerSwitcher({ activeLayer }: { activeLayer: string }) {
 // Main Component
 export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapProps) {
     const [activeLayer, setActiveLayer] = useState('satellite');
+    const [showHeatmap, setShowHeatmap] = useState(true);
+
+    // Prepare heatmap points: [lat, lng, intensity]
+    const heatmapPoints = devices
+        .map(d => {
+            const lat = Number(d.lat || d.latitude);
+            const lng = Number(d.lng || d.longitude);
+            return (lat && lng) ? [lat, lng, 1.0] as [number, number, number] : null;
+        })
+        .filter((p): p is [number, number, number] => p !== null);
 
     // Prevent propagation when clicking markers
     const handleMarkerClick = useCallback((e: any, device: Device) => {
@@ -155,13 +163,12 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
     const handleCommand = (cmd: string) => {
         if (cmd === 'LAYER_SATELLITE') setActiveLayer('satellite');
         if (cmd === 'LAYER_STREET') setActiveLayer('street');
-        if (cmd === 'CLEAR') onDeviceClick?.({} as Device); // Hack API to clear?
+        if (cmd === 'TOGGLE_HEATMAP') setShowHeatmap(!showHeatmap);
+        if (cmd === 'CLEAR') onDeviceClick?.({} as Device);
     };
 
     return (
         <div className="professional-map">
-            {/* Spotlight Overlay */}
-
             <Spotlight
                 devices={devices}
                 onDeviceSelect={(d) => onDeviceClick?.(d)}
@@ -172,7 +179,7 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                 center={CONFIG.center}
                 zoom={CONFIG.defaultZoom}
                 minZoom={CONFIG.minZoom}
-                maxZoom={CONFIG.maxZoomGlobal} // Global Max
+                maxZoom={CONFIG.maxZoomGlobal}
                 className="map-main"
                 zoomControl={false}
             >
@@ -183,15 +190,32 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                 {/* Canvas Tools Overlay */}
                 <CanvasTools />
 
-                <LayersControl position="bottomright">
+                {/* Heatmap Layer */}
+                {showHeatmap && (
+                    <HeatmapLayer
+                        points={heatmapPoints}
+                        options={{
+                            radius: 40,
+                            blur: 25,
+                            max: 1.0,
+                            gradient: {
+                                0.2: 'rgba(0, 240, 255, 0.2)', // Laser Cyan
+                                0.4: 'rgba(0, 255, 156, 0.4)', // Emerald
+                                0.6: 'rgba(255, 179, 0, 0.6)', // Gold
+                                0.8: 'rgba(255, 61, 104, 0.8)' // Ruby
+                            }
+                        }}
+                    />
+                )}
 
+                <LayersControl position="bottomright">
                     {/* Satellite */}
                     <BaseLayer checked={activeLayer === 'satellite'} name={TILE_PROVIDERS.satellite.name}>
                         <TileLayer
                             url={TILE_PROVIDERS.satellite.url}
                             attribution={TILE_PROVIDERS.satellite.attribution}
                             maxNativeZoom={TILE_PROVIDERS.satellite.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.satellite.maxZoom} // 22
+                            maxZoom={TILE_PROVIDERS.satellite.maxZoom}
                             eventHandlers={{ add: () => setActiveLayer('satellite') }}
                         />
                     </BaseLayer>
@@ -204,7 +228,7 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                             subdomains={TILE_PROVIDERS.street.subdomains}
                             attribution={TILE_PROVIDERS.street.attribution}
                             maxNativeZoom={TILE_PROVIDERS.street.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.street.maxZoom} // 28
+                            maxZoom={TILE_PROVIDERS.street.maxZoom}
                             eventHandlers={{ add: () => setActiveLayer('street') }}
                         />
                     </BaseLayer>
@@ -217,7 +241,7 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                             subdomains={TILE_PROVIDERS.carto.subdomains}
                             attribution={TILE_PROVIDERS.carto.attribution}
                             maxNativeZoom={TILE_PROVIDERS.carto.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.carto.maxZoom} // 28
+                            maxZoom={TILE_PROVIDERS.carto.maxZoom}
                         />
                     </BaseLayer>
 
@@ -229,7 +253,7 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                             subdomains={TILE_PROVIDERS.dark.subdomains}
                             attribution={TILE_PROVIDERS.dark.attribution}
                             maxNativeZoom={TILE_PROVIDERS.dark.maxNativeZoom}
-                            maxZoom={TILE_PROVIDERS.dark.maxZoom} // 28
+                            maxZoom={TILE_PROVIDERS.dark.maxZoom}
                         />
                     </BaseLayer>
 
@@ -245,38 +269,35 @@ export function ProfessionalMap({ devices, selectedDevice, onDeviceClick }: MapP
                         />
                     </BaseLayer>
 
+                    {/* Heatmap Toggle Overlay */}
+                    <LayersControl.Overlay checked={showHeatmap} name="🔥 Heatmap Density">
+                        <LayerSwitcher activeLayer={showHeatmap ? 'heatmap' : 'none'} />
+                    </LayersControl.Overlay>
                 </LayersControl>
 
-                {/* Device Markers with Clustering */}
-                <MarkerClusterGroup
-                    chunkedLoading
-                    maxClusterRadius={60}
-                    spiderfyOnMaxZoom={true}
-                    showCoverageOnHover={false}
-                >
-                    {devices.map((device, idx) => {
-                        const lat = Number(device.lat || device.latitude);
-                        const lng = Number(device.lng || device.longitude);
-                        if (!lat || !lng) return null;
+                {/* Pinpoint Device Markers */}
+                {devices.map((device, idx) => {
+                    const lat = Number(device.lat || device.latitude);
+                    const lng = Number(device.lng || device.longitude);
+                    if (!lat || !lng) return null;
 
-                        const isSelected = selectedDevice?.survey_id === device.survey_id;
-                        const type = device.device_type || 'BOREWELL';
-                        const label = device.original_name || device.survey_id;
+                    const isSelected = selectedDevice?.survey_id === device.survey_id;
+                    const type = device.device_type || 'BOREWELL';
+                    const label = device.original_name || device.survey_id;
 
-                        return (
-                            <Marker
-                                key={device.survey_id || idx}
-                                position={[lat, lng]}
-                                icon={getDeviceIcon(type, device.status || '', label)}
-                                opacity={isSelected ? 1 : 0.8}
-                                zIndexOffset={isSelected ? 1000 : 0}
-                                eventHandlers={{
-                                    click: (e) => handleMarkerClick(e, device)
-                                }}
-                            />
-                        );
-                    })}
-                </MarkerClusterGroup>
+                    return (
+                        <Marker
+                            key={device.survey_id || idx}
+                            position={[lat, lng]}
+                            icon={getDeviceIcon(type, device.status || '', label)}
+                            opacity={isSelected ? 1 : 0.85}
+                            zIndexOffset={isSelected ? 2000 : 1000} // Higher than heatmap
+                            eventHandlers={{
+                                click: (e) => handleMarkerClick(e, device)
+                            }}
+                        />
+                    );
+                })}
             </MapContainer>
         </div>
     );

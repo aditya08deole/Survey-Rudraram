@@ -1,245 +1,286 @@
-import React, { useState, useEffect } from 'react';
-import { X, MapPin, Droplet, Droplets, Zap, Ruler, Clock, Home, FileText, Camera, Info, ImageIcon, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    X, MapPin, Info, Image as ImageIcon, Plus,
+    Settings, Droplets, ShieldCheck,
+    Loader2, Camera, Navigation, CheckCircle2,
+    Download
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import imageCompression from 'browser-image-compression';
 import apiService from '../../services/apiService';
-import DeviceImageGallery from './DeviceImageGallery';
 import { generateDeviceReport } from '../../services/ReportGenerator';
-import { useApp } from '../../context/AppContext';
 import './DeviceSidebar.css';
 
-const DeviceSidebar = ({ device, onClose, onImageUpload }) => {
-    const { user } = useApp();
-    const [activeTab, setActiveTab] = useState('details');
-    const [coverImage, setCoverImage] = useState(null);
-    const [isEditingNote, setIsEditingNote] = useState(false);
-    const [noteText, setNoteText] = useState('');
+const DeviceHUD = ({ device, onClose, onImageUpload }) => {
+    const [activeTab, setActiveTab] = useState('specs');
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [isEditingNotes, setIsEditingNotes] = useState(false);
+    const [notes, setNotes] = useState(device?.notes || '');
+    const [images, setImages] = useState([]);
+    const fileInputRef = useRef(null);
 
-    const isAdminOrEditor = user?.role === 'admin' || user?.role === 'editor';
-
+    // Auto-sync notes when device changes
     useEffect(() => {
+        setNotes(device?.notes || '');
         if (device?.survey_id) {
-            setNoteText(device.notes || '');
-            // Fetch primary image for cover
-            apiService.fetchDeviceImages(device.survey_id)
-                .then(response => {
-                    if (response.success && response.data && response.data.length > 0) {
-                        const primary = response.data.find(img => img.is_primary) || response.data[0];
-                        setCoverImage(primary.image_url);
-                    } else {
-                        setCoverImage(null);
-                    }
-                })
-                .catch(err => console.error("Failed to load cover image", err));
-        } else {
-            setCoverImage(null);
-            setNoteText('');
+            loadImages();
         }
     }, [device]);
 
+    const loadImages = async () => {
+        try {
+            const data = await apiService.fetchDeviceImages(device.survey_id);
+            setImages(data || []);
+        } catch (error) {
+            console.error("Error loading images:", error);
+        }
+    };
+
+    const handleFileSelect = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            setIsUploading(true);
+            setUploadProgress(10);
+
+            const options = {
+                maxSizeMB: 0.8,
+                maxWidthOrHeight: 1920,
+                useWebWorker: true,
+                initialQuality: 0.8,
+                onProgress: (p) => setUploadProgress(10 + (p * 0.4)) // 10% to 50%
+            };
+
+            const compressedFile = await imageCompression(file, options);
+            setUploadProgress(60);
+
+            const result = await apiService.uploadDeviceImage(
+                device.survey_id,
+                device.device_type || 'BOREWELL',
+                compressedFile
+            );
+
+            if (result.success) {
+                setUploadProgress(100);
+                toast.success('Field Photo Ingested');
+                loadImages();
+                if (onImageUpload) onImageUpload();
+            } else {
+                throw new Error(result.error || 'Upload failed');
+            }
+        } catch (error) {
+            toast.error('Ingestion Failed: ' + error.message);
+        } finally {
+            setTimeout(() => {
+                setIsUploading(false);
+                setUploadProgress(0);
+            }, 500);
+        }
+    };
+
     if (!device) return null;
 
-    // Use normalized keys from backend
-    const deviceType = device.device_type || device.deviceType || 'Unknown';
-    const deviceName = device.original_name || device.originalName || device.survey_id || 'Unknown Device';
-    const surveyId = device.survey_id || device.surveyCode;
-
-    const renderDetails = () => {
-        // Borewell Details
-        if (deviceType === 'Borewell') {
-            return (
-                <div className="sidebar-details-grid">
-                    <DetailRow icon={<Zap size={16} />} label="Motor HP" value={device.motor_hp} unit="HP" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Depth" value={device.depth_ft} unit="ft" highlight />
-                    <DetailRow icon={<Droplet size={16} />} label="Pipe Size" value={device.pipe_size_inch} unit="inch" />
-                    <DetailRow icon={<Zap size={16} />} label="Power" value={device.power_type} />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses_connected} />
-                    <DetailRow icon={<Clock size={16} />} label="Daily Usage" value={device.daily_usage_hrs} unit="hrs" />
-                    {/* sr_no removed as per request */}
-                    <DetailRow icon={<Info size={16} />} label="Status" value={device.done !== undefined ? (device.done ? 'Done' : 'Pending') : null} />
-                </div>
-            );
-        }
-        // Sump Details
-        if (deviceType === 'Sump') {
-            return (
-                <div className="sidebar-details-grid">
-                    <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} unit="L" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.tank_height_m} unit="m" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Circumference" value={device.tank_circumference} unit="m" />
-                    <DetailRow icon={<Zap size={16} />} label="Power Dist." value={device.power_distance_m} unit="m" />
-                    <DetailRow icon={<Home size={16} />} label="People" value={device.people_connected} />
-                </div>
-            );
-        }
-        // OHSR Details
-        if (deviceType === 'OHSR' || deviceType === 'OHT') {
-            return (
-                <div className="sidebar-details-grid">
-                    <DetailRow icon={<Droplet size={16} />} label="Capacity" value={device.capacity} unit="L" highlight />
-                    <DetailRow icon={<Ruler size={16} />} label="Height" value={device.tank_height_m} unit="m" highlight />
-                    <DetailRow icon={<FileText size={16} />} label="Material" value={device.material} />
-                    <DetailRow icon={<Info size={16} />} label="Type" value={device.type} />
-                    <DetailRow icon={<Info size={16} />} label="Lid Access" value={device.lid_access} />
-                    <DetailRow icon={<Home size={16} />} label="Houses" value={device.houses_connected} />
-                </div>
-            );
-        }
-        return <p className="text-gray-500 italic p-4">No specific technical details available for this device type.</p>;
-    };
-
-    const renderAdditionalInfo = () => {
-        // Core system fields to always hide (internal or already shown prominently)
-        const systemFields = ['id', 'geometry', 'geom', 'lat', 'lng', 'latitude', 'longitude', 'images', 'notes', 'device_type', 'deviceType', 'survey_id', 'surveyCode', 'original_name', 'originalName', 'done', 'status', 'zone', 'street', 'location', 'sr_no', 'is_primary', 'created_at', 'updated_at', 'sheet_name', 'row_index'];
-
-        // Fields already rendered in 'renderDetails' (Technical Specs)
-        let renderedSpecs = [];
-        if (deviceType === 'Borewell') renderedSpecs = ['motor_hp', 'depth_ft', 'pipe_size_inch', 'power_type', 'houses_connected', 'daily_usage_hrs'];
-        if (deviceType === 'Sump') renderedSpecs = ['capacity', 'tank_height_m', 'tank_circumference', 'power_distance_m', 'people_connected'];
-        if (deviceType === 'OHSR' || deviceType === 'OHT') renderedSpecs = ['capacity', 'tank_height_m', 'material', 'type', 'lid_access', 'houses_connected'];
-
-        const excluded = new Set([...systemFields, ...renderedSpecs]);
-
-        const extraFields = Object.entries(device).filter(([key, val]) => {
-            if (excluded.has(key)) return false;
-            if (val === null || val === undefined || val === '') return false;
-            if (typeof val === 'object') return false;
-            return true;
-        });
-
-        if (extraFields.length === 0) return null;
-
-        return (
-            <div className="sidebar-section">
-                <h3 className="section-title">Additional Information</h3>
-                <div className="sidebar-details-grid">
-                    {extraFields.map(([key, val]) => (
-                        <DetailRow
-                            key={key}
-                            icon={<Info size={16} />}
-                            label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            value={String(val)}
-                        />
-                    ))}
-                </div>
-            </div>
-        );
-    };
-
     return (
-        <div className="device-sidebar">
-            {/* 1. Hero Image / Gallery Preview */}
-            <div className="sidebar-cover-image" style={{ backgroundImage: `url(${coverImage || '/placeholder-device.jpg'})` }}>
-                <div className="cover-overlay"></div>
-                <button className="sidebar-close-btn" onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
-                    <X size={24} />
-                </button>
-            </div>
-
-            {/* 2. Header & Title (Floating up into image) */}
-            <div className={`sidebar-header has-cover`}>
-                <div style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 className="sidebar-title">{deviceName}</h2>
-                        <span className={`status-badge status-${(device.status || 'Working').toLowerCase().replace(' ', '-')}`}>
-                            {device.status || 'Unknown'}
-                        </span>
-                    </div>
-                    <span className="sidebar-subtitle">{surveyId || 'No ID'} • {device.zone || 'No Zone'}</span>
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                drag
+                dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
+                dragElastic={0.1}
+                dragMomentum={false}
+                className="device-hud-container glassmorphism"
+            >
+                {/* Drag Handle Top */}
+                <div className="hud-drag-handle">
+                    <div className="drag-indicator" />
+                    <button className="hud-close-btn" onClick={onClose}>
+                        <X size={18} />
+                    </button>
                 </div>
-            </div>
 
-            {/* 3. Action Bar (Google Maps Style) */}
-            <div className="sidebar-actions-bar">
-                <button className={`action-chip primary ${activeTab === 'images' ? 'active' : ''}`} onClick={() => setActiveTab('images')}>
-                    <Camera size={16} />
-                    <span>Photos</span>
-                </button>
-                <button className="action-chip" onClick={() => generateDeviceReport(device)}>
-                    <Download size={16} />
-                    <span>Report</span>
-                </button>
-                <button className={`action-chip ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>
-                    <Info size={16} />
-                    <span>Details</span>
-                </button>
-            </div>
-
-            {/* 4. Scrollable Content Area */}
-            <div className="sidebar-content">
-                {activeTab === 'details' && (
-                    <div className="details-tab fade-in">
-                        {/* Location Section */}
-                        <div className="sidebar-section">
-                            <div className="location-card glass-panel">
-                                <div className="loc-row">
-                                    <MapPin size={18} className="text-primary" />
-                                    <div>
-                                        <span className="loc-value">{device.street || device.location || 'Location not available'}</span>
-                                        <span className="loc-label">{device.lat?.toFixed(5)}, {device.lng?.toFixed(5)}</span>
-                                    </div>
-                                </div>
+                {/* Hero Banner */}
+                <div className="hud-hero" style={{
+                    backgroundImage: `url(${images[0]?.image_url || 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=800'})`
+                }}>
+                    <div className="hud-hero-overlay">
+                        <div className="hud-title-zone">
+                            <h2 className="hud-title">{device.original_name || 'Unnamed Device'}</h2>
+                            <div className="hud-badges">
+                                <span className={`hud-status-badge status-${device.status?.toLowerCase().replace(' ', '-')}`}>
+                                    {device.status || 'Unknown'}
+                                </span>
+                                <span className="hud-id-badge">{device.survey_id}</span>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Technical Specs - Preserved All Data */}
-                        <div className="sidebar-section">
-                            <h3 className="section-title">Technical Specifications</h3>
-                            {renderDetails()}
-                            {renderAdditionalInfo()}
-                        </div>
+                {/* Action Toolbar */}
+                <div className="hud-nav">
+                    <button
+                        className={`hud-nav-item ${activeTab === 'specs' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('specs')}
+                    >
+                        <Info size={18} />
+                        <span>Specs</span>
+                    </button>
+                    <button
+                        className={`hud-nav-item ${activeTab === 'gallery' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('gallery')}
+                    >
+                        <ImageIcon size={18} />
+                        <span>Gallery</span>
+                    </button>
+                    <button className="hud-nav-item" onClick={() => generateDeviceReport(device)}>
+                        <Download size={18} />
+                        <span>PDF</span>
+                    </button>
+                    <button
+                        className={`hud-nav-item upload-btn`}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                    >
+                        {isUploading ? (
+                            <div className="progress-radial-container">
+                                <Loader2 size={18} className="animate-spin" />
+                            </div>
+                        ) : (
+                            <Plus size={18} />
+                        )}
+                        <span>Photo</span>
+                    </button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                    />
+                </div>
 
-                        {/* Notes Section */}
-                        <div className="sidebar-section">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <h3 className="section-title" style={{ marginBottom: 0 }}>Field Notes</h3>
-                                {!isEditingNote && isAdminOrEditor && (
-                                    <button className="edit-notes-link" onClick={() => setIsEditingNote(true)}>Edit</button>
+                {/* Dynamic Content Body */}
+                <div className="hud-body">
+                    <div className="hud-scroll-content">
+                        {activeTab === 'specs' ? (
+                            <motion.div
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="hud-section fade-in"
+                            >
+                                <div className="section-label">Technical Configuration</div>
+                                <div className="hud-specs-grid">
+                                    <div className="hud-spec-card highlight">
+                                        <ShieldCheck size={16} className="spec-icon" />
+                                        <div className="spec-content">
+                                            <div className="spec-label">Hardware Type</div>
+                                            <div className="spec-value">{device.device_type || 'Borewell'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="hud-spec-card">
+                                        <Navigation size={16} className="spec-icon" />
+                                        <div className="spec-content">
+                                            <div className="spec-label">Zone</div>
+                                            <div className="spec-value">{device.zone || 'Rudraram'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="hud-spec-card">
+                                        <Droplets size={16} className="spec-icon" />
+                                        <div className="spec-content">
+                                            <div className="spec-label">Condition</div>
+                                            <div className="spec-value">{device.condition || 'N/A'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="hud-spec-card">
+                                        <Settings size={16} className="spec-icon" />
+                                        <div className="spec-content">
+                                            <div className="spec-label">Usage</div>
+                                            <div className="spec-value">{device.daily_usage_hrs || 'N/A'} hrs</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="section-label mt-6">Spatial Location</div>
+                                <div className="hud-location-bar">
+                                    <MapPin size={16} color="#ef4444" />
+                                    <span>GPS Fix Established</span>
+                                    <span className="coords">
+                                        {Number(device.lat || device.latitude).toFixed(4)}, {Number(device.lng || device.longitude).toFixed(4)}
+                                    </span>
+                                </div>
+
+                                <div className="hud-notes-box mt-6">
+                                    <div className="hud-notes-header">
+                                        <div className="section-label">Field Intelligence</div>
+                                        <button className="hud-edit-btn" onClick={() => setIsEditingNotes(!isEditingNotes)}>
+                                            {isEditingNotes ? 'Cancel' : 'Update'}
+                                        </button>
+                                    </div>
+                                    {isEditingNotes ? (
+                                        <div className="hud-note-editor">
+                                            <textarea
+                                                value={notes}
+                                                onChange={(e) => setNotes(e.target.value)}
+                                                placeholder="Add field observations..."
+                                            />
+                                            <button className="hud-save-btn" onClick={async () => {
+                                                await apiService.updateDeviceNotes(device.survey_id, device.device_type, notes);
+                                                setIsEditingNotes(false);
+                                            }}>Push Updates</button>
+                                        </div>
+                                    ) : (
+                                        <div className="hud-notes-display">
+                                            {notes || 'No critical observations recorded for this asset.'}
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="hud-gallery-grid fade-in"
+                            >
+                                {images.length > 0 ? (
+                                    <div className="hud-gallery-container">
+                                        {images.map((img, i) => (
+                                            <div key={i} className="hud-gallery-item">
+                                                <img src={img.image_url} alt="Field Asset" />
+                                                <div className="img-overlay">
+                                                    <span>{new Date(img.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="hud-empty-gallery">
+                                        <Camera size={48} className="mb-2 opacity-20" />
+                                        <p>No Asset Documentation Yet</p>
+                                        <button onClick={() => fileInputRef.current?.click()}>Start Ingestion</button>
+                                    </div>
                                 )}
-                            </div>
-                            {isEditingNote ? (
-                                <div className="note-editor-container">
-                                    <textarea
-                                        className="notes-editor"
-                                        value={noteText}
-                                        onChange={(e) => setNoteText(e.target.value)}
-                                        rows={3}
-                                    />
-                                    <div className="note-actions">
-                                        <button className="btn-save" onClick={async () => {
-                                            await apiService.updateDeviceNotes(surveyId, deviceType, noteText);
-                                            setIsEditingNote(false);
-                                            device.notes = noteText;
-                                        }}>Save</button>
-                                        <button className="btn-cancel" onClick={() => setIsEditingNote(false)}>Cancel</button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <p className="notes-text">{noteText || 'No notes available.'}</p>
-                            )}
-                        </div>
+                            </motion.div>
+                        )}
                     </div>
-                )}
+                </div>
 
-                {activeTab === 'images' && (
-                    <div className="images-tab fade-in">
-                        <DeviceImageGallery surveyCode={surveyId} />
+                {/* Bottom Utility Bar */}
+                <div className="hud-footer">
+                    <div className="sync-status">
+                        <CheckCircle2 size={12} className="text-secondary" />
+                        <span>Live Supabase Sync</span>
                     </div>
-                )}
-            </div>
-        </div>
+                    <div className="last-updated">
+                        Ref: {device.survey_id?.substring(0, 8)}
+                    </div>
+                </div>
+            </motion.div>
+        </AnimatePresence>
     );
 };
 
-const DetailRow = ({ icon, label, value, unit, highlight }) => {
-    if (value === undefined || value === null || value === '') return null;
-    return (
-        <div className={`detail-card ${highlight ? 'highlight' : ''}`}>
-            <div className="detail-icon">{icon}</div>
-            <div className="detail-content">
-                <span className="detail-label">{label}</span>
-                <span className="detail-value">{value}{unit ? ` ${unit}` : ''}</span>
-            </div>
-        </div>
-    );
-};
-
-export default React.memo(DeviceSidebar);
+export default DeviceHUD;

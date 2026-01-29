@@ -554,9 +554,10 @@ export const inviteUser = async (userData) => {
 // I noticed some were missing or incorrectly referenced in the default export.
 // I'll add them here properly.
 
-export const uploadDeviceImage = async (surveyCode, file) => {
+export const uploadDeviceImage = async (surveyCode, deviceType, file) => {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('device_type', deviceType);
   const response = await fetch(`${API_BASE_URL}/api/device-images/upload/${surveyCode}`, {
     method: 'POST',
     body: formData
