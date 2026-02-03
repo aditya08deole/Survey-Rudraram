@@ -145,16 +145,20 @@ async def health_check():
 # Middleware to force no-cache on root (index.html) to ensure updates are seen immediately
 @app.middleware("http")
 async def add_no_cache_header(request: Request, call_next):
-    response = await call_next(request)
-    if request.url.path == "/" or request.url.path == "/index.html":
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-    return response
+    try:
+        response = await call_next(request)
+        if request.url.path == "/" or request.url.path == "/index.html":
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+    except Exception as e:
+        logger.error(f"Middleware error: {e}")
+        raise
 
-if FRONTEND_BUILD_DIR.exists():
+# Only mount frontend if build directory exists AND we're not in API-only mode
+if FRONTEND_BUILD_DIR.exists() and not os.getenv("API_ONLY_MODE", "false").lower() == "true":
     logger.info(f"Serving frontend from {FRONTEND_BUILD_DIR}")
-    app.mount("/", StaticFiles(directory=str(FRONTEND_BUILD_DIR), html=True), name="static")
     
     @app.exception_handler(404)
     async def spa_fallback_handler(request: Request, exc):
@@ -164,16 +168,26 @@ if FRONTEND_BUILD_DIR.exists():
                 content={"detail": "API endpoint not found"}
             )
         # Prevent caching of index.html so updates are instant
-        response = FileResponse(FRONTEND_BUILD_DIR / "index.html")
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-        return response
+        try:
+            response = FileResponse(FRONTEND_BUILD_DIR / "index.html")
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            return response
+        except Exception as e:
+            logger.error(f"Failed to serve index.html: {e}")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Failed to load frontend"}
+            )
+    
+    # Mount static files LAST - this catches all remaining routes
+    app.mount("/", StaticFiles(directory=str(FRONTEND_BUILD_DIR), html=True), name="static")
 else:
-    logger.warning(f"Frontend build directory not found at {FRONTEND_BUILD_DIR}. API only mode.")
-    @app.get("/")
-    async def root():
-        return {"message": "Rudraram API is running. Build frontend to view dashboard."}
+    if not FRONTEND_BUILD_DIR.exists():
+        logger.warning(f"Frontend build directory not found at {FRONTEND_BUILD_DIR}. API only mode.")
+    else:
+        logger.info("Running in API-only mode")
 
 if __name__ == "__main__":
     import uvicorn

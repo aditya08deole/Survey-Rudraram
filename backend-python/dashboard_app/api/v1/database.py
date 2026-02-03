@@ -64,14 +64,17 @@ async def update_device_notes(
         supabase.table(table).update({"notes": update.notes}).eq("survey_code", survey_code).execute()
         
         # Log Audit
-        from dashboard_app.services.sync_service import SyncService
-        SyncService.log_audit(
-            operation="UPDATE_NOTES",
-            table_name=table,
-            record_id=survey_code,
-            old_data={"notes": old_notes},
-            new_data={"notes": update.notes}
-        )
+        try:
+            supabase.table("audit_logs").insert({
+                "operation": "UPDATE_NOTES",
+                "table_name": table,
+                "record_id": survey_code,
+                "old_data": {"notes": old_notes},
+                "new_data": {"notes": update.notes},
+                "user_id": current_user.get("id")
+            }).execute()
+        except Exception as audit_error:
+            logger.warning(f"Audit log failed: {audit_error}")
         
         return {"success": True, "message": "Notes updated"}
     except Exception as e:
