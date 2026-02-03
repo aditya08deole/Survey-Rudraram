@@ -7,7 +7,6 @@
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { fetchSurveyData, fetchDevicesFromDB, fetchStatsFromDB, fetchZonesFromDB } from '../services/apiService';
-import { calculateStats } from '../services/excelReader';
 
 // Initial state
 const initialState = {
@@ -16,10 +15,10 @@ const initialState = {
   zones: [],
   stats: null,
 
-  // Data source
-  useDatabase: true, // Use database API by default (set to false for Excel fallback)
+  // Data source - Supabase only (Excel support removed)
+  useDatabase: true,
 
-  // Sheet selection (Excel mode)
+  // Sheet selection (legacy - not used)
   currentSheet: 'All',
   availableSheets: ['All'],
 
@@ -153,14 +152,10 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Load initial data
+  // Load initial data - Supabase only
   useEffect(() => {
-    if (state.useDatabase) {
-      loadDatabaseData();
-    } else {
-      loadData(state.currentSheet);
-    }
-  }, [state.currentSheet, state.useDatabase]);
+    loadDatabaseData();
+  }, []);
 
   // Function to load data from DATABASE API (new Supabase integration)
   const loadDatabaseData = async () => {
@@ -305,69 +300,6 @@ export function AppProvider({ children }) {
     dispatch({ type: ActionTypes.SET_LOADING, payload: false });
   };
 
-  // Function to load all data from Excel API backend (legacy)
-  const loadData = async (sheetName = 'All', source = 'supabase') => {
-    dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-
-    try {
-      // Fetch data from FastAPI backend with sheet and source parameters
-      const result = await fetchSurveyData(sheetName, source);
-
-      if (!result.success) {
-        throw new Error(result.errors.join(', ') || 'Failed to load data from API');
-      }
-
-      // Calculate statistics
-      const stats = calculateStats(result.devices);
-
-      // Extract unique zones
-      const zones = [...new Set(result.devices.map(d => d.zone))]
-        .filter(Boolean)
-        .map(zoneName => ({
-          name: zoneName,
-          deviceCount: result.devices.filter(d => d.zone === zoneName).length
-        }));
-
-      dispatch({ type: ActionTypes.SET_DEVICES, payload: result.devices });
-      dispatch({ type: ActionTypes.SET_ZONES, payload: zones });
-      dispatch({
-        type: ActionTypes.SET_STATS, payload: {
-          overview: {
-            totalDevices: stats.totalDevices,
-            mappedDevices: stats.mappedDevices,
-            unmappedDevices: stats.unmappedDevices,
-            lastUpdated: result.loadedAt
-          },
-          byZone: stats.byZone,
-          byType: stats.byType,
-          byStatus: stats.byStatus
-        }
-      });
-      dispatch({
-        type: ActionTypes.SET_DATA_STATUS,
-        payload: {
-          hasData: result.devices.length > 0,
-          lastUpdated: result.loadedAt
-        }
-      });
-      dispatch({ type: ActionTypes.SET_ERROR, payload: null });
-
-      // Log warnings if any
-      if (result.warnings.length > 0) {
-        console.warn('⚠️  Warnings during Excel load:', result.warnings);
-      }
-
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      dispatch({
-        type: ActionTypes.SET_ERROR,
-        payload: `Failed to load Excel file from GitHub: ${error.message}`
-      });
-    }
-
-    dispatch({ type: ActionTypes.SET_LOADING, payload: false });
-  };
-
   // Filter devices based on current filters
   const getFilteredDevices = () => {
     let filtered = [...state.devices];
@@ -402,24 +334,14 @@ export function AppProvider({ children }) {
   // Actions
   const actions = {
     refreshData: () => {
-      if (state.useDatabase) {
-        loadDatabaseData();
-      } else {
-        loadData(state.currentSheet);
-      }
+      loadDatabaseData();
     },
 
     toggleDataSource: () => {
+      // Legacy function - now only reloads database data
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-      // Toggle between database and Excel
-      const newValue = !state.useDatabase;
-      // Manually update state and reload
       dispatch({ type: ActionTypes.SET_ERROR, payload: null });
-      if (newValue) {
-        loadDatabaseData();
-      } else {
-        loadData(state.currentSheet);
-      }
+      loadDatabaseData();
     },
 
     setCurrentSheet: (sheetName) => {

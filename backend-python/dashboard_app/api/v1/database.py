@@ -98,7 +98,7 @@ async def get_all_devices(
     try:
         all_devices = []
         
-        # Fetch borewells
+        # Fetch borewells with images
         if not device_type or device_type == "borewell":
             query = supabase.table("borewells").select("*")
             if zone:
@@ -111,9 +111,19 @@ async def get_all_devices(
             borewells = result.data
             for item in borewells:
                 item["device_type"] = "borewell"
+                # Fetch images for this device
+                try:
+                    img_result = supabase.table("device_images").select("*").eq("survey_code", item["survey_code"]).order("uploaded_at", desc=True).execute()
+                    item["images"] = img_result.data if img_result.data else []
+                    item["primary_image_url"] = next((img["image_url"] for img in img_result.data if img.get("is_primary")), img_result.data[0]["thumbnail_url"] if img_result.data else None)
+                    item["total_images"] = len(img_result.data)
+                except:
+                    item["images"] = []
+                    item["primary_image_url"] = None
+                    item["total_images"] = 0
             all_devices.extend(borewells)
         
-        # Fetch sumps
+        # Fetch sumps with images
         if not device_type or device_type == "sump":
             query = supabase.table("sumps").select("*")
             if zone:
@@ -125,9 +135,19 @@ async def get_all_devices(
             for item in sumps:
                 item["device_type"] = "sump"
                 item["status"] = None  # Sumps don't have status
+                # Fetch images
+                try:
+                    img_result = supabase.table("device_images").select("*").eq("survey_code", item["survey_code"]).order("uploaded_at", desc=True).execute()
+                    item["images"] = img_result.data if img_result.data else []
+                    item["primary_image_url"] = next((img["image_url"] for img in img_result.data if img.get("is_primary")), img_result.data[0]["thumbnail_url"] if img_result.data else None)
+                    item["total_images"] = len(img_result.data)
+                except:
+                    item["images"] = []
+                    item["primary_image_url"] = None
+                    item["total_images"] = 0
             all_devices.extend(sumps)
         
-        # Fetch overhead tanks
+        # Fetch overhead tanks with images
         if not device_type or device_type == "overhead_tank":
             query = supabase.table("overhead_tanks").select("*")
             if zone:
@@ -139,6 +159,16 @@ async def get_all_devices(
             for item in overhead_tanks:
                 item["device_type"] = "overhead_tank"
                 item["status"] = None  # OHSRs don't have status
+                # Fetch images
+                try:
+                    img_result = supabase.table("device_images").select("*").eq("survey_code", item["survey_code"]).order("uploaded_at", desc=True).execute()
+                    item["images"] = img_result.data if img_result.data else []
+                    item["primary_image_url"] = next((img["image_url"] for img in img_result.data if img.get("is_primary")), img_result.data[0]["thumbnail_url"] if img_result.data else None)
+                    item["total_images"] = len(img_result.data)
+                except:
+                    item["images"] = []
+                    item["primary_image_url"] = None
+                    item["total_images"] = 0
             all_devices.extend(overhead_tanks)
         
         logger.info(f"Fetched {len(all_devices)} devices from database")

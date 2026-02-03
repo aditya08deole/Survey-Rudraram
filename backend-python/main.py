@@ -71,20 +71,33 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal Server Error", "error": str(exc) if DEBUG else "An unexpected error occurred."}
     )
 
-# CORS Configuration - Critical for Production
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
-if not allowed_origins or allowed_origins == [""]:
+# CORS Configuration - Security Critical!
+# NEVER use wildcard ["*"] in production
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_str:
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+else:
+    # Default origins for development - MUST be overridden in production
     if ENV == "production":
-        logger.warning("No ALLOWED_ORIGINS set in production! Falling back to restricted defaults.")
-        allowed_origins = []
+        logger.error("❌ CRITICAL: ALLOWED_ORIGINS not set in production! CORS will block all requests.")
+        logger.error("Set ALLOWED_ORIGINS environment variable with comma-separated domains.")
+        allowed_origins = []  # Block all in production if not configured
     else:
-        allowed_origins = ["*"]
+        logger.warning("⚠️  Using default development CORS origins. Set ALLOWED_ORIGINS for production!")
+        allowed_origins = [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173"
+        ]
+
+logger.info(f"CORS allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -95,8 +108,6 @@ app.include_router(db_router) # Already has /api/db
 app.include_router(device_images_router, prefix="/api")
 from dashboard_app.api.v1.zones import router as zones_router
 app.include_router(zones_router, prefix="/api")
-from dashboard_app.api.v1.sync import router as sync_router
-app.include_router(sync_router, prefix="/api/sync")
 
 # Directories
 BASE_DIR = Path(__file__).parent
@@ -108,21 +119,12 @@ async def health_check():
     Root endpoint for health checks
     """
     try:
-        # Deep check: Ping Supabase/DB
-        # We just need to check if we can get a client, or run a simple query
-        
+        # Check Supabase database connectivity with simple query
         settings = get_settings()
-        # Lightweight check
         supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        # We don't want to create a full client every ping if it's heavy, 
-        # but for now it's the safest "connectivity" check.
         
-        # Perform a simple query to verify database connectivity
-        # For example, fetching a small, non-sensitive piece of data or just trying to connect
-        # A simple select 1 is often sufficient
-        response = supabase.rpc('select_one', {}).execute()
-        if response.data is None: # or check response.status_code
-            raise Exception("Supabase connectivity check failed: No data returned.")
+        # Simple query to verify database connectivity - just check if users table exists
+        response = supabase.table('users').select('id').limit(1).execute()
         
         return {
             "status": "healthy", 

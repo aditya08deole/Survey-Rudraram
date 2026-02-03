@@ -4,7 +4,7 @@ const getApiBaseUrl = () => {
   if (process.env.NODE_ENV === 'production') {
     return window.location.origin;
   }
-  return 'http://localhost:8000';
+  return 'http://localhost:5000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -559,7 +559,7 @@ export const inviteUser = async (userData) => {
 // I noticed some were missing or incorrectly referenced in the default export.
 // I'll add them here properly.
 
-export const uploadDeviceImage = async (surveyCode, deviceType, file) => {
+export const uploadDeviceImage = async (surveyCode, file, caption = null, isPrimary = false) => {
   if (!surveyCode || surveyCode === 'undefined') {
     return { success: false, error: "Invalid survey identifier. Please refresh the page and try again." };
   }
@@ -574,7 +574,8 @@ export const uploadDeviceImage = async (surveyCode, deviceType, file) => {
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('device_type', deviceType);
+    if (caption) formData.append('caption', caption);
+    if (isPrimary) formData.append('is_primary', 'true');
 
     const response = await fetch(`${API_BASE_URL}/api/device-images/upload/${encodeURIComponent(surveyCode)}`, {
       method: 'POST',

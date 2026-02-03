@@ -34,7 +34,6 @@ const AssetInspector: React.FC<AssetInspectorProps> = ({ device, onClose }) => {
 
             const result = await apiService.uploadDeviceImage(
                 sid,
-                device.device_type || 'BOREWELL',
                 file
             );
 

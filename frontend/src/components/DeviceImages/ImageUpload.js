@@ -24,9 +24,9 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
                 return;
             }
 
-            // Validate file size (Input check - 15MB)
-            if (selectedFile.size > 15 * 1024 * 1024) {
-                setError('File size must be less than 15MB');
+            // Validate file size (Input check - 30MB)
+            if (selectedFile.size > 30 * 1024 * 1024) {
+                setError('File size must be less than 30MB');
                 return;
             }
 
@@ -67,10 +67,10 @@ const ImageUpload = ({ surveyCode, onUploadSuccess, onClose }) => {
             // STEP 1: THE CODING (Dual Stream Compression)
             setStatusText('Optimizing: HD & Thumbnail...');
 
-            // A. HD Version
+            // A. HD Version (adjusted for larger source images)
             const hdOptions = {
-                maxSizeMB: 1,
-                maxWidthOrHeight: 1920,
+                maxSizeMB: 2,  // Increased to 2MB for better quality with large sources
+                maxWidthOrHeight: 2560,  // Increased resolution for HD
                 useWebWorker: true,
                 fileType: 'image/webp'
             };

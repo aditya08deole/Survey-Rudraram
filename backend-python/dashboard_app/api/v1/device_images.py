@@ -1,6 +1,7 @@
 """
 Device Images API Router
 Handles image upload, retrieval, and deletion for survey devices
+Includes automatic thumbnail generation
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
@@ -10,18 +11,18 @@ from pydantic import BaseModel
 import uuid
 from datetime import datetime
 from supabase import Client
+from io import BytesIO
+from PIL import Image
+import logging
 
 from dashboard_app.core.config import get_settings
 from dashboard_app.auth.permissions import get_current_user
 from dashboard_app.schemas.user import User
+from dashboard_app.database.supabase_client import get_supabase
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/device-images", tags=["Device Images"])
-
-# Supabase client dependency
-def get_supabase() -> Client:
-    settings = get_settings()
-    from supabase import create_client
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 class ImageMetadataSchema(BaseModel):
     survey_id: str
@@ -68,6 +69,44 @@ async def save_image_metadata(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Metadata save failed: {str(e)}")
 
+
+def generate_thumbnail(image_bytes: bytes, max_size: tuple = (400, 400)) -> bytes:
+    """
+    Generate a thumbnail from image bytes
+    
+    Args:
+        image_bytes: Original image bytes
+        max_size: Maximum thumbnail dimensions (width, height)
+        
+    Returns:
+        bytes: Thumbnail image bytes in WebP format
+    """
+    try:
+        # Open image from bytes
+        img = Image.open(BytesIO(image_bytes))
+        
+        # Convert RGBA to RGB if necessary
+        if img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        
+        # Generate thumbnail (maintains aspect ratio)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Save to bytes
+        output = BytesIO()
+        img.save(output, format='WEBP', quality=80)
+        output.seek(0)
+        
+        return output.getvalue()
+    except Exception as e:
+        logger.error(f"Thumbnail generation failed: {e}")
+        return None
+
+
 @router.post("/upload/{survey_code}")
 async def upload_device_image(
     survey_code: str,
@@ -78,7 +117,7 @@ async def upload_device_image(
     supabase: Client = Depends(get_supabase)
 ):
     """
-    Upload an image for a specific device
+    Upload an image for a specific device with automatic thumbnail generation
     
     Args:
         survey_code: Device survey code (e.g., BW-001, SM-001)
@@ -87,36 +126,54 @@ async def upload_device_image(
         is_primary: Set as primary image for device
         
     Returns:
-        Image URL and metadata
+        Image URL, thumbnail URL, and metadata
     """
     try:
         # Validate file type
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
         
-        # Validate file size (15MB limit)
+        # Validate file size (30MB limit)
         contents = await file.read()
-        if len(contents) > 15 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File size must be less than 15MB")
+        if len(contents) > 30 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size must be less than 30MB")
         
-        # Generate unique filename
-        file_ext = file.filename.split('.')[-1]
-        unique_filename = f"{survey_code}/{uuid.uuid4()}.{file_ext}"
+        # Generate unique filenames
+        file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+        unique_id = uuid.uuid4()
+        main_filename = f"{survey_code}/{unique_id}.{file_ext}"
+        thumb_filename = f"{survey_code}/{unique_id}_thumb.webp"
         
-        # Upload to Supabase Storage
+        # Upload main image to Supabase Storage
         storage_response = supabase.storage.from_('device-images').upload(
-            unique_filename,
+            main_filename,
             contents,
             file_options={"content-type": file.content_type}
         )
         
-        # Get public URL
-        public_url = supabase.storage.from_('device-images').get_public_url(unique_filename)
+        # Get public URL for main image
+        public_url = supabase.storage.from_('device-images').get_public_url(main_filename)
+        
+        # Generate and upload thumbnail
+        thumbnail_url = public_url  # Fallback to main image
+        try:
+            thumbnail_bytes = generate_thumbnail(contents, max_size=(400, 400))
+            if thumbnail_bytes:
+                thumb_response = supabase.storage.from_('device-images').upload(
+                    thumb_filename,
+                    thumbnail_bytes,
+                    file_options={"content-type": "image/webp"}
+                )
+                thumbnail_url = supabase.storage.from_('device-images').get_public_url(thumb_filename)
+                logger.info(f"✅ Thumbnail generated: {thumb_filename}")
+        except Exception as thumb_error:
+            logger.warning(f"⚠️  Thumbnail generation failed, using main image: {thumb_error}")
         
         # Save metadata to database
         image_data = {
             "survey_code": survey_code,
             "image_url": public_url,
+            "thumbnail_url": thumbnail_url,
             "storage_path": unique_filename,
             "caption": caption,
             "is_primary": is_primary,

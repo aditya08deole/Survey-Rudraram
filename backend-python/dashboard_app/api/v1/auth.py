@@ -19,9 +19,24 @@ limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-# Temporary in-memory user store
-# In production, this will be in Supabase database
+# ⚠️ CRITICAL SECURITY WARNING ⚠️
+# This in-memory user store is TEMPORARY and INSECURE!
+# TODO: Replace with Supabase Auth or proper database-backed authentication
+# Current implementation:
+#   - No password recovery
+#   - No email verification  
+#   - Data lost on restart
+#   - Not suitable for production
+# 
+# Migration path:
+#   Option 1: Use Supabase Auth (recommended)
+#   Option 2: Create 'users' table with proper RLS policies
+#
+# For production deployment, you MUST implement proper auth!
+
 users_db = {
+    # Default admin - CHANGE PASSWORD IMMEDIATELY!
+    # Password: admin123 (INSECURE - FOR DEVELOPMENT ONLY)
     "admin@example.com": {
         "id": "1",
         "username": "admin",
@@ -30,6 +45,13 @@ users_db = {
         "role": "admin"
     }
 }
+
+# Log security warning on module load
+logger.warning("="*60)
+logger.warning("⚠️  USING INSECURE IN-MEMORY AUTH - NOT FOR PRODUCTION!")
+logger.warning("⚠️  Default admin password: admin123")
+logger.warning("⚠️  Implement proper authentication before deploying!")
+logger.warning("="*60)
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit(f"{os.getenv('RATE_LIMIT_PER_MINUTE', '10')}/minute")

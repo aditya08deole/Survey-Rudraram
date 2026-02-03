@@ -59,7 +59,6 @@ const DeviceHUD = ({ device, onClose, onImageUpload }) => {
 
             const result = await apiService.uploadDeviceImage(
                 device.survey_id,
-                device.device_type || 'BOREWELL',
                 compressedFile
             );
 

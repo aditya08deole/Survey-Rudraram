@@ -5,14 +5,9 @@ from typing import Optional, List, Dict, Any
 import logging
 import os
 from dotenv import load_dotenv
-from supabase import create_client
 from datetime import datetime
 
-from dashboard_app.services.excel_service import (
-    get_survey_data as get_excel_data,
-    is_cache_valid,
-    CACHE_DURATION_SECONDS
-)
+from dashboard_app.database.supabase_client import get_supabase_client
 
 # Load environment
 load_dotenv(".env.development")
@@ -20,20 +15,16 @@ load_dotenv(".env.production")
 
 logger = logging.getLogger(__name__)
 
-# Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    logger.error("Supabase credentials not found!")
+# Initialize Supabase client using shared singleton
+try:
+    supabase = get_supabase_client()
+    logger.info(f"✅ Supabase client initialized via singleton")
+except Exception as e:
+    logger.error(f"❌ Supabase initialization failed: {e}")
     supabase = None
-else:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        logger.info(f"Supabase client initialized: {SUPABASE_URL}")
-    except Exception as e:
-        logger.error(f"Failed to initialize Supabase: {e}")
-        supabase = None
+
+# Cache settings
+CACHE_EXPIRY_SECONDS = 60
 
 router = APIRouter(tags=["Survey Data"])
 
@@ -138,26 +129,17 @@ async def get_all_survey_data(
     include_invalid: bool = Query(False, description="Include quarantined invalid devices")
 ):
     """
-    Get all survey data.
-    - Default source='supabase': Fetches from Database (Repliable, Fast)
-    - source='excel': Fetches from GitHub Excel file (For Table View comparison)
+    Get all survey data from Supabase database.
+    Supabase-only - Excel support removed.
     """
     try:
         if source == "excel":
-            # --- EXCEL PATH ---
-            result = get_excel_data(sheet, include_invalid=include_invalid)
-            json_safe_content = jsonable_encoder(result)
-            metadata = result.get("metadata", {})
-            return JSONResponse(
-                content=json_safe_content,
-                headers={
-                    "Cache-Control": f"public, max-age={CACHE_DURATION_SECONDS}",
-                    "X-Total-Devices": str(metadata.get("valid_count", 0)),
-                    "X-Source": "Excel (GitHub)"
-                }
+            raise HTTPException(
+                status_code=410,
+                detail="Excel data source has been deprecated. Use Supabase database only."
             )
-        else:
-            # --- SUPABASE PATH (DEFAULT) ---
+        
+        # --- SUPABASE PATH (ONLY) ---
             # Check cache
             cache_key = f"{sheet}_{include_invalid}"
             now = datetime.now().timestamp()
@@ -209,14 +191,10 @@ async def get_all_survey_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/survey-data/stats", response_model=SurveyStatsResponse)
-async def get_survey_stats(source: str = Query("supabase")):
-    """Get statistics (Calculated from DB or Excel)"""
+async def get_survey_stats():
+    """Get statistics from Supabase database"""
     try:
-        if source == "excel":
-            result = get_excel_data("All")
-            valid_devices = result.get("devices", [])
-        else:
-            valid_devices = await fetch_from_supabase("All")
+        valid_devices = await fetch_from_supabase("All")
 
         stats = {
             "total_devices": len(valid_devices),
